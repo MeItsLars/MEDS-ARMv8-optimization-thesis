@@ -1,11 +1,11 @@
 #ifndef API_H
 #define API_H
 
-#define CRYPTO_SECRETKEYBYTES 93
-#define CRYPTO_PUBLICKEYBYTES 48
-#define CRYPTO_BYTES 88
+#define CRYPTO_SECRETKEYBYTES 19054
+#define CRYPTO_PUBLICKEYBYTES 173282
+#define CRYPTO_BYTES 7526
 
-#define CRYPTO_ALGNAME "toy"
+#define CRYPTO_ALGNAME "oldlevel5167717"
 
 int crypto_sign_keypair(
     unsigned char *pk,

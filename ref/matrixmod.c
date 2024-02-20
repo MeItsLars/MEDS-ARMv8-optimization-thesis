@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "log.h"
+#include "benchresult.h"
 
 #include "params.h"
 #include "matrixmod.h"
@@ -44,6 +45,7 @@ void pmod_mat_fprint(FILE *stream, pmod_mat_t *M, int M_r, int M_c)
 
 void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
+  BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r*C_c];
 
   for (int c = 0; c < C_c; c++)
@@ -60,6 +62,7 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
       pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r*C_c + c]);
+  BENCH_END("pmod_mat_mul");
 }
 
 int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
@@ -79,6 +82,7 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
 
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
+  BENCH_START("pmod_mat_syst_ct");
   int ret = M_r * swap;
 
   for (int r = 0; r < max_r; r++)
@@ -196,6 +200,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
+  BENCH_END("pmod_mat_syst_ct");
   return ret;
 }
 

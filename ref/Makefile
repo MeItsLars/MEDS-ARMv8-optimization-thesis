@@ -8,6 +8,9 @@ CC := gcc
 ifdef DEBUG
 CFLAGS := -g -Wall -D$(PARAM) -DDEBUG
 OBJDIR := debug/$(PARAM)
+else ifdef BENCHMARK
+CFLAGS := -O3 -Wall -D$(PARAM) -DBENCHMARK
+OBJDIR := build/$(PARAM)
 else
 #CFLAGS := -O3 -march=native -Wall -D$(PARAM)
 CFLAGS := -O3 -Wall -D$(PARAM)
@@ -20,7 +23,7 @@ endif
 
 CFLAGS += -I$(OBJDIR) -INIST
 
-EXES = test bench KAT_test
+EXES = test bench benchmark KAT_test
 
 TARGETS := ${EXES:%=$(OBJDIR)/%}
 
@@ -29,16 +32,16 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 default: $(EXES)
 
 OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o
-HEADERS = $(wildcard *.h) params.h $(OBJDIR)/api.h
+HEADERS = $(wildcard *.h) $(OBJDIR)/params.h $(OBJDIR)/api.h
 
 BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}
 
 
-params.h: params.py
-	python3 $< -p > $@
+$(OBJDIR)/params.h: params.py $(OBJDIR)
+	python3 $< -p $(PARAM) > params.h
 
 $(OBJDIR)/api.h: params.py $(OBJDIR)
-	python3 $< -a $(PARAM) > $@
+	python3 $< -a $(PARAM) > api.h
 
 
 $(EXES) : % :
@@ -90,6 +93,10 @@ BENCH_ALL:
 	echo ""; \
 	cat bench.txt; \
 	done
+
+BENCHMARK:
+	make benchmark PARAM=$(PARAM) BENCHMARK=true
+	$(OBJDIR)/benchmark verify
 
 all:
 	for p in `./params.py -l`; do \

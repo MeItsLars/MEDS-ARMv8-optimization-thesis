@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "log.h"
+#include "benchresult.h"
 
 #include "fips202.h"
 
@@ -510,6 +511,7 @@ int crypto_sign_open(
     const unsigned char *pk
   )
 {
+
   LOG_HEX(pk, MEDS_PK_BYTES);
   LOG_HEX(sm, smlen);
 
@@ -597,7 +599,6 @@ int crypto_sign_open(
   memcpy(seed_buf, alpha, MEDS_st_salt_bytes);
 
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
-
 
   for (int i = 0; i < MEDS_t; i++)
   {

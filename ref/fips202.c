@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "fips202.h"
+#include "benchresult.h"
 
 #define NROUNDS 24
 #define ROL(a, offset) ((a << offset) ^ (a >> (64-offset)))
@@ -609,8 +610,10 @@ void shake128_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
 **************************************************/
 void shake256_init(keccak_state *state)
 {
+  BENCH_START("shake256");
   keccak_init(state->s);
   state->pos = 0;
+  BENCH_END("shake256");
 }
 
 /*************************************************
@@ -624,7 +627,9 @@ void shake256_init(keccak_state *state)
 **************************************************/
 void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 {
+  BENCH_START("shake256");
   state->pos = keccak_absorb(state->s, state->pos, SHAKE256_RATE, in, inlen);
+  BENCH_END("shake256");
 }
 
 /*************************************************
@@ -636,8 +641,10 @@ void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 **************************************************/
 void shake256_finalize(keccak_state *state)
 {
+  BENCH_START("shake256");
   keccak_finalize(state->s, state->pos, SHAKE256_RATE, 0x1F);
   state->pos = SHAKE256_RATE;
+  BENCH_END("shake256");
 }
 
 /*************************************************
@@ -652,7 +659,9 @@ void shake256_finalize(keccak_state *state)
 **************************************************/
 void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 {
+  BENCH_START("shake256");
   state->pos = keccak_squeeze(out, outlen, state->s, state->pos, SHAKE256_RATE);
+  BENCH_END("shake256");
 }
 
 /*************************************************
@@ -666,8 +675,10 @@ void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 **************************************************/
 void shake256_absorb_once(keccak_state *state, const uint8_t *in, size_t inlen)
 {
+  BENCH_START("shake256");
   keccak_absorb_once(state->s, SHAKE256_RATE, in, inlen, 0x1F);
   state->pos = SHAKE256_RATE;
+  BENCH_END("shake256");
 }
 
 /*************************************************
@@ -684,7 +695,9 @@ void shake256_absorb_once(keccak_state *state, const uint8_t *in, size_t inlen)
 **************************************************/
 void shake256_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
 {
+  BENCH_START("shake256");
   keccak_squeezeblocks(out, nblocks, state->s, SHAKE256_RATE);
+  BENCH_END("shake256");
 }
 
 /*************************************************

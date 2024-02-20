@@ -5,6 +5,7 @@
 #include "fips202.h"
 
 #include "log.h"
+#include "benchresult.h"
 
 #include "util.h"
 #include "meds.h"
@@ -43,6 +44,7 @@ GFq_t rnd_GF(keccak_state *shake)
 
 void rnd_sys_mat(pmod_mat_t *M, int M_r, int M_c, const uint8_t *seed, size_t seed_len)
 {
+  BENCH_START("rnd_sys_mat");
   keccak_state shake;
   shake256_absorb_once(&shake, seed, seed_len);
 
@@ -56,6 +58,7 @@ void rnd_sys_mat(pmod_mat_t *M, int M_r, int M_c, const uint8_t *seed, size_t se
         pmod_mat_set_entry(M, M_r, M_c, r, c, 1);
       else
         pmod_mat_set_entry(M, M_r, M_c, r, c, 0);
+  BENCH_END("rnd_sys_mat");
 }
 
 void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_len)
@@ -63,6 +66,7 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
   keccak_state shake;
   shake256_absorb_once(&shake, seed, seed_len);
 
+  BENCH_START("rnd_inv_matrix");
   while (0==0)
   {
     for (int r = 0; r < M_r; r++)
@@ -76,6 +80,7 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
     if (pmod_mat_syst_ct_partial_swap_backsub(tmp, M_r, M_c, M_r, 0, 0) == 0)
       return;
   }
+  BENCH_END("rnd_inv_matrix");
 }
 
 int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
@@ -240,6 +245,8 @@ int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
 int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 {
   _Static_assert (MEDS_n == MEDS_m+1, "solve_opt requires MEDS_n == MEDS_m+1");
+
+  BENCH_START("solve_opt");
 
   // set up core sub-system
   pmod_mat_t N[MEDS_n * (2 * MEDS_m)] = {0};
@@ -531,6 +538,8 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   LOG_MAT(A_tilde, MEDS_m, MEDS_m);
   LOG_MAT(B_tilde_inv, MEDS_n, MEDS_n);
+
+  BENCH_END("solve_opt");
 
   return 0;
 }
