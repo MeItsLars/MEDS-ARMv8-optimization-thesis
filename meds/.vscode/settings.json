@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.json": "jsonc",
+        "util.h": "c",
+        "params.h": "c",
+        "matrixmod.h": "c",
+        "stdint.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "meds.h": "c"
+    }
+}

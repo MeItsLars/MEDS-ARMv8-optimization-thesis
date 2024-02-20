@@ -1,0 +1,449 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+100.02      0.02     0.02       56     0.36     0.36  pmod_mat_syst_ct
+  0.00      0.02     0.00    32790     0.00     0.00  bs_write
+  0.00      0.02     0.00     8361     0.00     0.00  keccak_squeeze
+  0.00      0.02     0.00     8361     0.00     0.00  meds_fips202_ref_shake256_squeeze
+  0.00      0.02     0.00     8203     0.00     0.00  rnd_GF
+  0.00      0.02     0.00     3990     0.00     0.00  bs_read
+  0.00      0.02     0.00     1770     0.00     0.00  KeccakF1600_StatePermute
+  0.00      0.02     0.00     1110     0.00     0.00  GF_inv
+  0.00      0.02     0.00      715     0.00     0.00  pmod_mat_mul
+  0.00      0.02     0.00      173     0.00     0.00  pmod_mat_fprint
+  0.00      0.02     0.00       92     0.00     0.00  keccak_absorb_once
+  0.00      0.02     0.00       92     0.00     0.00  meds_fips202_ref_shake256_absorb_once
+  0.00      0.02     0.00       71     0.00     0.00  keccak_absorb
+  0.00      0.02     0.00       71     0.00     0.00  meds_fips202_ref_shake256_absorb
+  0.00      0.02     0.00       70     0.00     0.00  G_mat_init
+  0.00      0.02     0.00       55     0.00     0.00  rnd_inv_matrix
+  0.00      0.02     0.00       43     0.00     0.00  bs_finalize
+  0.00      0.02     0.00       39     0.00     0.00  keccak_finalize
+  0.00      0.02     0.00       39     0.00     0.00  keccak_init
+  0.00      0.02     0.00       39     0.00     0.00  meds_fips202_ref_shake256_finalize
+  0.00      0.02     0.00       39     0.00     0.00  meds_fips202_ref_shake256_init
+  0.00      0.02     0.00       38     0.00     0.00  bs_init
+  0.00      0.02     0.00       35     0.00     0.00  pi
+  0.00      0.02     0.00       31     0.00     0.00  XOF
+  0.00      0.02     0.00       13     0.00     0.00  AES256_ECB
+  0.00      0.02     0.00        7     0.00     0.00  t_hash
+  0.00      0.02     0.00        6     0.00     0.00  cpucycles
+  0.00      0.02     0.00        6     0.00     0.36  pmod_mat_inv
+  0.00      0.02     0.00        3     0.00     0.00  AES256_CTR_DRBG_Update
+  0.00      0.02     0.00        3     0.00     0.00  rnd_sys_mat
+  0.00      0.02     0.00        3     0.00     0.36  solve
+  0.00      0.02     0.00        2     0.00     0.00  parse_hash
+  0.00      0.02     0.00        2     0.00     0.00  randombytes
+  0.00      0.02     0.00        2     0.00     0.00  stree_to_path_to_stree
+  0.00      0.02     0.00        1     0.00     5.72  crypto_sign
+  0.00      0.02     0.00        1     0.00     4.29  crypto_sign_keypair
+  0.00      0.02     0.00        1     0.00    10.00  crypto_sign_open
+  0.00      0.02     0.00        1     0.00     0.00  osfreq
+  0.00      0.02     0.00        1     0.00     0.00  randombytes_init
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2024 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 49.99% of 0.02 seconds
+
+index % time    self  children    called     name
+                0.00    0.00       3/56          crypto_sign_keypair [5]
+                0.00    0.00       3/56          solve [7]
+                0.00    0.00       6/56          pmod_mat_inv [6]
+                0.01    0.00      16/56          crypto_sign [4]
+                0.01    0.00      28/56          crypto_sign_open [3]
+[1]    100.0    0.02    0.00      56         pmod_mat_syst_ct [1]
+                0.00    0.00     557/1110        GF_inv [14]
+-----------------------------------------------
+                                                 <spontaneous>
+[2]    100.0    0.00    0.02                 main [2]
+                0.00    0.01       1/1           crypto_sign_open [3]
+                0.00    0.01       1/1           crypto_sign [4]
+                0.00    0.00       1/1           crypto_sign_keypair [5]
+                0.00    0.00       6/6           cpucycles [33]
+                0.00    0.00       1/1           randombytes_init [40]
+                0.00    0.00       1/1           osfreq [39]
+-----------------------------------------------
+                0.00    0.01       1/1           main [2]
+[3]     50.0    0.00    0.01       1         crypto_sign_open [3]
+                0.01    0.00      28/56          pmod_mat_syst_ct [1]
+                0.00    0.00   14400/32790       bs_write [8]
+                0.00    0.00    3390/3990        bs_read [12]
+                0.00    0.00      68/173         pmod_mat_fprint [16]
+                0.00    0.00      20/55          rnd_inv_matrix [22]
+                0.00    0.00      18/38          bs_init [28]
+                0.00    0.00      17/71          meds_fips202_ref_shake256_absorb [20]
+                0.00    0.00      16/35          pi [29]
+                0.00    0.00      15/43          bs_finalize [23]
+                0.00    0.00      10/31          XOF [30]
+                0.00    0.00       1/3           rnd_sys_mat [35]
+                0.00    0.00       1/2           parse_hash [36]
+                0.00    0.00       1/2           stree_to_path_to_stree [38]
+                0.00    0.00       1/39          meds_fips202_ref_shake256_init [27]
+                0.00    0.00       1/39          meds_fips202_ref_shake256_finalize [26]
+                0.00    0.00       1/8361        meds_fips202_ref_shake256_squeeze [10]
+-----------------------------------------------
+                0.00    0.01       1/1           main [2]
+[4]     28.6    0.00    0.01       1         crypto_sign [4]
+                0.01    0.00      16/56          pmod_mat_syst_ct [1]
+                0.00    0.00   15600/32790       bs_write [8]
+                0.00    0.00     600/3990        bs_read [12]
+                0.00    0.00      83/173         pmod_mat_fprint [16]
+                0.00    0.00      32/55          rnd_inv_matrix [22]
+                0.00    0.00      19/43          bs_finalize [23]
+                0.00    0.00      18/38          bs_init [28]
+                0.00    0.00      17/31          XOF [30]
+                0.00    0.00      17/71          meds_fips202_ref_shake256_absorb [20]
+                0.00    0.00      16/35          pi [29]
+                0.00    0.00      12/715         pmod_mat_mul [15]
+                0.00    0.00       2/7           t_hash [32]
+                0.00    0.00       1/2           randombytes [37]
+                0.00    0.00       1/3           rnd_sys_mat [35]
+                0.00    0.00       1/39          meds_fips202_ref_shake256_init [27]
+                0.00    0.00       1/39          meds_fips202_ref_shake256_finalize [26]
+                0.00    0.00       1/8361        meds_fips202_ref_shake256_squeeze [10]
+                0.00    0.00       1/2           parse_hash [36]
+                0.00    0.00       1/2           stree_to_path_to_stree [38]
+-----------------------------------------------
+                0.00    0.00       1/1           main [2]
+[5]     21.4    0.00    0.00       1         crypto_sign_keypair [5]
+                0.00    0.00       6/6           pmod_mat_inv [6]
+                0.00    0.00       3/3           solve [7]
+                0.00    0.00       3/56          pmod_mat_syst_ct [1]
+                0.00    0.00    2790/32790       bs_write [8]
+                0.00    0.00      22/173         pmod_mat_fprint [16]
+                0.00    0.00       9/43          bs_finalize [23]
+                0.00    0.00       4/31          XOF [30]
+                0.00    0.00       3/55          rnd_inv_matrix [22]
+                0.00    0.00       3/92          meds_fips202_ref_shake256_absorb_once [18]
+                0.00    0.00       3/8203        rnd_GF [11]
+                0.00    0.00       3/715         pmod_mat_mul [15]
+                0.00    0.00       3/35          pi [29]
+                0.00    0.00       2/38          bs_init [28]
+                0.00    0.00       1/2           randombytes [37]
+                0.00    0.00       1/3           rnd_sys_mat [35]
+-----------------------------------------------
+                0.00    0.00       6/6           crypto_sign_keypair [5]
+[6]     10.7    0.00    0.00       6         pmod_mat_inv [6]
+                0.00    0.00       6/56          pmod_mat_syst_ct [1]
+-----------------------------------------------
+                0.00    0.00       3/3           crypto_sign_keypair [5]
+[7]      5.4    0.00    0.00       3         solve [7]
+                0.00    0.00       3/56          pmod_mat_syst_ct [1]
+                0.00    0.00       3/1110        GF_inv [14]
+-----------------------------------------------
+                0.00    0.00    2790/32790       crypto_sign_keypair [5]
+                0.00    0.00   14400/32790       crypto_sign_open [3]
+                0.00    0.00   15600/32790       crypto_sign [4]
+[8]      0.0    0.00    0.00   32790         bs_write [8]
+-----------------------------------------------
+                0.00    0.00    8361/8361        meds_fips202_ref_shake256_squeeze [10]
+[9]      0.0    0.00    0.00    8361         keccak_squeeze [9]
+                0.00    0.00     225/1770        KeccakF1600_StatePermute [13]
+-----------------------------------------------
+                0.00    0.00       1/8361        crypto_sign [4]
+                0.00    0.00       1/8361        crypto_sign_open [3]
+                0.00    0.00      30/8361        parse_hash [36]
+                0.00    0.00      35/8361        t_hash [32]
+                0.00    0.00      91/8361        XOF [30]
+                0.00    0.00    8203/8361        rnd_GF [11]
+[10]     0.0    0.00    0.00    8361         meds_fips202_ref_shake256_squeeze [10]
+                0.00    0.00    8361/8361        keccak_squeeze [9]
+-----------------------------------------------
+                0.00    0.00       3/8203        crypto_sign_keypair [5]
+                0.00    0.00    2700/8203        rnd_sys_mat [35]
+                0.00    0.00    5500/8203        rnd_inv_matrix [22]
+[11]     0.0    0.00    0.00    8203         rnd_GF [11]
+                0.00    0.00    8203/8361        meds_fips202_ref_shake256_squeeze [10]
+-----------------------------------------------
+                0.00    0.00     600/3990        crypto_sign [4]
+                0.00    0.00    3390/3990        crypto_sign_open [3]
+[12]     0.0    0.00    0.00    3990         bs_read [12]
+-----------------------------------------------
+                0.00    0.00     225/1770        keccak_squeeze [9]
+                0.00    0.00    1545/1770        keccak_absorb [19]
+[13]     0.0    0.00    0.00    1770         KeccakF1600_StatePermute [13]
+-----------------------------------------------
+                0.00    0.00       3/1110        solve [7]
+                0.00    0.00     550/1110        rnd_inv_matrix [22]
+                0.00    0.00     557/1110        pmod_mat_syst_ct [1]
+[14]     0.0    0.00    0.00    1110         GF_inv [14]
+-----------------------------------------------
+                0.00    0.00       3/715         crypto_sign_keypair [5]
+                0.00    0.00      12/715         crypto_sign [4]
+                0.00    0.00     700/715         pi [29]
+[15]     0.0    0.00    0.00     715         pmod_mat_mul [15]
+-----------------------------------------------
+                0.00    0.00      22/173         crypto_sign_keypair [5]
+                0.00    0.00      68/173         crypto_sign_open [3]
+                0.00    0.00      83/173         crypto_sign [4]
+[16]     0.0    0.00    0.00     173         pmod_mat_fprint [16]
+-----------------------------------------------
+                0.00    0.00      92/92          meds_fips202_ref_shake256_absorb_once [18]
+[17]     0.0    0.00    0.00      92         keccak_absorb_once [17]
+-----------------------------------------------
+                0.00    0.00       3/92          crypto_sign_keypair [5]
+                0.00    0.00       3/92          rnd_sys_mat [35]
+                0.00    0.00      31/92          XOF [30]
+                0.00    0.00      55/92          rnd_inv_matrix [22]
+[18]     0.0    0.00    0.00      92         meds_fips202_ref_shake256_absorb_once [18]
+                0.00    0.00      92/92          keccak_absorb_once [17]
+-----------------------------------------------
+                0.00    0.00      71/71          meds_fips202_ref_shake256_absorb [20]
+[19]     0.0    0.00    0.00      71         keccak_absorb [19]
+                0.00    0.00    1545/1770        KeccakF1600_StatePermute [13]
+-----------------------------------------------
+                0.00    0.00       2/71          parse_hash [36]
+                0.00    0.00      17/71          crypto_sign [4]
+                0.00    0.00      17/71          crypto_sign_open [3]
+                0.00    0.00      35/71          t_hash [32]
+[20]     0.0    0.00    0.00      71         meds_fips202_ref_shake256_absorb [20]
+                0.00    0.00      71/71          keccak_absorb [19]
+-----------------------------------------------
+                0.00    0.00      70/70          pi [29]
+[21]     0.0    0.00    0.00      70         G_mat_init [21]
+-----------------------------------------------
+                0.00    0.00       3/55          crypto_sign_keypair [5]
+                0.00    0.00      20/55          crypto_sign_open [3]
+                0.00    0.00      32/55          crypto_sign [4]
+[22]     0.0    0.00    0.00      55         rnd_inv_matrix [22]
+                0.00    0.00    5500/8203        rnd_GF [11]
+                0.00    0.00     550/1110        GF_inv [14]
+                0.00    0.00      55/92          meds_fips202_ref_shake256_absorb_once [18]
+-----------------------------------------------
+                0.00    0.00       9/43          crypto_sign_keypair [5]
+                0.00    0.00      15/43          crypto_sign_open [3]
+                0.00    0.00      19/43          crypto_sign [4]
+[23]     0.0    0.00    0.00      43         bs_finalize [23]
+-----------------------------------------------
+                0.00    0.00      39/39          meds_fips202_ref_shake256_finalize [26]
+[24]     0.0    0.00    0.00      39         keccak_finalize [24]
+-----------------------------------------------
+                0.00    0.00      39/39          meds_fips202_ref_shake256_init [27]
+[25]     0.0    0.00    0.00      39         keccak_init [25]
+-----------------------------------------------
+                0.00    0.00       1/39          crypto_sign [4]
+                0.00    0.00       1/39          crypto_sign_open [3]
+                0.00    0.00       2/39          parse_hash [36]
+                0.00    0.00      35/39          t_hash [32]
+[26]     0.0    0.00    0.00      39         meds_fips202_ref_shake256_finalize [26]
+                0.00    0.00      39/39          keccak_finalize [24]
+-----------------------------------------------
+                0.00    0.00       1/39          crypto_sign [4]
+                0.00    0.00       1/39          crypto_sign_open [3]
+                0.00    0.00       2/39          parse_hash [36]
+                0.00    0.00      35/39          t_hash [32]
+[27]     0.0    0.00    0.00      39         meds_fips202_ref_shake256_init [27]
+                0.00    0.00      39/39          keccak_init [25]
+-----------------------------------------------
+                0.00    0.00       2/38          crypto_sign_keypair [5]
+                0.00    0.00      18/38          crypto_sign [4]
+                0.00    0.00      18/38          crypto_sign_open [3]
+[28]     0.0    0.00    0.00      38         bs_init [28]
+-----------------------------------------------
+                0.00    0.00       3/35          crypto_sign_keypair [5]
+                0.00    0.00      16/35          crypto_sign [4]
+                0.00    0.00      16/35          crypto_sign_open [3]
+[29]     0.0    0.00    0.00      35         pi [29]
+                0.00    0.00     700/715         pmod_mat_mul [15]
+                0.00    0.00      70/70          G_mat_init [21]
+-----------------------------------------------
+                0.00    0.00       4/31          crypto_sign_keypair [5]
+                0.00    0.00      10/31          crypto_sign_open [3]
+                0.00    0.00      17/31          crypto_sign [4]
+[30]     0.0    0.00    0.00      31         XOF [30]
+                0.00    0.00      91/8361        meds_fips202_ref_shake256_squeeze [10]
+                0.00    0.00      31/92          meds_fips202_ref_shake256_absorb_once [18]
+-----------------------------------------------
+                0.00    0.00       4/13          randombytes [37]
+                0.00    0.00       9/13          AES256_CTR_DRBG_Update [34]
+[31]     0.0    0.00    0.00      13         AES256_ECB [31]
+-----------------------------------------------
+                0.00    0.00       2/7           crypto_sign [4]
+                0.00    0.00       5/7           stree_to_path_to_stree [38]
+[32]     0.0    0.00    0.00       7         t_hash [32]
+                0.00    0.00      35/39          meds_fips202_ref_shake256_init [27]
+                0.00    0.00      35/71          meds_fips202_ref_shake256_absorb [20]
+                0.00    0.00      35/39          meds_fips202_ref_shake256_finalize [26]
+                0.00    0.00      35/8361        meds_fips202_ref_shake256_squeeze [10]
+-----------------------------------------------
+                0.00    0.00       6/6           main [2]
+[33]     0.0    0.00    0.00       6         cpucycles [33]
+-----------------------------------------------
+                0.00    0.00       1/3           randombytes_init [40]
+                0.00    0.00       2/3           randombytes [37]
+[34]     0.0    0.00    0.00       3         AES256_CTR_DRBG_Update [34]
+                0.00    0.00       9/13          AES256_ECB [31]
+-----------------------------------------------
+                0.00    0.00       1/3           crypto_sign_keypair [5]
+                0.00    0.00       1/3           crypto_sign [4]
+                0.00    0.00       1/3           crypto_sign_open [3]
+[35]     0.0    0.00    0.00       3         rnd_sys_mat [35]
+                0.00    0.00    2700/8203        rnd_GF [11]
+                0.00    0.00       3/92          meds_fips202_ref_shake256_absorb_once [18]
+-----------------------------------------------
+                0.00    0.00       1/2           crypto_sign [4]
+                0.00    0.00       1/2           crypto_sign_open [3]
+[36]     0.0    0.00    0.00       2         parse_hash [36]
+                0.00    0.00      30/8361        meds_fips202_ref_shake256_squeeze [10]
+                0.00    0.00       2/39          meds_fips202_ref_shake256_init [27]
+                0.00    0.00       2/71          meds_fips202_ref_shake256_absorb [20]
+                0.00    0.00       2/39          meds_fips202_ref_shake256_finalize [26]
+-----------------------------------------------
+                0.00    0.00       1/2           crypto_sign_keypair [5]
+                0.00    0.00       1/2           crypto_sign [4]
+[37]     0.0    0.00    0.00       2         randombytes [37]
+                0.00    0.00       4/13          AES256_ECB [31]
+                0.00    0.00       2/3           AES256_CTR_DRBG_Update [34]
+-----------------------------------------------
+                0.00    0.00       1/2           crypto_sign [4]
+                0.00    0.00       1/2           crypto_sign_open [3]
+[38]     0.0    0.00    0.00       2         stree_to_path_to_stree [38]
+                0.00    0.00       5/7           t_hash [32]
+-----------------------------------------------
+                0.00    0.00       1/1           main [2]
+[39]     0.0    0.00    0.00       1         osfreq [39]
+-----------------------------------------------
+                0.00    0.00       1/1           main [2]
+[40]     0.0    0.00    0.00       1         randombytes_init [40]
+                0.00    0.00       1/3           AES256_CTR_DRBG_Update [34]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2024 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [34] AES256_CTR_DRBG_Update  [3] crypto_sign_open       [29] pi
+  [31] AES256_ECB             [19] keccak_absorb          [16] pmod_mat_fprint
+  [14] GF_inv                 [17] keccak_absorb_once      [6] pmod_mat_inv
+  [21] G_mat_init             [24] keccak_finalize        [15] pmod_mat_mul
+  [13] KeccakF1600_StatePermute [25] keccak_init           [1] pmod_mat_syst_ct
+  [30] XOF                     [9] keccak_squeeze         [37] randombytes
+  [23] bs_finalize            [20] meds_fips202_ref_shake256_absorb [40] randombytes_init
+  [28] bs_init                [18] meds_fips202_ref_shake256_absorb_once [11] rnd_GF
+  [12] bs_read                [26] meds_fips202_ref_shake256_finalize [22] rnd_inv_matrix
+   [8] bs_write               [27] meds_fips202_ref_shake256_init [35] rnd_sys_mat
+  [33] cpucycles              [10] meds_fips202_ref_shake256_squeeze [7] solve
+   [4] crypto_sign            [39] osfreq                 [38] stree_to_path_to_stree
+   [5] crypto_sign_keypair    [36] parse_hash             [32] t_hash
