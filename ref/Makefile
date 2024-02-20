@@ -35,10 +35,10 @@ BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}
 
 
 params.h: params.py
-	python $< -p > $@
+	python3 $< -p > $@
 
 $(OBJDIR)/api.h: params.py $(OBJDIR)
-	python $< -a $(PARAM) > $@
+	python3 $< -a $(PARAM) > $@
 
 
 $(EXES) : % :
