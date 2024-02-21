@@ -14,6 +14,9 @@ typedef struct
     char name[256];
     long long total_cycle_count;
     long long start_cycle_count;
+    long long cycle_counts[100];
+    int cycle_count_index;
+    int runs;
 } benchresult;
 
 extern benchresult benchresults[1000];
@@ -76,22 +79,28 @@ static void complete_benchmark()
         }                                                                           \
     } while (0)
 
-#define BENCH_END(bench_name)                                                                \
-    do                                                                                       \
-    {                                                                                        \
-        if (benchmark_enabled == 0)                                                          \
-            break;                                                                           \
-        long long end_cycle_count = cpucycles();                                             \
-        for (int i = 0; i < number_of_benchresults; i++)                                     \
-        {                                                                                    \
-            if (strcmp(benchresults[i].name, bench_name) == 0)                               \
-            {                                                                                \
-                long long cycle_count = end_cycle_count - benchresults[i].start_cycle_count; \
-                benchresults[i].total_cycle_count += cycle_count;                            \
-                benchresults[i].start_cycle_count = 0;                                       \
-                break;                                                                       \
-            }                                                                                \
-        }                                                                                    \
+#define BENCH_END(bench_name)                                                                      \
+    do                                                                                             \
+    {                                                                                              \
+        if (benchmark_enabled == 0)                                                                \
+            break;                                                                                 \
+        long long end_cycle_count = cpucycles();                                                   \
+        for (int i = 0; i < number_of_benchresults; i++)                                           \
+        {                                                                                          \
+            if (strcmp(benchresults[i].name, bench_name) == 0)                                     \
+            {                                                                                      \
+                long long cycle_count = end_cycle_count - benchresults[i].start_cycle_count;       \
+                benchresults[i].total_cycle_count += cycle_count;                                  \
+                benchresults[i].start_cycle_count = 0;                                             \
+                if (benchresults[i].cycle_count_index < 100)                                       \
+                {                                                                                  \
+                    benchresults[i].cycle_counts[benchresults[i].cycle_count_index] = cycle_count; \
+                    benchresults[i].cycle_count_index++;                                           \
+                }                                                                                  \
+                benchresults[i].runs++;                                                            \
+                break;                                                                             \
+            }                                                                                      \
+        }                                                                                          \
     } while (0)
 
 #else

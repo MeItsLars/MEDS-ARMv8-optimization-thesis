@@ -148,7 +148,8 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < number_of_benchresults; i++) {
       float percent = (float)benchresults[i].total_cycle_count / median_time * 100;
-      printf("  %s: %lli cycles (%.2f%%)\n", benchresults[i].name, benchresults[i].total_cycle_count, percent);
+      long long median_cycle = median(benchresults[i].cycle_counts, benchresults[i].cycle_count_index);
+      printf("  %s: %lli cycles (%.2f%%) - tot runs: %i - median of op: %lli\n", benchresults[i].name, benchresults[i].total_cycle_count, percent, benchresults[i].runs, median_cycle);
     }
   }
 
