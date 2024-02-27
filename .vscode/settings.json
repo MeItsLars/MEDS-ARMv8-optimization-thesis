@@ -7,6 +7,8 @@
         "benchresult.h": "c",
         "matrixmod.h": "c",
         "typeinfo": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "random.h": "c",
+        "string.h": "c"
     }
 }

@@ -23,7 +23,7 @@ endif
 
 CFLAGS += -I$(OBJDIR) -INIST
 
-EXES = test bench benchmark KAT_test
+EXES = test bench benchmark KAT_test matmulbench
 
 TARGETS := ${EXES:%=$(OBJDIR)/%}
 
@@ -97,6 +97,10 @@ BENCH_ALL:
 BENCHMARK:
 	make benchmark PARAM=$(PARAM) BENCHMARK=true
 	$(OBJDIR)/benchmark verify
+
+BENCH_MATMUL:
+	make matmulbench PARAM=$(PARAM) BENCHMARK=true
+	$(OBJDIR)/matmulbench
 
 all:
 	for p in `./params.py -l`; do \

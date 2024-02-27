@@ -33,6 +33,26 @@ static void complete_benchmark()
     qsort(benchresults, number_of_benchresults, sizeof(benchresult), compare_benchresults);
 }
 
+
+static int compare(const void *a, const void *b)
+{
+  return (*(long long *)a - *(long long *)b);
+}
+
+static float median(long long arr[], int n)
+{
+  qsort(arr, n, sizeof(long long), compare);
+
+  if (n % 2 != 0)
+  {
+    return arr[n / 2];
+  }
+  else
+  {
+    return (arr[n / 2 - 1] + arr[n / 2]) / 2.0;
+  }
+}
+
 #if BENCHMARK
 
 #include <stdio.h>
