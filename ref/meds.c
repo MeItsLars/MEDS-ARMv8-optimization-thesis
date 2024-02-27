@@ -352,8 +352,6 @@ int crypto_sign(
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
   BENCH_END("SEC-Setup");
-  
-  BENCH_START("SEC-Challenges");
 
   for (int i = 0; i < MEDS_t; i++)
   {
@@ -362,6 +360,7 @@ int crypto_sign(
 
     while (1 == 1)
     {
+      BENCH_START("SEC-Challenge-Init");
       uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
 
 
@@ -389,9 +388,10 @@ int crypto_sign(
             pmod_mat_set_entry(M_tilde[i], 2, MEDS_k, r, c, rnd_GF(&shake));
       }
 
-
       LOG_MAT_FMT(M_tilde[i], 2, MEDS_k, "M_tilde[%i]", i);
 
+      BENCH_END("SEC-Challenge-Init");
+      BENCH_START("SEC-Challenge-C");
 
       pmod_mat_t C[2 * MEDS_m * MEDS_n];
 
@@ -399,15 +399,23 @@ int crypto_sign(
 
       LOG_MAT(C, 2, MEDS_m * MEDS_n);
 
+      BENCH_END("SEC-Challenge-C");
+      BENCH_START("SEC-Challenge-Solve");
 
       pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
 
-      if (solve(A_tilde[i], B_tilde_inv, C) < 0)
+      int solve_result = solve(A_tilde[i], B_tilde_inv, C);
+      
+      BENCH_END("SEC-Challenge-Solve");
+
+      if (solve_result < 0)
       {
         LOG("no sol");
         continue;
       }
+
+      BENCH_START("SEC-Challenge-Inv");
 
       if (pmod_mat_inv(B_tilde[i], B_tilde_inv, MEDS_n, MEDS_n) < 0)
       {
@@ -424,13 +432,20 @@ int crypto_sign(
       LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
       LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
 
+      BENCH_END("SEC-Challenge-Inv");
+      BENCH_START("SEC-Challenge-Pi");
 
       pi(G_tilde_ti, A_tilde[i], B_tilde[i], G_0);
-
-
+      
       LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m*MEDS_n, "G_tilde[%i]", i);
 
-      if (SF(G_tilde_ti, G_tilde_ti) == 0)
+      BENCH_END("SEC-Challenge-Pi");
+      BENCH_START("SEC-Challenge-SF");
+
+      int sf_result = SF(G_tilde_ti, G_tilde_ti);
+
+      BENCH_END("SEC-Challenge-SF");
+      if (sf_result == 0)
         break;
     }
 
@@ -452,7 +467,6 @@ int crypto_sign(
     shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m*MEDS_n - MEDS_k)) * GFq_bits, 8));
     BENCH_END("SEC-Challenge");
   }
-  BENCH_END("SEC-Challenges");
 
   shake256_absorb(&h_shake, (uint8_t*)m, mlen);
 
