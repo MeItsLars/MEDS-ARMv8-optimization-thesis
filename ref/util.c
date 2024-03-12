@@ -315,6 +315,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   if (N1_r == -1)
   {
+    // Reduced row echelon form failed.
     LOG("RREF failed. Redo.\n");
     return -1;
   }

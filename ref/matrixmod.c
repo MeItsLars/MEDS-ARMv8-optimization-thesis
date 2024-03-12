@@ -110,25 +110,47 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
   return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
 }
 
+/**
+ * @brief Solve a system of linear equations using the Gaussian Elimination Algorithm with pivoting:
+ * https://web.mit.edu/10.001/Web/Course_Notes/GaussElimPivoting.html
+ * 
+ * @param M The matrix of the system of linear equations.
+ * @param M_r The number of rows of the matrix.
+ * @param M_c The number of columns of the matrix.
+ * @param max_r The maximum number of rows to consider.
+ * @param swap If set to 1, the algorithm will perform swaps.
+ * @param backsub If set to 1, the algorithm will perform back substitution.
+ * @return -1 if the system of linear equations is inconsistent.
+ *         0 if we were able to solve the system of linear equations and swap was not set.
+ *         The row number of the last swap if we were able to solve the system of linear equations and swap was set.
+*/
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
   BENCH_START("pmod_mat_syst_ct");
   int ret = M_r * swap;
 
+  BENCH_START("pmod_mat_syst_ct_forward_elim");
+  // Step 1: Forward elimination
   for (int r = 0; r < max_r; r++)
   {
+    // Execute swap (?)
+    // I'm really not sure what this is swapping and why
+    // Swapping is only used by the 'solve_opt' function.
     if (swap)
     {
       GFq_t z = 0;
 
       // compute condition for swap
+      // After this loop, z will be 1 if there is a non-zero element in the current column (on or after the diagonal)
       for (int r2 = r; r2 < M_r; r2++)
         z |= pmod_mat_entry(M, M_r, M_c, r2, r);
 
+      // We need to swap if the pivot element is zero
       int do_swap = GFq_eq0(z);
 
       // conditional swap
       {
+        // If a swap is needed, set 'ret' to the row number
         ret = r * do_swap + ret * (1 - do_swap);
 
 #if DEBUG
@@ -140,6 +162,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
         }
 #endif
 
+        // Seems to swap column r with the last column, but why?
         for (int i = 0; i < M_r; i++)
           GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
                     &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
@@ -152,14 +175,23 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
+    // Step 2: Elimination
+    // In this loop, we eliminate the elements below the diagonal
+    // We do this by multiplying the pivot row by the inverse of the pivot element (the element on the diagonal)
+    // and then subtracting the result from the other rows
+
+    // Loop from the next row to the last row
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      // Get the element on the diagonal
       uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
 
+      // If the element on the diagonal is zero, add the entire row r2 to the current row r
+      // This is done to make the element on the diagonal non-zero
       for (int c = r; c < M_c; c++)
       {
         uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
-
+        
         uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
         pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * GFq_eq0(Mrr)) % MEDS_p);
@@ -168,25 +200,35 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
 
     uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
 
+    // If, after everything, the element on the diagonal is (still) zero, return that we failed
+    // to convert this row in the matrix to RREF
     if (val == 0)
       return -1;
 
+    // Compute the multiplicative inverse of the element on the diagonal
     val = GF_inv(val);
 
-    // normalize
+    // normalize;
+    // multiply every element in the row with the multiplicative inverse of the element on the diagonal
+    // The goal of this is to make sure the element on the diagonal is exactly 1.
     for (int c = r; c < M_c; c++)
     {
       uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
       pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
     }
 
-    // eliminate
+    // eliminate;
+    // For all rows below the current one, make sure the element in the current column is zero
+    // This is done by subtracting the current row from the other rows with the appropriate difference factor
+    // The goal is to prepare the next rows for the next iteration (making sure they have a zero in the columns left of the diagonal)
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      // Calculate the factor
       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
       for (int c = r; c < M_c; c++)
       {
+        // Calculate and set the new value
         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
@@ -198,16 +240,31 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
   }
+  BENCH_END("pmod_mat_syst_ct_forward_elim");
 
+  // At this point, the entire matrix is in RREF.
+
+  // If we don't need to perform back substitution, we're done
   if (!backsub)
     return ret;
 
-  // back substitution
+  BENCH_START("pmod_mat_syst_ct_backsub");
+
+  // back substitution;
+  // In this loop, we make sure the elements above the diagonal are zero
+  // We do this by subtracting the current row from the other rows with the appropriate difference factor
+  // The goal is to prepare the previous rows for the next iteration (making sure they have a zero in the columns right of the diagonal)
+  
+  // Loop through the rows in reverse order (so we start with the last row which contains only one non-zero element)
   for (int r = max_r - 1; r >= 0; r--)
+    // For every row above the current one, make sure the element in the current column is zero
     for (int r2 = 0; r2 < r; r2++)
     {
+      // Compute the factor
       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
+      // Set the value in the current column
+      // >> This section seems to be unnecessary? Removing it still produces the same results
       uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
       uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
 
@@ -216,7 +273,10 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       val = (MEDS_p + tmp1 - val) % MEDS_p;
 
       pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
+      // <<
 
+      // Calculate and set the new values in columns right of the diagonal block.
+      // The values in the diagonal block are already 0 so we don't need to do anything with them.
       for (int c = max_r; c < M_c; c++)
       {
         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
@@ -230,6 +290,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
+  BENCH_END("pmod_mat_syst_ct_backsub");
   BENCH_END("pmod_mat_syst_ct");
   return ret;
 }
