@@ -258,12 +258,14 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
   // Systemize core sub-system while pivoting all but the last row.
+  BENCH_START("solve_opt_syst_ct_partial");
   int piv;
   if ((piv = pmod_mat_syst_ct_partial(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1)) != 0)
   {
     LOG("no sol %i", __LINE__);
     return -1;
   }
+  BENCH_END("solve_opt_syst_ct_partial");
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
@@ -311,7 +313,9 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   int N1_r;
 
   // Sytemize 2nd sub-system.
+  BENCH_START("solve_opt_mat_rref");
   N1_r = pmod_mat_rref(N1, MEDS_m - 1, MEDS_m);
+  BENCH_END("solve_opt_mat_rref");
 
   if (N1_r == -1)
   {
