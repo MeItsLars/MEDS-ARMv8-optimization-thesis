@@ -73,7 +73,39 @@ void print_binary(GFq_t val)
   printf("\n");
 }
 
+GFq_t modulo_reduce(uint32_t r)
+{
+  r = r - MEDS_p * (r >> GFq_bits);
+  r = r - MEDS_p * (r >> GFq_bits);
+  r = r - MEDS_p * (r >> GFq_bits);
+  int32_t diff = r - MEDS_p;
+  int32_t mask = (diff >> 31) & 0x1;
+  return mask * r + (1 - mask) * diff;
+}
+
 void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  BENCH_START("pmod_mat_mul");
+  GFq_t tmp[C_r * C_c];
+
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+    {
+      uint32_t val = 0;
+
+      for (int i = 0; i < A_c; i++)
+        val = (val + (uint32_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint32_t)pmod_mat_entry(B, B_r, B_c, i, c));
+
+      tmp[r * C_c + c] = modulo_reduce(val);
+    }
+
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+      pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
+  BENCH_END("pmod_mat_mul");
+}
+
+void pmod_mat_mul2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];

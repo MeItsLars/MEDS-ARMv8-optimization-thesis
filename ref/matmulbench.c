@@ -113,13 +113,17 @@ uint32_t modulo_mul(GFq_t a, GFq_t b)
   return res;
 }
 
-uint32_t modulo_reduce(uint32_t a)
+uint32_t mod_reduce(uint32_t r)
 {
-  uint32_t r = a;
+  // Reduce to a value between 0 and 2^GFq_bits - 1 (constant time)
   r = r - MEDS_p * (r >> GFq_bits);
   r = r - MEDS_p * (r >> GFq_bits);
   r = r - MEDS_p * (r >> GFq_bits);
-  return r;
+  // Reduce to a value between 0 and MEDS_p - 1:
+  // If r >= MEDS_p, return r - MEDS_p, else return r (constant time)
+  int32_t diff = r - MEDS_p;
+  int32_t mask = (diff >> 31) & 0x1;
+  return mask * r + (1 - mask) * diff;
 }
 
 void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
@@ -140,7 +144,7 @@ void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
-      pmod_mat_set_entry(C, C_r, C_c, r, c, modulo_reduce(tmp[r * C_c + c]));
+      pmod_mat_set_entry(C, C_r, C_c, r, c, mod_reduce(tmp[r * C_c + c]));
 }
 
 int main(int argc, char *argv[])
