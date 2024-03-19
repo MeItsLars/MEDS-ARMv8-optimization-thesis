@@ -126,6 +126,7 @@ uint32_t mod_reduce(uint32_t r)
   return mask * r + (1 - mask) * diff;
 }
 
+__attribute__((optimize("no-tree-vectorize")))
 void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   uint32_t tmp[C_r * C_c];
@@ -136,9 +137,7 @@ void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
     {
       uint32_t val = 0;
       for (int i = 0; i < A_c; i++)
-      {
-        val += pmod_mat_entry(A, A_r, A_c, r, i) * (uint32_t)pmod_mat_entry(B, B_r, B_c, i, c);
-      }
+        val += (uint32_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint32_t)pmod_mat_entry(B, B_r, B_c, i, c);
       tmp[r * C_c + c] = val;
     }
 

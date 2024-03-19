@@ -83,7 +83,7 @@ GFq_t modulo_reduce(uint32_t r)
   return mask * r + (1 - mask) * diff;
 }
 
-void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];
@@ -105,7 +105,7 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
   BENCH_END("pmod_mat_mul");
 }
 
-void pmod_mat_mul2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];
@@ -329,6 +329,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
 
 GFq_t GF_inv(GFq_t val)
 {
+  BENCH_START("GF_inv");
   //  if (MEDS_p == 8191)
   //  {
   //    // Use an optimal addition chain...
@@ -391,6 +392,7 @@ GFq_t GF_inv(GFq_t val)
       exponent >>= 1;
     }
 
+    BENCH_END("GF_inv");
     return t;
   }
 }
