@@ -14,6 +14,7 @@
         "cyclecounter.h": "c",
         "perf_event.h": "c",
         "unistd.h": "c",
-        "fips202.h": "c"
+        "fips202.h": "c",
+        "arm_neon.h": "c"
     }
 }

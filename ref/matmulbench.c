@@ -7,6 +7,8 @@
 #include <sys/random.h>
 #include <sys/time.h>
 
+#include <arm_neon.h>
+
 #include "util.h"
 #include "fips202.h"
 #include "params.h"
@@ -22,6 +24,7 @@ int benchmark_enabled = 0;
 
 #define MATMUL_ROUNDS 1000
 
+// Default matrix multiplication implementation
 void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   GFq_t tmp[C_r * C_c];
@@ -79,6 +82,7 @@ GFq_t montgomery_from(uint32_t a)
   return (a * MG_Rinv) % MEDS_p;
 }
 
+// Matrix multiplication with Montgomery reduction
 void pmod_mat_mul_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   uint32_t tmp[C_r * C_c];
@@ -129,6 +133,7 @@ uint32_t mod_reduce(uint32_t r)
   return mask * r + (1 - mask) * diff;
 }
 
+// Matrix multiplication with a smart modulo reduction
 __attribute__((optimize("no-tree-vectorize")))
 void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
@@ -144,6 +149,32 @@ void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
       tmp[r * C_c + c] = val;
     }
 
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+      pmod_mat_set_entry(C, C_r, C_c, r, c, mod_reduce(tmp[r * C_c + c]));
+}
+
+// Matrix multiplication with a smart modulo reduction and NEON intrinsics in the first multiply loop
+void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  uint32_t tmp[C_r * C_c];
+
+  // Multiply
+  for (int c = 0; c < C_c; c ++)
+    for (int r = 0; r < C_r; r ++)
+    {
+      uint32x4_t val = vdupq_n_u32(0);
+      for (int i = 0; i < A_c; i += 4)
+      {
+        uint16x4_t a = vld1_u16((uint16_t *)&pmod_mat_entry(A, A_r, A_c, r, i));
+        uint16x4_t b = vld1_u16((uint16_t *)&pmod_mat_entry(B, B_r, B_c, i, c));
+        val = vmlal_u16(val, a, b);
+      }
+      uint32_t res = vgetq_lane_u32(val, 0) + vgetq_lane_u32(val, 1) + vgetq_lane_u32(val, 2) + vgetq_lane_u32(val, 3);
+      tmp[r * C_c + c] = res;
+    }
+
+  // Reduce and store
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
       pmod_mat_set_entry(C, C_r, C_c, r, c, mod_reduce(tmp[r * C_c + c]));
@@ -190,7 +221,7 @@ int main(int argc, char *argv[])
     pmod_mat_mul_1(C1, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
     old_matmul_cc += get_cyclecounter();
     long long new_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_3(C2, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
+    pmod_mat_mul_4(C2, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
