@@ -2,15 +2,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/random.h>
 #include <sys/time.h>
 
+#include "util.h"
 #include "fips202.h"
 #include "params.h"
 #include "api.h"
 #include "meds.h"
 #include "matrixmod.h"
+#include "cyclecounter.h"
 #include "benchresult.h"
 
 benchresult benchresults[1000];
@@ -148,6 +151,8 @@ void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
 int main(int argc, char *argv[])
 {
+  enable_cyclecounter();
+
   uint8_t seed1[MEDS_pub_seed_bytes];
 
   for (int i = 0; i < MEDS_pub_seed_bytes; i++)
@@ -181,12 +186,12 @@ int main(int argc, char *argv[])
         pmod_mat_set_entry(B, MEDS_m * MEDS_n, MEDS_k, r, c, rnd_GF(&shake));
       }
 
-    long long old_matmul_cc = -cpucycles();
+    long long old_matmul_cc = -get_cyclecounter();
     pmod_mat_mul_1(C1, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
-    old_matmul_cc += cpucycles();
-    long long new_matmul_cc = -cpucycles();
+    old_matmul_cc += get_cyclecounter();
+    long long new_matmul_cc = -get_cyclecounter();
     pmod_mat_mul_3(C2, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
-    new_matmul_cc += cpucycles();
+    new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
     new_matmul_cycles[round] = new_matmul_cc;
@@ -201,6 +206,8 @@ int main(int argc, char *argv[])
   printf("New median: %f\n", new_matmul_median_cc);
   printf("Percentage: %f%%\n", percentage);
   printf("Improvement: %f%%\n", improvement);
+
+  disable_cyclecounter();
 
   // Compare matrices
   int equalities = 0;

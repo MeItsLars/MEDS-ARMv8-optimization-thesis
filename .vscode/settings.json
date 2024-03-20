@@ -9,6 +9,11 @@
         "typeinfo": "c",
         "stdio.h": "c",
         "random.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "stdint.h": "c",
+        "cyclecounter.h": "c",
+        "perf_event.h": "c",
+        "unistd.h": "c",
+        "fips202.h": "c"
     }
 }

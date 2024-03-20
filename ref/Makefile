@@ -9,7 +9,7 @@ ifdef DEBUG
 CFLAGS := -g -Wall -D$(PARAM) -DDEBUG
 OBJDIR := debug/$(PARAM)
 else ifdef BENCHMARK
-CFLAGS := -O3 -Wall -D$(PARAM) -DBENCHMARK
+CFLAGS := -O3 -Wall -D$(PARAM) -DBENCHMARK -Wno-unused-function
 OBJDIR := build/$(PARAM)
 else
 #CFLAGS := -O3 -march=native -Wall -D$(PARAM)
@@ -31,7 +31,7 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 
 default: $(EXES)
 
-OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o
+OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o cyclecounter.o
 HEADERS = $(wildcard *.h) $(OBJDIR)/params.h $(OBJDIR)/api.h
 
 BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}

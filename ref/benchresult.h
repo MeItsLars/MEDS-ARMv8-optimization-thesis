@@ -1,13 +1,33 @@
 #ifndef BENCHRESULT_H
 #define BENCHRESULT_H
 
-static long long cpucycles(void)
-{
-    unsigned long long result;
-    asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
-                 : "=a"(result)::"%rdx");
-    return result;
-}
+#include <stdlib.h>
+#include <stdint.h>
+#include "cyclecounter.h"
+
+// Implementation for Intel CPUs
+// static long long cpucycles(void)
+// {
+//     unsigned long long result;
+//     asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
+//                  : "=a"(result)::"%rdx");
+//     return result;
+// }
+
+// Implementation for ARM CPUs
+// static inline unsigned long long cpufreq(void)
+// {
+//     uint64_t result;
+//     asm volatile("mrs %0, cntfrq_el0" : "=r"(result));
+//     return result;
+// }
+
+// static inline unsigned long long cpucycles(void)
+// {
+//     uint64_t result;
+//     asm volatile("mrs %0, PMCCNTR_EL0" : "=r"(result));
+//     return result;
+// }
 
 typedef struct
 {
@@ -33,24 +53,23 @@ static void complete_benchmark()
     qsort(benchresults, number_of_benchresults, sizeof(benchresult), compare_benchresults);
 }
 
-
 static int compare(const void *a, const void *b)
 {
-  return (*(long long *)a - *(long long *)b);
+    return (*(long long *)a - *(long long *)b);
 }
 
 static float median(long long arr[], int n)
 {
-  qsort(arr, n, sizeof(long long), compare);
+    qsort(arr, n, sizeof(long long), compare);
 
-  if (n % 2 != 0)
-  {
-    return arr[n / 2];
-  }
-  else
-  {
-    return (arr[n / 2 - 1] + arr[n / 2]) / 2.0;
-  }
+    if (n % 2 != 0)
+    {
+        return arr[n / 2];
+    }
+    else
+    {
+        return (arr[n / 2 - 1] + arr[n / 2]) / 2.0;
+    }
 }
 
 #if BENCHMARK
@@ -81,7 +100,7 @@ static float median(long long arr[], int n)
             if (strcmp(benchresults[i].name, bench_name) == 0)                      \
             {                                                                       \
                 found = 1;                                                          \
-                benchresults[i].start_cycle_count = cpucycles();                    \
+                benchresults[i].start_cycle_count = get_cyclecounter();                    \
                 break;                                                              \
             }                                                                       \
         }                                                                           \
@@ -89,7 +108,7 @@ static float median(long long arr[], int n)
         {                                                                           \
             strcpy(benchresults[number_of_benchresults].name, bench_name);          \
             benchresults[number_of_benchresults].total_cycle_count = 0;             \
-            benchresults[number_of_benchresults].start_cycle_count = cpucycles();   \
+            benchresults[number_of_benchresults].start_cycle_count = get_cyclecounter();   \
             number_of_benchresults++;                                               \
             if (number_of_benchresults > 999)                                       \
             {                                                                       \
@@ -104,7 +123,7 @@ static float median(long long arr[], int n)
     {                                                                                              \
         if (benchmark_enabled == 0)                                                                \
             break;                                                                                 \
-        long long end_cycle_count = cpucycles();                                                   \
+        long long end_cycle_count = get_cyclecounter();                                                   \
         for (int i = 0; i < number_of_benchresults; i++)                                           \
         {                                                                                          \
             if (strcmp(benchresults[i].name, bench_name) == 0)                                     \

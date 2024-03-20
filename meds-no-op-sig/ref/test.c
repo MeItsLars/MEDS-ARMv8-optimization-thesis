@@ -48,18 +48,18 @@ int main(int argc, char *argv[])
     uint8_t sk[CRYPTO_SECRETKEYBYTES] = {0};
     uint8_t pk[CRYPTO_PUBLICKEYBYTES] = {0};
 
-    time = -cpucycles();
+    time = -get_cyclecounter();
     crypto_sign_keypair(pk, sk);
-    time += cpucycles();
+    time += get_cyclecounter();
 
     if (time < keygen_time) keygen_time = time;
 
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
 
-    time = -cpucycles();
+    time = -get_cyclecounter();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
-    time += cpucycles();
+    time += get_cyclecounter();
 
     if (time < sign_time) sign_time = time;
 
@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
     unsigned long long msg_out_len = sizeof(msg_out);
 
 
-    time = -cpucycles();
+    time = -get_cyclecounter();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
-    time += cpucycles();
+    time += get_cyclecounter();
 
     if (time < verify_time) verify_time = time;
 

@@ -56,20 +56,20 @@ int main(int argc, char *argv[])
 
   for (int round = 0; round < rounds; round++)
   {
-    keygen_time = -cpucycles();
+    keygen_time = -get_cyclecounter();
     crypto_sign_keypair(pk, sk);
-    keygen_time += cpucycles();
+    keygen_time += get_cyclecounter();
 
-    sign_time = -cpucycles();
+    sign_time = -get_cyclecounter();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
-    sign_time += cpucycles();
+    sign_time += get_cyclecounter();
 
     unsigned char msg_out[17];
     unsigned long long msg_out_len = sizeof(msg_out);
 
-    verify_time = -cpucycles();
+    verify_time = -get_cyclecounter();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
-    verify_time += cpucycles();
+    verify_time += get_cyclecounter();
 
     if (ret != 0)
     {

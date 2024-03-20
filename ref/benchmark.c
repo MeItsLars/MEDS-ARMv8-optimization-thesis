@@ -17,7 +17,7 @@ int benchmark_enabled = 0;
 
 double osfreq(void);
 
-long long cpucycles(void);
+unsigned long long cpucycles(void);
 
 int main(int argc, char *argv[])
 {
@@ -79,17 +79,17 @@ int main(int argc, char *argv[])
     {
     case 1:
     {
-      long long keygen_time = -cpucycles();
+      long long keygen_time = -get_cyclecounter();
       crypto_sign_keypair(pk, sk);
-      keygen_time += cpucycles();
+      keygen_time += get_cyclecounter();
       results[round] = keygen_time;
       break;
     }
     case 2:
     {
-      long long sign_time = -cpucycles();
+      long long sign_time = -get_cyclecounter();
       crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
-      sign_time += cpucycles();
+      sign_time += get_cyclecounter();
       results[round] = sign_time;
       break;
     }
@@ -98,10 +98,10 @@ int main(int argc, char *argv[])
       unsigned char msg_out[17];
       unsigned long long msg_out_len = sizeof(msg_out);
 
-      long long verify_time = -cpucycles();
+      long long verify_time = -get_cyclecounter();
       int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
       
-      verify_time += cpucycles();
+      verify_time += get_cyclecounter();
       results[round] = verify_time;
 
       if (ret != 0)
