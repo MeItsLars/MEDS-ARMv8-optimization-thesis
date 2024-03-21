@@ -281,6 +281,8 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
       // Store into the result matrix
       int result_index = r * C_c + c;
+      // TODO: Handle last few elements separately if C_c * C_r is not a multiple of 4
+      assert(result_index < C_c * C_r);
       vst1_u16(&C[result_index], C_red_u16);
     }
 }
