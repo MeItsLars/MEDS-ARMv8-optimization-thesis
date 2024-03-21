@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <arm_neon.h>
 
 #include "log.h"
 #include "benchresult.h"
@@ -84,6 +85,109 @@ GFq_t modulo_reduce(uint32_t r)
 }
 
 void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  BENCH_START("pmod_mat_mul");
+  // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
+  int A_r_pad = (A_r + 3) & ~3;
+  int A_c_pad = (A_c + 3) & ~3;
+  uint32_t A_pad[A_r_pad * A_c_pad];
+
+  int B_r_pad = (B_r + 3) & ~3;
+  int B_c_pad = (B_c + 3) & ~3;
+  uint32_t B_pad[B_r_pad * B_c_pad];
+
+  int C_r_pad = A_r_pad;
+  int C_c_pad = B_c_pad;
+
+  for (int r = 0; r < A_r; r++)
+    for (int c = 0; c < A_c; c++)
+      A_pad[r * A_c_pad + c] = pmod_mat_entry(A, A_r, A_c, r, c);
+
+  for (int r = A_r; r < A_r_pad; r++)
+    for (int c = 0; c < A_c_pad; c++)
+      A_pad[r * A_c_pad + c] = 0;
+
+  for (int r = 0; r < B_r; r++)
+    for (int c = 0; c < B_c; c++)
+      B_pad[r * B_c_pad + c] = pmod_mat_entry(B, B_r, B_c, r, c);
+
+  for (int r = B_r; r < B_r_pad; r++)
+    for (int c = 0; c < B_c_pad; c++)
+      B_pad[r * B_c_pad + c] = 0;
+
+  // Step 2: Multiply
+  uint32_t tmp[C_r_pad * C_c_pad];
+
+  int Ai, Bi, Ci;
+  uint32x4_t A0, A1, A2, A3;
+  uint32x4_t B0, B1, B2, B3;
+  uint32x4_t C0, C1, C2, C3;
+
+  for (int c = 0; c < C_c_pad; c += 4)
+    for (int r = 0; r < C_r_pad; r += 4)
+    {
+      // In every inner loop, we compute a 4x4 block of the result matrix
+      // This 4x4 block is represented by the vectors (of size 4) C0, C1, C2, C3
+
+      C0 = vmovq_n_u32(0);
+      C1 = vmovq_n_u32(0);
+      C2 = vmovq_n_u32(0);
+      C3 = vmovq_n_u32(0);
+
+      // In every iteration of the following loop, we compute a contribution to the 4x4 result block
+      // Specifically, we compute the product of a 4x4 block of A and a 4x4 block of B and add it to the result block
+      for (int k = 0; k < A_c_pad; k += 4)
+      {
+        Ai = r * A_c_pad + k;
+        Bi = k * B_c_pad + c;
+
+        A0 = vld1q_u32(&A_pad[Ai]);
+        A1 = vld1q_u32(&A_pad[Ai + A_c_pad]);
+        A2 = vld1q_u32(&A_pad[Ai + 2 * A_c_pad]);
+        A3 = vld1q_u32(&A_pad[Ai + 3 * A_c_pad]);
+
+        B0 = vld1q_u32(&B_pad[Bi]);
+        B1 = vld1q_u32(&B_pad[Bi + B_c_pad]);
+        B2 = vld1q_u32(&B_pad[Bi + 2 * B_c_pad]);
+        B3 = vld1q_u32(&B_pad[Bi + 3 * B_c_pad]);
+
+        C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
+        C0 = vmlaq_laneq_u32(C0, B1, A0, 1);
+        C0 = vmlaq_laneq_u32(C0, B2, A0, 2);
+        C0 = vmlaq_laneq_u32(C0, B3, A0, 3);
+
+        C1 = vmlaq_laneq_u32(C1, B0, A1, 0);
+        C1 = vmlaq_laneq_u32(C1, B1, A1, 1);
+        C1 = vmlaq_laneq_u32(C1, B2, A1, 2);
+        C1 = vmlaq_laneq_u32(C1, B3, A1, 3);
+
+        C2 = vmlaq_laneq_u32(C2, B0, A2, 0);
+        C2 = vmlaq_laneq_u32(C2, B1, A2, 1);
+        C2 = vmlaq_laneq_u32(C2, B2, A2, 2);
+        C2 = vmlaq_laneq_u32(C2, B3, A2, 3);
+
+        C3 = vmlaq_laneq_u32(C3, B0, A3, 0);
+        C3 = vmlaq_laneq_u32(C3, B1, A3, 1);
+        C3 = vmlaq_laneq_u32(C3, B2, A3, 2);
+        C3 = vmlaq_laneq_u32(C3, B3, A3, 3);
+      }
+
+      // Store the result block
+      Ci = C_c_pad * r + c;
+      vst1q_u32(&tmp[Ci], C0);
+      vst1q_u32(&tmp[Ci + C_c_pad], C1);
+      vst1q_u32(&tmp[Ci + 2 * C_c_pad], C2);
+      vst1q_u32(&tmp[Ci + 3 * C_c_pad], C3);
+    }
+
+  // Reduce and store (not with NEON)
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+      pmod_mat_set_entry(C, C_r, C_c, r, c, modulo_reduce(tmp[r * C_c_pad + c]));
+  BENCH_END("pmod_mat_mul");
+}
+
+void pmod_mat_mul3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];

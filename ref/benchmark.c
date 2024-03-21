@@ -63,6 +63,8 @@ int main(int argc, char *argv[])
   printf("pk:   %i bytes\n", MEDS_PK_BYTES);
   printf("sig:  %i bytes\n", MEDS_SIG_BYTES);
 
+  enable_cyclecounter();
+
   crypto_sign_keypair(pk, sk);
   crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
 
@@ -134,5 +136,6 @@ int main(int argc, char *argv[])
     }
   }
 
+  disable_cyclecounter();
   return 0;
 }
