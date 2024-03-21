@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include <sys/random.h>
 #include <sys/time.h>
@@ -220,6 +221,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
         B2 = vld1q_u32(&B_pad[Bi + 2 * B_c_pad]);
         B3 = vld1q_u32(&B_pad[Bi + 3 * B_c_pad]);
 
+        // TODO: Consider using vmlal_n_u16. Better throughput.
         C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
         C0 = vmlaq_laneq_u32(C0, B1, A0, 1);
         C0 = vmlaq_laneq_u32(C0, B2, A0, 2);
@@ -287,6 +289,11 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
     }
 }
 
+int min_cycle_bound(int m, int o, int n)
+{
+  return 0.25 * m * o * (n + 13);
+}
+
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
@@ -338,10 +345,14 @@ int main(int argc, char *argv[])
   // Print results
   double old_matmul_median_cc = median(old_matmul_cycles, MATMUL_ROUNDS);
   double new_matmul_median_cc = median(new_matmul_cycles, MATMUL_ROUNDS);
+  int cycle_bound = min_cycle_bound(MEDS_k, MEDS_m * MEDS_n, MEDS_k);
+  float improvement_possible = 100 - (float)cycle_bound / new_matmul_median_cc * 100;
   float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
   float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
   double percentage = new_matmul_median_cc / old_matmul_median_cc * 100;
   double improvement = (new_matmul_median_cc - old_matmul_median_cc) / old_matmul_median_cc * 100;
+  printf("Minimum cycle bound: %d\n", cycle_bound);
+  printf("Improvement possible: %f%% (x%f%%)\n", improvement_possible, (100 + improvement_possible) / 100);
   printf("Old median: %f\n", old_matmul_median_cc);
   printf("New median: %f\n", new_matmul_median_cc);
   printf("Old std: %f\n", old_matmul_std);
