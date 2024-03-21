@@ -134,8 +134,7 @@ uint32_t mod_reduce(uint32_t r)
 }
 
 // Matrix multiplication with a smart modulo reduction
-__attribute__((optimize("no-tree-vectorize")))
-void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+__attribute__((optimize("no-tree-vectorize"))) void pmod_mat_mul_3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   uint32_t tmp[C_r * C_c];
 
@@ -250,33 +249,21 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
       vst1q_u32(&tmp[Ci + 3 * C_c_pad], C3);
     }
 
-    // // Reduce to a value between 0 and 2^GFq_bits - 1 (constant time)
-    // r = r - MEDS_p * (r >> GFq_bits);
-    // r = r - MEDS_p * (r >> GFq_bits);
-    // r = r - MEDS_p * (r >> GFq_bits);
-    // // Reduce to a value between 0 and MEDS_p - 1:
-    // // If r >= MEDS_p, return r - MEDS_p, else return r (constant time)
-    // int32_t diff = r - MEDS_p;
-    // int32_t mask = (diff >> 31) & 0x1;
-    // return mask * r + (1 - mask) * diff;
-
   // Reduce the result matrix using NEON intrinsics
   uint32x4_t C_red;
+  uint16x4_t C_red_u16;
   uint32x4_t C_tmp;
   uint32x4_t C_diff;
   uint32x4_t C_mask;
   uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
   uint32x4_t C_one = vdupq_n_u32(1);
-  for (int c = 0; c < C_c_pad; c += 4)
-    for (int r = 0; r < C_r_pad; r ++)
+  for (int r = 0; r < C_r; r++)
+    for (int c = 0; c < C_c; c += 4)
     {
       // Load 4 values from the result matrix
       C_red = vld1q_u32(&tmp[r * C_c_pad + c]);
 
-      // Apply three reductions
-      C_tmp = vshrq_n_u32(C_red, GFq_bits);
-      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
-      C_red = vsubq_u32(C_red, C_tmp);
+      // Apply two reductions
       C_tmp = vshrq_n_u32(C_red, GFq_bits);
       C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
       C_red = vsubq_u32(C_red, C_tmp);
@@ -284,22 +271,17 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
       C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
       C_red = vsubq_u32(C_red, C_tmp);
 
-      // // Reduce to a value between 0 and MEDS_p - 1:
+      // Reduce to a value between 0 and MEDS_p - 1:
       C_diff = vsubq_u32(C_red, C_MEDS_p);
       C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
       C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
 
-      // Store the result back
-      vst1q_u32(&tmp[r * C_c_pad + c], C_red);
-    }
+      // Convert to smaller type
+      C_red_u16 = vqmovn_u32(C_red);
 
-  // Store result
-  for (int c = 0; c < C_c; c++)
-    for (int r = 0; r < C_r; r++)
-    {
-      uint32_t val = tmp[r * C_c_pad + c];
-      // if (val > MEDS_p) val -= MEDS_p;
-      pmod_mat_set_entry(C, C_r, C_c, r, c, val);
+      // Store into the result matrix
+      int result_index = r * C_c + c;
+      vst1_u16(&C[result_index], C_red_u16);
     }
 }
 
@@ -354,10 +336,14 @@ int main(int argc, char *argv[])
   // Print results
   double old_matmul_median_cc = median(old_matmul_cycles, MATMUL_ROUNDS);
   double new_matmul_median_cc = median(new_matmul_cycles, MATMUL_ROUNDS);
+  float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
+  float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
   double percentage = new_matmul_median_cc / old_matmul_median_cc * 100;
   double improvement = (new_matmul_median_cc - old_matmul_median_cc) / old_matmul_median_cc * 100;
   printf("Old median: %f\n", old_matmul_median_cc);
   printf("New median: %f\n", new_matmul_median_cc);
+  printf("Old std: %f\n", old_matmul_std);
+  printf("New std: %f\n", new_matmul_std);
   printf("Percentage: %f%%\n", percentage);
   printf("Improvement: %f%%\n", improvement);
 
@@ -375,7 +361,9 @@ int main(int argc, char *argv[])
   int expected_equalities = MEDS_k * MEDS_k;
 
   if (expected_equalities == equalities)
+  {
     printf("Matrices are EQUAL\n");
+  }
   else
   {
     printf("Equalities: %d / %d\n", equalities, expected_equalities);

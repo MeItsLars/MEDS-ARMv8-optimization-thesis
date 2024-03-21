@@ -72,6 +72,30 @@ static float median(long long arr[], int n)
     }
 }
 
+static float standard_deviation(long long arr[], int n)
+{
+    float mean = 0;
+    for (int i = 0; i < n; i++)
+    {
+        mean += arr[i];
+    }
+    mean /= n;
+
+    float variance = 0;
+    for (int i = 0; i < n; i++)
+    {
+        float diff = arr[i] - mean;
+        if (diff < 0)
+        {
+            diff = -diff;
+        }
+        variance += diff;
+    }
+    variance /= n;
+
+    return variance;
+}
+
 #if BENCHMARK
 
 #include <stdio.h>
