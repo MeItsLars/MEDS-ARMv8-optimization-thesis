@@ -1,0 +1,155 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage{url}
+\usepackage[utf8]{inputenc}
+\usepackage{graphics}
+\usepackage{graphicx}
+\setlength{\marginparwidth}{2cm}
+\usepackage{todonotes}
+\usepackage{natbib}
+\usepackage{enumitem}
+\usepackage{xurl}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+\usepackage[a4paper]{geometry}
+
+% Set the line spacing between paragraphs
+\setlength{\parskip}{1em}
+% Remove paragraph indentation
+\setlength{\parindent}{0pt}
+
+% URL LINE BREAKS
+\expandafter\def\expandafter\UrlBreaks\expandafter{\UrlBreaks% save the current one
+  \do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j%
+  \do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t%
+  \do\u\do\v\do\w\do\x\do\y\do\z\do\A\do\B\do\C\do\D%
+  \do\E\do\F\do\G\do\H\do\I\do\J\do\K\do\L\do\M\do\N%
+  \do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V\do\W\do\X%
+  \do\Y\do\Z\do\*\do\-\do\~\do\'\do\"\do\-}%
+
+\makeatletter %otherwise geometry resets everything
+\Gm@restore@org
+\makeatother
+
+\setlength{\itemsep}{0cm}
+\setlength{\voffset}{0cm}
+\setlength{\headheight}{0cm}
+\setlength{\topmargin}{0cm}
+
+\graphicspath{{imgs/}}
+
+\begin{document}
+\begin{titlepage}
+\begin{center}
+\textsc{\LARGE Master Thesis\\Computing Science}\\[1.5cm]
+\includegraphics[height=100pt]{logo}
+
+\vspace{0.4cm}
+\textsc{\Large Radboud University}\\[1cm]
+\hrule
+\vspace{0.4cm}
+\textbf{\huge Optimizing MEDS implementation for ARMv8}\\[0.4cm]
+\hrule
+\vspace{2cm}
+\begin{minipage}[t]{0.45\textwidth}
+\begin{flushleft} \large
+\textit{Author:}\\
+Lars Jeurissen\\
+s1022856\\
+\texttt{lars.jeurissen@ru.nl}
+\end{flushleft}
+\end{minipage}
+\begin{minipage}[t]{0.45\textwidth}
+\begin{flushright} \large
+\textit{First supervisor/assessor:}\\
+prof. dr. Peter Schwabe\\
+\texttt{p.schwabe@cs.ru.nl}\\[1.3cm]
+\textit{Second supervisor:}\\
+dr. Simona Samardjiska\\
+\texttt{simonas@cs.ru.nl}
+\end{flushright}
+\end{minipage}
+\vfill
+{\large \today}
+\end{center}
+\end{titlepage}
+
+\input{acknowledgements.tex}
+
+\input{abstract.tex}
+
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+\label{ch:introduction}
+As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm and Grover's algorithm to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
+
+The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
+
+In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
+
+Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds. \todo[inline]{Comparison with other similar schemes? Or this go in MEDS section?}
+
+In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of the MEDS implementation, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
+
+We investigate the following research questions in this thesis (see also Chapter \ref{ch:researchobjectives}):
+\begin{itemize}
+    \item What are the bottlenecks in the MEDS implementation?
+    \item How can we improve the general performance of the MEDS implementation?
+    \item How can we optimize the MEDS implementation for ARMv8?
+    \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
+\end{itemize}
+
+The underlying background of this thesis is explained in Chapter \ref{ch:background}.
+\todo[inline]{Add more about the structure of the thesis.}
+
+\chapter{Background}
+\label{ch:background}
+\todo[inline]{Explain Nist PQC? Or introduction?}
+\todo[inline]{Explain Signature Schemes}
+\todo[inline]{Explain MEDS}
+MEDS \cite{chou2023take}
+\todo[inline]{Explain ARMv8 and NEON}
+\todo[inline]{Explain profiling techniques}
+
+\chapter{Research Objectives}
+\label{ch:researchobjectives}
+\todo[inline]{Explain MEDS speedup goals}
+\todo[inline]{Explain SIMD speedup}
+\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
+
+\chapter{Methodology}
+\label{ch:methodology}
+\todo[inline]{Give MEDS profiling results on ARM}
+\todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
+\todo[inline]{Check; should I include the performance results in this section or in the results section? What about intermediate results?}
+
+\chapter{Discussion}
+\label{ch:discussion}
+\todo[inline]{Discuss the results.}
+
+\chapter{Future work}
+\label{ch:futurework}
+\todo[inline]{Discuss future work.}
+- Check if ALTEQ optimization can be applied to MEDS.
+- Create a non-constant time implementation for gaussian elimination (can be used in verification).
+- Create a parallel implementation for gaussian elimination.
+- Check if it is possible to parallelize over the entire challenge \& response loop.
+
+\chapter{Conclusion}
+\label{ch:conclusion}
+\todo[inline]{Conclude the thesis.}
+
+\bibliographystyle{plain}
+\bibliography{bibliofile}
+
+\input{appendix}
+
+\end{document}

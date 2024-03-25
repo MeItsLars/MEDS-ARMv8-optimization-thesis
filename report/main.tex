@@ -1,0 +1,187 @@
+% Hardness estimates of the code equivalence problem in the rank metric: (bevat een hoop info over ME)
+% https://link.springer.com/article/10.1007/s10623-023-01338-x
+
+% > NEON programmer guide for ARMv8-A:
+% https://developer.arm.com/documentation/102159/latest/
+% See page 38 for random neon number of registers lol
+% > NEON info:
+% https://developer.arm.com/documentation/102474/0100/Fundamentals-of-Armv8-Neon-technology/Registers--vectors--lanes-and-elements
+% > NEON paper door Peter:
+% https://link.springer.com/chapter/10.1007/978-3-642-33027-8_19
+% ARM matrix multiplication 4x4 NEON tutorials:
+% https://developer.arm.com/documentation/102467/0201/Example---matrix-multiplication
+% https://developer.arm.com/documentation/102159/0400/Matrix-multiplication
+% > ARM intrinsics pagina:
+% https://developer.arm.com/architectures/instruction-sets/intrinsics
+
+% > Cortex A72 optimization guide (instruction set):
+% https://developer.arm.com/documentation/uan0016/latest/
+% > Instruction Set Overview (a bit more explanation per instruction):
+% https://www.cs.princeton.edu/courses/archive/spr19/cos217/reading/ArmInstructionSetOverview.pdf
+% > ARMv8 Instruction Set Architecture explanation document:
+% https://developer.arm.com/-/media/Arm%20Developer%20Community/PDF/Learn%20the%20Architecture/Armv8-A%20Instruction%20Set%20Architecture.pdf
+
+% > Architecture details:
+% https://www.anandtech.com/show/9184/arm-reveals-cortex-a72-architecture-details
+
+% > Montgomery Multiplication with vector instructions (splits 1 multiplication into multiple parallel parts)
+% https://link.springer.com/chapter/10.1007/978-3-662-43414-7_24
+% > Tutorial on how to implement Montgomery Reduction:
+% https://www.nayuki.io/page/montgomery-reduction-algorithm
+% > General tutorial on Montgomery:
+% https://en.algorithmica.org/hpc/number-theory/montgomery/
+
+% > Matrix Multiplication elaborate tutorial with speedups:
+% https://en.algorithmica.org/hpc/algorithms/matmul/
+
+% > Compiler Explorer:
+% https://godbolt.org/
+
+% > Raspberry Pi 4: Ethernet guide:
+% https://alexanderhoughton.co.uk/blog/connecting-to-raspberry-pi-direct-to-pc-via-ethernet/
+
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[left=3cm,right=3cm,top=2cm,bottom=2cm]{geometry}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{mathrsfs}
+\usepackage{graphics}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\title{Master Thesis \\ Optimising MEDS C Implementation for ARMv8}
+\author{Lars Jeurissen, s1022856}
+\date{February, 2024}
+
+\begin{document}
+\maketitle
+
+\section{Profiler}
+\subsection{Initial Profiler Results}
+\subsubsection{\texttt{crypto\_sign\_keypair}}
+\begin{itemize}
+    \item \texttt{pmod\_mat\_mult} (35.79\%)\\
+    23.91\% is caused by calls from \texttt{pi}
+    \item \texttt{pmod\_mat\_syst\_ct} (34.05\%)\\
+    10.49\% is caused by calls from \texttt{pmod\_mat\_inv}
+    \item \texttt{rnd\_sys\_mat} (5.11\%)
+    \item \texttt{solve} (11.96\%)
+\end{itemize}
+
+\subsubsection{\texttt{crypto\_sign}}
+\begin{itemize}
+    \item \texttt{pi} (32.65\%)\\
+    32.61\% is caused by calls to \texttt{pmod\_mat\_mul}
+    \item \texttt{pmod\_mat\_syst\_ct} (32.50\%)
+    \item \texttt{meds\_fips202\_ref\_shake256\_absorb} (11.48\%)
+    \item \texttt{rnd\_inv\_mat} (10.68\%)
+    \item \texttt{bs\_write} (5.50\%)
+\end{itemize}
+
+\subsubsection{\texttt{crypto\_sign\_open}}
+\begin{itemize}
+    \item \texttt{pmod\_mat\_syst\_ct} (36.16\%)
+    \item \texttt{pi} (34.07\%)\\
+    34.03\% is caused by calls to \texttt{pmod\_mat\_mul}
+    \item \texttt{meds\_fips202\_ref\_shake256\_absorb} (11.98\%)
+    \item \texttt{rnd\_inv\_mat} (6.99\%)
+    \item \texttt{bs\_write} (5.28\%)
+\end{itemize}
+
+\section{MEDS optimizations}
+- Idea: publish less public information (in addition to a little bit of other information) and let the prover and verifier re-generate the public information
+- For MEDS: the optimised protocol causes a small increase in PK size but a great reduction in signature size
+- Before: send a mxm A and nxn B for every non-zero challenge response
+- After:
+* Additional public info: Full-rank linearly independent D0 and D1
+* Send a 2xk matrix for every non-zero challenge response that represent the two code word vectors
+
+\section{Preliminaries}
+- NEON instructions
+- ARM Cortex A72
+- MEDS
+- Matrix multiplication
+- Benchmarking/profiling
+
+\section{Contributions}
+- Made benchmarking code for various operations
+
+\section{Matrix Multiplication}
+\subsection{Matrix and Number Sizes}
+Determine number of operations for naive version.\\
+Given two matrices of size $m \times n$ and $n \times o$ respectively:
+\begin{enumerate}
+    \item Multiplications: $m \cdot o \cdot n$.\\
+    Intuition: For every one of $m \cdot o$ entries in the resulting matrix, perform $n$ multiplications between elements from A and B respectively.
+    \item Additions: $m \cdot o \cdot n$.\\
+    Intuition: Every multiplication result needs to be added to the corresponding entry in the resulting matrix.
+    \item Modular reductions: $m \cdot o$.\\
+    Intuition: The modulo operation needs to be applied to every element in the resulting matrix.
+\end{enumerate}
+
+In MEDS, the ring sizes used are $q = 4093$ and $q = 2039$. Field elements from these rings fit into 12 and 11 bits, respectively. Although we always apply a modular reduction to the elements in the resulting matrix, the (temporary) results of a multiplication can be up to 24 and 22 bits long. Before the modular reduction, we want to add the results of multiplications together. This further increases the maximum bit length. For all matrix multiplications $A \times B = C$ in MEDS, the number of columns in $A$ (and thus the maximum number of additions before a modular reduction) is at most max$(m, n, k)$. For the given parameter set, this value is 30. The result of 30 additions of 24 bit numbers will always fit in a 29 bit number.\\
+In conclusion, we can use 32-bit SIMD lanes for the multiplication results.
+
+\subsection{SIMD Values}
+Although our approach can be generalized to any SIMD instruction set and underlying architecture, this section describes the information for the ARM Cortex A72 and we will work with this information for the optimization.
+
+\begin{enumerate}
+    \item Input field elements fit into a 16 bit lane
+    \item Multiplication results fit into 32 bit lanes
+    \item Additions of the resulting multiplications also fit in a 32 bit register
+    \item A NEON register is 128 bits
+    \item For each NEON register, we can execute $128 / 32 = 4$ multiplications at the same time.
+    \item The Armv8-A AArch64 architecture provides 32 NEON registers (total of 4096 bits, or 256 lanes to store a field element).
+\end{enumerate}
+
+\subsection{Bound on the Cycle Count}
+
+\subsubsection{Arithmetic Bound}
+Initial bound:
+\begin{enumerate}
+    \item We can use the `ASIMD multiply accumulate, Q-form' (MLA) instruction to multiply two field elements and accumulate them onto an existing value. This means that, using this instruction, we achieve both the `Multiplications' and `Additions' operations at the same time.
+    \item We need $m \cdot o \cdot n$ multiplications and accumulations. Using NEON, we can do 4 at the same time. This results in a total of $\frac{1}{4} \cdot m \cdot o \cdot n$ MLA instructions.
+    \item We need to perform $m \cdot o$ reductions. Using our reduction technique, we need the following instructions for each reduction:
+    \begin{itemize}
+        \item \textbf{vshrq\_n\_u32 (3x)}
+        \item \textbf{vmulq\_n\_u32 (2x)}
+        \item \textbf{vsubq\_u32 (4x)}
+        \item \textbf{vandq\_u32 (1x)}
+        \item \textbf{vaddq\_u32 (1x)}
+        \item \textbf{vmulq\_u32 (2x)}
+    \end{itemize}
+    \item We can execute 4 reductions in parallel. This results in a total of $\frac{1}{4} \cdot m \cdot o \cdot 13$ operations.
+\end{enumerate}
+A very crude initial bond on only arithmetic that ignores throughput and latency thus becomes:
+\[
+    \frac{1}{4} \cdot m \cdot o \cdot n + \frac{1}{4} \cdot m \cdot o \cdot 13 = \frac{1}{4} \cdot m \cdot o \cdot (n + 13)
+\]
+
+\subsubsection{Load/Store Bound}
+To create a better bound, we need to add the time it takes to load and store the field elements:
+\begin{enumerate}
+    \item We need to load the elements from matrix A. Using NEON, we can load 4 at the same time. This results in $\frac{1}{4} \cdot m \cdot n$ `vld1\_u16' instructions.
+    \item We need to load the elements from matrix B. Using NEON, we can load 4 at the same time. This results in $n \cdot o$ `vld1\_u16' instructions.
+    \item We need to store the elements from matrix C. Using NEON, we can store 4 at the same time. This results in $m \cdot o$ `vst1\_u16' instructions.
+\end{enumerate}
+This results in a total load/store bound of:
+\[
+    \frac{1}{4} \cdot m \cdot n + \frac{1}{4} \cdot n \cdot o + \frac{1}{4} \cdot m \cdot o = \frac{1}{4} \cdot (m \cdot n + n \cdot o + m \cdot o)
+\]
+Combining this with the arithmetic bound gives:
+\[
+    \frac{1}{4} \cdot m \cdot o \cdot (n + 13) + \frac{1}{4} \cdot (m \cdot n + n \cdot o + m \cdot o)
+\]
+
+\section{Future Work}
+- Analyze functions to obtain minimum cycle count necessary
+- Optimize functions C code with NEON instructions
+- Analyze results?
+
+\end{document}
