@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <assert.h>
 
 #include <sys/random.h>
 #include <sys/time.h>
@@ -155,46 +156,18 @@ __attribute__((optimize("no-tree-vectorize"))) void pmod_mat_mul_3(pmod_mat_t *C
 }
 
 // Matrix multiplication with a smart modulo reduction and NEON intrinsics in the first multiply loop
-void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint32_t *A, int A_r, int A_c, uint32_t *B, int B_r, int B_c)
 {
-  // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
-  int A_r_pad = (A_r + 3) & ~3;
-  int A_c_pad = (A_c + 3) & ~3;
-  uint32_t A_pad[A_r_pad * A_c_pad];
-
-  int B_r_pad = (B_r + 3) & ~3;
-  int B_c_pad = (B_c + 3) & ~3;
-  uint32_t B_pad[B_r_pad * B_c_pad];
-
-  int C_r_pad = A_r_pad;
-  int C_c_pad = B_c_pad;
-
-  for (int r = 0; r < A_r; r++)
-    for (int c = 0; c < A_c; c++)
-      A_pad[r * A_c_pad + c] = pmod_mat_entry(A, A_r, A_c, r, c);
-
-  for (int r = A_r; r < A_r_pad; r++)
-    for (int c = 0; c < A_c_pad; c++)
-      A_pad[r * A_c_pad + c] = 0;
-
-  for (int r = 0; r < B_r; r++)
-    for (int c = 0; c < B_c; c++)
-      B_pad[r * B_c_pad + c] = pmod_mat_entry(B, B_r, B_c, r, c);
-
-  for (int r = B_r; r < B_r_pad; r++)
-    for (int c = 0; c < B_c_pad; c++)
-      B_pad[r * B_c_pad + c] = 0;
-
   // Step 2: Multiply
-  uint32_t tmp[C_r_pad * C_c_pad];
+  uint32_t tmp[C_r * C_c];
 
   int Ai, Bi, Ci;
   uint32x4_t A0, A1, A2, A3;
   uint32x4_t B0, B1, B2, B3;
   uint32x4_t C0, C1, C2, C3;
 
-  for (int c = 0; c < C_c_pad; c += 4)
-    for (int r = 0; r < C_r_pad; r += 4)
+  for (int c = 0; c < C_c; c += 4)
+    for (int r = 0; r < C_r; r += 4)
     {
       // In every inner loop, we compute a 4x4 block of the result matrix
       // This 4x4 block is represented by the vectors (of size 4) C0, C1, C2, C3
@@ -206,20 +179,20 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
       // In every iteration of the following loop, we compute a contribution to the 4x4 result block
       // Specifically, we compute the product of a 4x4 block of A and a 4x4 block of B and add it to the result block
-      for (int k = 0; k < A_c_pad; k += 4)
+      for (int k = 0; k < A_c; k += 4)
       {
-        Ai = r * A_c_pad + k;
-        Bi = k * B_c_pad + c;
+        Ai = r * A_c + k;
+        Bi = k * B_c + c;
 
-        A0 = vld1q_u32(&A_pad[Ai]);
-        A1 = vld1q_u32(&A_pad[Ai + A_c_pad]);
-        A2 = vld1q_u32(&A_pad[Ai + 2 * A_c_pad]);
-        A3 = vld1q_u32(&A_pad[Ai + 3 * A_c_pad]);
+        A0 = vld1q_u32(&A[Ai]);
+        A1 = vld1q_u32(&A[Ai + A_c]);
+        A2 = vld1q_u32(&A[Ai + 2 * A_c]);
+        A3 = vld1q_u32(&A[Ai + 3 * A_c]);
 
-        B0 = vld1q_u32(&B_pad[Bi]);
-        B1 = vld1q_u32(&B_pad[Bi + B_c_pad]);
-        B2 = vld1q_u32(&B_pad[Bi + 2 * B_c_pad]);
-        B3 = vld1q_u32(&B_pad[Bi + 3 * B_c_pad]);
+        B0 = vld1q_u32(&B[Bi]);
+        B1 = vld1q_u32(&B[Bi + B_c]);
+        B2 = vld1q_u32(&B[Bi + 2 * B_c]);
+        B3 = vld1q_u32(&B[Bi + 3 * B_c]);
 
         // TODO: Consider using vmlal_n_u16. Better throughput.
         C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
@@ -244,11 +217,11 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
       }
 
       // Store the result block
-      Ci = C_c_pad * r + c;
+      Ci = C_c * r + c;
       vst1q_u32(&tmp[Ci], C0);
-      vst1q_u32(&tmp[Ci + C_c_pad], C1);
-      vst1q_u32(&tmp[Ci + 2 * C_c_pad], C2);
-      vst1q_u32(&tmp[Ci + 3 * C_c_pad], C3);
+      vst1q_u32(&tmp[Ci + C_c], C1);
+      vst1q_u32(&tmp[Ci + 2 * C_c], C2);
+      vst1q_u32(&tmp[Ci + 3 * C_c], C3);
     }
 
   // Reduce the result matrix using NEON intrinsics
@@ -263,7 +236,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
     for (int c = 0; c < C_c; c += 4)
     {
       // Load 4 values from the result matrix
-      C_red = vld1q_u32(&tmp[r * C_c_pad + c]);
+      C_red = vld1q_u32(&tmp[r * C_c + c]);
 
       // Apply two reductions
       C_tmp = vshrq_n_u32(C_red, GFq_bits);
@@ -294,6 +267,13 @@ float min_cycle_bound(int m, int o, int n)
   return 0.25 * m * o * (n + 13);
 }
 
+#define A_ROWS 24
+#define A_COLS 24 * 24
+#define B_ROWS A_COLS
+#define B_COLS 24
+#define C_ROWS A_ROWS
+#define C_COLS B_COLS
+
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
@@ -305,10 +285,12 @@ int main(int argc, char *argv[])
     seed1[i] = i;
   }
 
-  pmod_mat_t A[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_t B[MEDS_m * MEDS_n * MEDS_k];
-  pmod_mat_t C1[MEDS_k * MEDS_k];
-  pmod_mat_t C2[MEDS_k * MEDS_k];
+  pmod_mat_t A[A_ROWS * A_COLS];
+  pmod_mat_t B[B_ROWS * B_COLS];
+  uint32_t A2[A_ROWS * A_COLS];
+  uint32_t B2[B_ROWS * B_COLS];
+  pmod_mat_t C1[C_ROWS * C_COLS];
+  pmod_mat_t C2[C_ROWS * C_COLS];
 
   keccak_state shake;
   shake256_absorb_once(&shake, seed1, MEDS_pub_seed_bytes);
@@ -319,23 +301,26 @@ int main(int argc, char *argv[])
   for (int round = 0; round < MATMUL_ROUNDS; round++)
   {
     // Fill matrices with random values
-    for (int r = 0; r < MEDS_k; r++)
-      for (int c = 0; c < MEDS_m * MEDS_n; c++)
+    for (int r = 0; r < A_ROWS; r++)
+      for (int c = 0; c < A_COLS; c++)
       {
-        pmod_mat_set_entry(A, MEDS_k, MEDS_m * MEDS_n, r, c, rnd_GF(&shake));
+        pmod_mat_set_entry(A, A_ROWS, A_COLS, r, c, rnd_GF(&shake));
+        A2[r * A_COLS + c] = pmod_mat_entry(A, A_ROWS, A_COLS, r, c);
       }
 
-    for (int r = 0; r < MEDS_m * MEDS_n; r++)
-      for (int c = 0; c < MEDS_k; c++)
+    for (int r = 0; r < B_ROWS; r++)
+      for (int c = 0; c < B_COLS; c++)
       {
-        pmod_mat_set_entry(B, MEDS_m * MEDS_n, MEDS_k, r, c, rnd_GF(&shake));
+        pmod_mat_set_entry(B, B_ROWS, B_COLS, r, c, rnd_GF(&shake));
+        B2[r * B_COLS + c] = pmod_mat_entry(B, B_ROWS, B_COLS, r, c);
       }
 
     long long old_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_1(C1, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
+    pmod_mat_mul_1(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     old_matmul_cc += get_cyclecounter();
+
     long long new_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_4(C2, MEDS_k, MEDS_k, A, MEDS_k, MEDS_m * MEDS_n, B, MEDS_m * MEDS_n, MEDS_k);
+    pmod_mat_mul_4(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
