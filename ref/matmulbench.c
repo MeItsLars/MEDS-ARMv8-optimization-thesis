@@ -228,6 +228,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A
         B3 = vld1_u16(&B[Bi + 3 * B_c]);
         
         // Was: vmlaq_laneq_u32. But this is faster!
+        // Reordering the following instructions did not seem to improve performance
         C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
         C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
         C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
@@ -318,7 +319,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A
 
 float min_cycle_bound(int m, int o, int n)
 {
-  return 0.25 * m * o * (n + 13);
+  return 0.25 * m * o * (n + 13) + 0.25 * (m * n + n * o + m * o);
 }
 
 #define A_ROWS 24
@@ -391,7 +392,7 @@ int main(int argc, char *argv[])
   double percentage = new_matmul_median_cc / old_matmul_median_cc * 100;
   double improvement = (new_matmul_median_cc - old_matmul_median_cc) / old_matmul_median_cc * 100;
   printf("Minimum cycle bound: %f\n", cycle_bound);
-  printf("Improvement possible: %f%% (x%f%%)\n", improvement_possible, improvement_possible / 100);
+  printf("Improvement possible: -%f%% (x%f%%)\n", (improvement_possible - 100), improvement_possible / 100);
   printf("Old median: %f\n", old_matmul_median_cc);
   printf("New median: %f\n", new_matmul_median_cc);
   printf("Old std: %f\n", old_matmul_std);
