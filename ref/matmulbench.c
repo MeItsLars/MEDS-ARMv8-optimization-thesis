@@ -156,14 +156,42 @@ __attribute__((optimize("no-tree-vectorize"))) void pmod_mat_mul_3(pmod_mat_t *C
 }
 
 // Matrix multiplication with a smart modulo reduction and NEON intrinsics in the first multiply loop
-void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint32_t *A, int A_r, int A_c, uint32_t *B, int B_r, int B_c)
+void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c)
 {
+  // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
+  // int A_r_pad = (A_r + 3) & ~3;
+  // int A_c_pad = (A_c + 3) & ~3;
+  // uint32_t A_pad[A_r_pad * A_c_pad];
+
+  // int B_r_pad = (B_r + 3) & ~3;
+  // int B_c_pad = (B_c + 3) & ~3;
+  // uint32_t B_pad[B_r_pad * B_c_pad];
+
+  // int C_r_pad = A_r_pad;
+  // int C_c_pad = B_c_pad;
+
+  // for (int r = 0; r < A_r; r++)
+  //   for (int c = 0; c < A_c; c++)
+  //     A_pad[r * A_c_pad + c] = pmod_mat_entry(A, A_r, A_c, r, c);
+
+  // for (int r = A_r; r < A_r_pad; r++)
+  //   for (int c = 0; c < A_c_pad; c++)
+  //     A_pad[r * A_c_pad + c] = 0;
+
+  // for (int r = 0; r < B_r; r++)
+  //   for (int c = 0; c < B_c; c++)
+  //     B_pad[r * B_c_pad + c] = pmod_mat_entry(B, B_r, B_c, r, c);
+
+  // for (int r = B_r; r < B_r_pad; r++)
+  //   for (int c = 0; c < B_c_pad; c++)
+  //     B_pad[r * B_c_pad + c] = 0;
+
   // Step 2: Multiply
   uint32_t tmp[C_r * C_c];
 
   int Ai, Bi, Ci;
-  uint32x4_t A0, A1, A2, A3;
-  uint32x4_t B0, B1, B2, B3;
+  // uint16x4_t A0, A1, A2, A3;
+  uint16x4_t B0, B1, B2, B3;
   uint32x4_t C0, C1, C2, C3;
 
   for (int c = 0; c < C_c; c += 4)
@@ -184,36 +212,62 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint32_t *A, int A_r, int A
         Ai = r * A_c + k;
         Bi = k * B_c + c;
 
-        A0 = vld1q_u32(&A[Ai]);
-        A1 = vld1q_u32(&A[Ai + A_c]);
-        A2 = vld1q_u32(&A[Ai + 2 * A_c]);
-        A3 = vld1q_u32(&A[Ai + 3 * A_c]);
+        // A0 = vld1_u16(&A[Ai]);
+        // A1 = vld1_u16(&A[Ai + A_c]);
+        // A2 = vld1_u16(&A[Ai + 2 * A_c]);
+        // A3 = vld1_u16(&A[Ai + 3 * A_c]);
 
-        B0 = vld1q_u32(&B[Bi]);
-        B1 = vld1q_u32(&B[Bi + B_c]);
-        B2 = vld1q_u32(&B[Bi + 2 * B_c]);
-        B3 = vld1q_u32(&B[Bi + 3 * B_c]);
+        int A0 = Ai;
+        int A1 = Ai + A_c;
+        int A2 = Ai + 2 * A_c;
+        int A3 = Ai + 3 * A_c;
+
+        B0 = vld1_u16(&B[Bi]);
+        B1 = vld1_u16(&B[Bi + B_c]);
+        B2 = vld1_u16(&B[Bi + 2 * B_c]);
+        B3 = vld1_u16(&B[Bi + 3 * B_c]);
+        
+        // Was: vmlaq_laneq_u32. But this is faster!
+        C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+        C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+        C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
+        C0 = vmlal_n_u16(C0, B3, A[A0 + 3]);
+
+        C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+        C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+        C1 = vmlal_n_u16(C1, B2, A[A1 + 2]);
+        C1 = vmlal_n_u16(C1, B3, A[A1 + 3]);
+
+        C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+        C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+        C2 = vmlal_n_u16(C2, B2, A[A2 + 2]);
+        C2 = vmlal_n_u16(C2, B3, A[A2 + 3]);
+
+        C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+        C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+        C3 = vmlal_n_u16(C3, B2, A[A3 + 2]);
+        C3 = vmlal_n_u16(C3, B3, A[A3 + 3]);
 
         // TODO: Consider using vmlal_n_u16. Better throughput.
-        C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
-        C0 = vmlaq_laneq_u32(C0, B1, A0, 1);
-        C0 = vmlaq_laneq_u32(C0, B2, A0, 2);
-        C0 = vmlaq_laneq_u32(C0, B3, A0, 3);
+        // C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
+        // C0 = vmlaq_laneq_u32(C0, B1, A0, 1);
+        // C0 = vmlaq_laneq_u32(C0, B2, A0, 2);
+        // C0 = vmlaq_laneq_u32(C0, B3, A0, 3);
 
-        C1 = vmlaq_laneq_u32(C1, B0, A1, 0);
-        C1 = vmlaq_laneq_u32(C1, B1, A1, 1);
-        C1 = vmlaq_laneq_u32(C1, B2, A1, 2);
-        C1 = vmlaq_laneq_u32(C1, B3, A1, 3);
+        // C1 = vmlaq_laneq_u32(C1, B0, A1, 0);
+        // C1 = vmlaq_laneq_u32(C1, B1, A1, 1);
+        // C1 = vmlaq_laneq_u32(C1, B2, A1, 2);
+        // C1 = vmlaq_laneq_u32(C1, B3, A1, 3);
 
-        C2 = vmlaq_laneq_u32(C2, B0, A2, 0);
-        C2 = vmlaq_laneq_u32(C2, B1, A2, 1);
-        C2 = vmlaq_laneq_u32(C2, B2, A2, 2);
-        C2 = vmlaq_laneq_u32(C2, B3, A2, 3);
+        // C2 = vmlaq_laneq_u32(C2, B0, A2, 0);
+        // C2 = vmlaq_laneq_u32(C2, B1, A2, 1);
+        // C2 = vmlaq_laneq_u32(C2, B2, A2, 2);
+        // C2 = vmlaq_laneq_u32(C2, B3, A2, 3);
 
-        C3 = vmlaq_laneq_u32(C3, B0, A3, 0);
-        C3 = vmlaq_laneq_u32(C3, B1, A3, 1);
-        C3 = vmlaq_laneq_u32(C3, B2, A3, 2);
-        C3 = vmlaq_laneq_u32(C3, B3, A3, 3);
+        // C3 = vmlaq_laneq_u32(C3, B0, A3, 0);
+        // C3 = vmlaq_laneq_u32(C3, B1, A3, 1);
+        // C3 = vmlaq_laneq_u32(C3, B2, A3, 2);
+        // C3 = vmlaq_laneq_u32(C3, B3, A3, 3);
       }
 
       // Store the result block
@@ -287,8 +341,8 @@ int main(int argc, char *argv[])
 
   pmod_mat_t A[A_ROWS * A_COLS];
   pmod_mat_t B[B_ROWS * B_COLS];
-  uint32_t A2[A_ROWS * A_COLS];
-  uint32_t B2[B_ROWS * B_COLS];
+  pmod_mat_t A2[A_ROWS * A_COLS];
+  pmod_mat_t B2[B_ROWS * B_COLS];
   pmod_mat_t C1[C_ROWS * C_COLS];
   pmod_mat_t C2[C_ROWS * C_COLS];
 
