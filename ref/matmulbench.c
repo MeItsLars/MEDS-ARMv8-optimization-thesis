@@ -277,6 +277,10 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A
       vst1q_u32(&tmp[Ci + C_c], C1);
       vst1q_u32(&tmp[Ci + 2 * C_c], C2);
       vst1q_u32(&tmp[Ci + 3 * C_c], C3);
+
+      // Reducing the results immediately here and ignoring the 'tmp' array while storing the result
+      // directly into the result matrix should theoretically be faster. But, after trying it, the result
+      // turned out to be a bit slower.
     }
 
   // Reduce the result matrix using NEON intrinsics
