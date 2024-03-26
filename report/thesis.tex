@@ -10,6 +10,8 @@
 \usepackage{enumitem}
 \usepackage{xurl}
 \usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
 \hypersetup{
     colorlinks,
     citecolor=black,
@@ -20,7 +22,7 @@
 \usepackage[a4paper]{geometry}
 
 % Set the line spacing between paragraphs
-\setlength{\parskip}{1em}
+% \setlength{\parskip}{1em}
 % Remove paragraph indentation
 \setlength{\parindent}{0pt}
 
@@ -46,38 +48,39 @@
 
 \begin{document}
 \begin{titlepage}
-\begin{center}
-\textsc{\LARGE Master Thesis\\Computing Science}\\[1.5cm]
-\includegraphics[height=100pt]{logo}
+  \begin{center}
+    \textsc{\LARGE Master Thesis\\Computing Science}\\[1.5cm]
+    \includegraphics[height=100pt]{logo}
 
-\vspace{0.4cm}
-\textsc{\Large Radboud University}\\[1cm]
-\hrule
-\vspace{0.4cm}
-\textbf{\huge Optimizing MEDS implementation for ARMv8}\\[0.4cm]
-\hrule
-\vspace{2cm}
-\begin{minipage}[t]{0.45\textwidth}
-\begin{flushleft} \large
-\textit{Author:}\\
-Lars Jeurissen\\
-s1022856\\
-\texttt{lars.jeurissen@ru.nl}
-\end{flushleft}
-\end{minipage}
-\begin{minipage}[t]{0.45\textwidth}
-\begin{flushright} \large
-\textit{First supervisor/assessor:}\\
-prof. dr. Peter Schwabe\\
-\texttt{p.schwabe@cs.ru.nl}\\[1.3cm]
-\textit{Second supervisor:}\\
-dr. Simona Samardjiska\\
-\texttt{simonas@cs.ru.nl}
-\end{flushright}
-\end{minipage}
-\vfill
-{\large \today}
-\end{center}
+    \vspace{0.4cm}
+    \textsc{\Large Radboud University}\\[1cm]
+    \hrule
+    \vspace{0.4cm}
+    \textbf{\huge Optimizing MEDS implementation for ARMv8}\\[0.4cm]
+    \vspace{0.2cm}
+    \hrule
+    \vspace{2cm}
+    \begin{minipage}[t]{0.45\textwidth}
+      \begin{flushleft} \large
+        \textit{Author:}\\
+        Lars Jeurissen\\
+        s1022856\\
+        \texttt{lars.jeurissen@ru.nl}
+      \end{flushleft}
+    \end{minipage}
+    \begin{minipage}[t]{0.45\textwidth}
+      \begin{flushright} \large
+        \textit{First supervisor/assessor:}\\
+        prof. dr. Peter Schwabe\\
+        \texttt{p.schwabe@cs.ru.nl}\\[1.3cm]
+        \textit{Second supervisor:}\\
+        dr. Simona Samardjiska\\
+        \texttt{simonas@cs.ru.nl}
+      \end{flushright}
+    \end{minipage}
+    \vfill
+    {\large \today}
+  \end{center}
 \end{titlepage}
 
 \input{acknowledgements.tex}
@@ -90,34 +93,97 @@ dr. Simona Samardjiska\\
 \chapter{Introduction}
 \label{ch:introduction}
 As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm and Grover's algorithm to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
-
+~\\\\
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
-
+~\\\\
 In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
-
+~\\\\
 Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds. \todo[inline]{Comparison with other similar schemes? Or this go in MEDS section?}
-
-In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of the MEDS implementation, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
-
+~\\\\
+In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of MEDS, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
+~\\\\
 We investigate the following research questions in this thesis (see also Chapter \ref{ch:researchobjectives}):
 \begin{itemize}
-    \item What are the bottlenecks in the MEDS implementation?
-    \item How can we improve the general performance of the MEDS implementation?
-    \item How can we optimize the MEDS implementation for ARMv8?
-    \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
+  \item What are the bottlenecks in the MEDS implementation?
+  \item How can we improve the general performance of the MEDS implementation?
+  \item How can we optimize the MEDS implementation for ARMv8?
+  \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
-
+~\\\\
 The underlying background of this thesis is explained in Chapter \ref{ch:background}.
 \todo[inline]{Add more about the structure of the thesis.}
 
 \chapter{Background}
 \label{ch:background}
+
 \todo[inline]{Explain Nist PQC? Or introduction?}
-\todo[inline]{Explain Signature Schemes}
-\todo[inline]{Explain MEDS}
-MEDS \cite{chou2023take}
-\todo[inline]{Explain ARMv8 and NEON}
-\todo[inline]{Explain profiling techniques}
+
+\section{Matrix Equivalence Digital Signature (MEDS)}
+\label{sec:meds}
+Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based digital signature scheme and the candidate in the NIST PQC competition that we aim to optimize in this thesis.
+
+\subsection{Signature Schemes}
+\label{sec:signatureschemes}
+A digital signature scheme is a cryptographic scheme with the purpose of verifying the authenticity of a message. The scheme allows a party to sign a piece of data such as a message or a document, after which any party can verify the signature and thereby the authenticity of the data.
+~\\\\
+A digital signature scheme consists of three algorithms:
+\begin{itemize}
+  \item \textbf{Key generation}: This algorithm generates 2 keys, a private key and a public key. The private key is used to sign the data, and the public key is used to verify the signature.
+  \item \textbf{Signature generation}: Given a message and the private (and sometimes public) key, this algorithm generates a signature for the message.
+  \item \textbf{Signature verification}: Given a message, a signature, and the public key, this algorithm verifies the signature.
+\end{itemize}
+
+Formally, a digital signature scheme is defined as a tuple of algorithms $(\text{G}, \text{S}, \text{V})$ \cite{goldwasser2008lecture}, where:
+\begin{itemize}
+  \item $\text{G}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
+  \item $\text{S}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
+  \item $\text{V}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
+\end{itemize}
+Such that, given $(pk, sk) \leftarrow \text{G}(1^n)$:
+\[
+  \text{V}(pk, m, \text{S}(sk, m)) = 1
+\]
+for all $m$.
+
+\subsection{How MEDS works}
+\label{sec:medsworks}
+Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence, which is closely related to the notion of Code Equivalence that is used in LESS \cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition.
+
+\subsubsection{The Matrix Code Equivalence (MCE) Problem}
+MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) problem. The computational form of this problem is defined as follows \cite{chou2023meds}:
+\begin{center}
+  \textbf{MCE Problem}\\
+  Given two rank metric codes $\mathcal{C}, \mathcal{D}$ of size $[m \times n, k]$,\\
+  find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$.
+\end{center}
+where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
+
+\subsubsection{Sigma Protocol \& Fiat-Shamir Transform}
+The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem.
+~\\\\
+To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
+~\\\\
+The security of the scheme is finally achieved using the following two techniques:
+\begin{itemize}
+  \item \textbf{Multiple Challenges}: An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme uses $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
+  \item \textbf{Multiple Public Keys}: As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme uses multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, where $s$ is the number of public keys.
+\end{itemize}
+By selecting $t$ and $s$ appropriately, the security of the scheme can be increased to the desired level. Multiple combinations of $t$ and $s$ can be used to achieve various security levels. The selection of these parameters also has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
+\\\\~
+To reduce the size of the public key and the signature, the MEDS scheme utilizes a few smart techniques, such as the use of seed trees, fixed-weight challenge strings, and the compression of public keys \cite{chou2023meds}. Further optimizations to reduce the size of the public key and the signature are actively being researched.
+
+\section{ARMv8 and NEON}
+\label{sec:armv8}
+\todo[inline]{Any meaningful citations in this section?}
+In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 architecture. To this end, we will use a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU. We will be testing and comparing the performance of the MEDS implementation on this device.
+
+\subsection{ARMv8 Architecture}
+ARMv8 is the architecture that is used in the ARM Cortex-A72 and a lot of other processors. The default instroctuion set for ARMv8 is AArch64, a 64-bit instruction set that has more registers and higher performance than the 32-bit AArch32 instruction set.
+
+\subsection{Vectorization and SIMD}
+Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on multiple numbers in a time that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to parallelization.
+~\\\\
+In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
@@ -127,6 +193,11 @@ MEDS \cite{chou2023take}
 
 \chapter{Methodology}
 \label{ch:methodology}
+
+\section{Benchmarking and Profiling}
+\todo[inline]{Explain profiling techniques?}
+\todo[inline]{Maybe better in methodology?}
+
 \todo[inline]{Give MEDS profiling results on ARM}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
 \todo[inline]{Check; should I include the performance results in this section or in the results section? What about intermediate results?}
