@@ -752,24 +752,6 @@ params = [
         _name = "toy"),
 ]
 
-# Author: Project Nayuki
-# (Public domain)
-# Source: https://www.nayuki.io/page/montgomery-reduction-algorithm
-def multiplicative_inverse(x, mod):
-  # Based on a simplification of the extended Euclidean algorithm
-  assert mod > 0 and 0 <= x < mod
-  y = x
-  x = mod
-  a = 0
-  b = 1
-  while y != 0:
-    a, b = b, a - x // y * b
-    x, y = y, x % y
-  if x == 1:
-    return a % mod
-  else:
-    raise ValueError("Reciprocal does not exist")
-
 for i, p in enumerate(params):
   exec(f"{p.name} = params[i]")
 
@@ -944,20 +926,6 @@ def gen_param(parset):
     print(f"{ind}#define GFq_bits {ceil(log(param.q, 2))}")
     print(f"{ind}#define GFq_bytes {ceil(ceil(log(param.q, 2))/8)}")
     print(f"{ind}#define GFq_fmt \"%{ceil(log(param.q, 10))}u\"")
-
-    print()
-
-    # Montgommery reduction parameters
-    mg_mod = param.q
-    mg_r_bits = ceil(log(param.q, 2))
-    mg_r = 1 << mg_r_bits
-    mg_r_mask = mg_r - 1
-    mg_r_inv = multiplicative_inverse(mg_r % mg_mod, mg_mod)
-    n_prime = (mg_r * mg_r_inv - 1) // mg_mod # From identity: R * R^-1 + N' * N = 1
-    print(f"{ind}#define MG_Rbits {mg_r_bits}")
-    print(f"{ind}#define MG_Rmask {mg_r_mask}")
-    print(f"{ind}#define MG_Rinv {mg_r_inv}")
-    print(f"{ind}#define MG_Nprime {n_prime}")
 
     print()
 
