@@ -210,12 +210,12 @@ void pmod_mat_mul(
         vst1_u16(&C_up[result_index], C_red_u16);
       else
       {
-        for (int i = 0; i < 3; i++)
-          if (c + i < C_c_up)
-          {
-            GFq_t val = vget_lane_u16(C_red_u16, i);
-            pmod_mat_set_entry(C_up, C_r_up, C_c_up, r, c + i, val);
-          }
+        if (c + 0 < C_c_up)
+          pmod_mat_set_entry(C_up, C_r_up, C_c_up, r, c + 0, vget_lane_u16(C_red_u16, 0));
+        if (c + 1 < C_c_up)
+          pmod_mat_set_entry(C_up, C_r_up, C_c_up, r, c + 1, vget_lane_u16(C_red_u16, 1));
+        if (c + 2 < C_c_up)
+          pmod_mat_set_entry(C_up, C_r_up, C_c_up, r, c + 2, vget_lane_u16(C_red_u16, 2));
       }
     }
 

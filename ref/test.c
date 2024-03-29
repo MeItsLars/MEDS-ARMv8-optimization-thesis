@@ -3,23 +3,30 @@
 #include <stdlib.h>
 
 #include "randombytes.h"
+#include "cyclecounter.h"
+#include "benchresult.h"
 
 #include "params.h"
 #include "api.h"
 #include "meds.h"
 
+benchresult benchresults[1000];
+int number_of_benchresults = 0;
+int benchmark_enabled = 0;
+
 double osfreq(void);
 
-long long cpucycles(void)
-{
-  unsigned long long result;
-  asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
-      : "=a" (result) ::  "%rdx");
-  return result;
-}
+// long long cpucycles(void)
+// {
+//   unsigned long long result;
+//   asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
+//       : "=a" (result) ::  "%rdx");
+//   return result;
+// }
 
 int main(int argc, char *argv[])
 {
+  enable_cyclecounter();
   printf("parameter set: %s\n\n", MEDS_name);
 
   long long time = 0;
@@ -103,6 +110,7 @@ int main(int argc, char *argv[])
   printf("sign:   %f   (%llu cycles)\n", sign_time / freq, sign_time);
   printf("verify: %f   (%llu cycles)\n", verify_time / freq, verify_time);
 
+  disable_cyclecounter();
   return 0;
 }
 

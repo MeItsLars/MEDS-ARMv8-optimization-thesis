@@ -6,7 +6,7 @@ LIBS = -lssl -lcrypto
 CC := gcc
 
 ifdef DEBUG
-CFLAGS := -g -Wall -D$(PARAM) -DDEBUG
+CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -Wno-unused-function
 OBJDIR := debug/$(PARAM)
 else ifdef BENCHMARK
 CFLAGS := -O3 -Wall -D$(PARAM) -DBENCHMARK -Wno-unused-function
