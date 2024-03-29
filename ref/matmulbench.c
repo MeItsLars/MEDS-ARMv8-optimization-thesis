@@ -226,7 +226,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A
         B1 = vld1_u16(&B[Bi + B_c]);
         B2 = vld1_u16(&B[Bi + 2 * B_c]);
         B3 = vld1_u16(&B[Bi + 3 * B_c]);
-        
+
         // Was: vmlaq_laneq_u32. But this is faster!
         // Reordering the following instructions did not seem to improve performance
         C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
@@ -282,6 +282,10 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A
       // directly into the result matrix should theoretically be faster. But, after trying it, the result
       // turned out to be a bit slower.
     }
+  
+  // A loop that reduces all elements in 'tmp' using the % operator seems to achieve the same performance
+  // as the parallel version below. However, the parallel version allows us to establish a lower bound on
+  // the number of cycles required for the reduction.
 
   // Reduce the result matrix using NEON intrinsics
   uint32x4_t C_red;

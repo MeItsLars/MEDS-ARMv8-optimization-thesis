@@ -9,22 +9,16 @@
 #include "api.h"
 #include "meds.h"
 
-#include <x86intrin.h>
-
 double osfreq(void);
-
-long long cpucycles(void)
-{
-  return __rdtsc();
-}
 
 int main(int argc, char *argv[])
 {
+  enable_cyclecounter();
   printf("name: %s\n", MEDS_name);
 
-  long long keygen_time = 0;
-  long long sign_time = 0;
-  long long verify_time = 0;
+  int64_t keygen_time = 0;
+  int64_t sign_time = 0;
+  int64_t verify_time = 0;
 
   int rounds = 128;
   //int rounds = 8;
@@ -86,6 +80,7 @@ int main(int argc, char *argv[])
     printf("%f (%llu cycles)  \n", verify_time / freq, verify_time);
   }
 
+  disable_cyclecounter();
   return 0;
 }
 

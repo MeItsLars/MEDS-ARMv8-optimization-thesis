@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <arm_neon.h>
+#include <assert.h>
 
 #include "log.h"
 #include "benchresult.h"
@@ -74,57 +75,49 @@ void print_binary(GFq_t val)
   printf("\n");
 }
 
-GFq_t modulo_reduce(uint32_t r)
-{
-  r = r - MEDS_p * (r >> GFq_bits);
-  r = r - MEDS_p * (r >> GFq_bits);
-  r = r - MEDS_p * (r >> GFq_bits);
-  int32_t diff = r - MEDS_p;
-  int32_t mask = (diff >> 31) & 0x1;
-  return mask * r + (1 - mask) * diff;
-}
-
-void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul(
+    pmod_mat_t *C_up, int C_r_up, int C_c_up,
+    pmod_mat_t *A_up, int A_r_up, int A_c_up,
+    pmod_mat_t *B_up, int B_r_up, int B_c_up)
 {
   BENCH_START("pmod_mat_mul");
   // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
-  int A_r_pad = (A_r + 3) & ~3;
-  int A_c_pad = (A_c + 3) & ~3;
-  uint32_t A_pad[A_r_pad * A_c_pad];
+  int A_r = (A_r_up + 3) & ~3;
+  int A_c = (A_c_up + 3) & ~3;
+  uint16_t A[A_r * A_c];
 
-  int B_r_pad = (B_r + 3) & ~3;
-  int B_c_pad = (B_c + 3) & ~3;
-  uint32_t B_pad[B_r_pad * B_c_pad];
+  int B_r = (B_r_up + 3) & ~3;
+  int B_c = (B_c_up + 3) & ~3;
+  uint16_t B[B_r * B_c];
 
-  int C_r_pad = A_r_pad;
-  int C_c_pad = B_c_pad;
+  int C_r = A_r;
+  int C_c = B_c;
 
-  for (int r = 0; r < A_r; r++)
+  for (int r = 0; r < A_r_up; r++)
+    for (int c = 0; c < A_c_up; c++)
+      A[r * A_c + c] = pmod_mat_entry(A_up, A_r_up, A_c_up, r, c);
+    
+  for (int r = A_r_up; r < A_r; r++)
     for (int c = 0; c < A_c; c++)
-      A_pad[r * A_c_pad + c] = pmod_mat_entry(A, A_r, A_c, r, c);
+      A[r * A_c + c] = 0;
 
-  for (int r = A_r; r < A_r_pad; r++)
-    for (int c = 0; c < A_c_pad; c++)
-      A_pad[r * A_c_pad + c] = 0;
-
-  for (int r = 0; r < B_r; r++)
+  for (int r = 0; r < B_r_up; r++)
+    for (int c = 0; c < B_c_up; c++)
+      B[r * B_c + c] = pmod_mat_entry(B_up, B_r_up, B_c_up, r, c);
+  
+  for (int r = B_r_up; r < B_r; r++)
     for (int c = 0; c < B_c; c++)
-      B_pad[r * B_c_pad + c] = pmod_mat_entry(B, B_r, B_c, r, c);
-
-  for (int r = B_r; r < B_r_pad; r++)
-    for (int c = 0; c < B_c_pad; c++)
-      B_pad[r * B_c_pad + c] = 0;
+      B[r * B_c + c] = 0;
 
   // Step 2: Multiply
-  uint32_t tmp[C_r_pad * C_c_pad];
+  uint32_t tmp[C_r * C_c];
 
   int Ai, Bi, Ci;
-  uint32x4_t A0, A1, A2, A3;
-  uint32x4_t B0, B1, B2, B3;
+  uint16x4_t B0, B1, B2, B3;
   uint32x4_t C0, C1, C2, C3;
 
-  for (int c = 0; c < C_c_pad; c += 4)
-    for (int r = 0; r < C_r_pad; r += 4)
+  for (int c = 0; c < C_c; c += 4)
+    for (int r = 0; r < C_r; r += 4)
     {
       // In every inner loop, we compute a 4x4 block of the result matrix
       // This 4x4 block is represented by the vectors (of size 4) C0, C1, C2, C3
@@ -136,80 +129,100 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
 
       // In every iteration of the following loop, we compute a contribution to the 4x4 result block
       // Specifically, we compute the product of a 4x4 block of A and a 4x4 block of B and add it to the result block
-      for (int k = 0; k < A_c_pad; k += 4)
+      for (int k = 0; k < A_c; k += 4)
       {
-        Ai = r * A_c_pad + k;
-        Bi = k * B_c_pad + c;
+        Ai = r * A_c + k;
+        Bi = k * B_c + c;
 
-        A0 = vld1q_u32(&A_pad[Ai]);
-        A1 = vld1q_u32(&A_pad[Ai + A_c_pad]);
-        A2 = vld1q_u32(&A_pad[Ai + 2 * A_c_pad]);
-        A3 = vld1q_u32(&A_pad[Ai + 3 * A_c_pad]);
+        int A0 = Ai;
+        int A1 = Ai + A_c;
+        int A2 = Ai + 2 * A_c;
+        int A3 = Ai + 3 * A_c;
 
-        B0 = vld1q_u32(&B_pad[Bi]);
-        B1 = vld1q_u32(&B_pad[Bi + B_c_pad]);
-        B2 = vld1q_u32(&B_pad[Bi + 2 * B_c_pad]);
-        B3 = vld1q_u32(&B_pad[Bi + 3 * B_c_pad]);
+        B0 = vld1_u16(&B[Bi]);
+        B1 = vld1_u16(&B[Bi + B_c]);
+        B2 = vld1_u16(&B[Bi + 2 * B_c]);
+        B3 = vld1_u16(&B[Bi + 3 * B_c]);
 
-        C0 = vmlaq_laneq_u32(C0, B0, A0, 0);
-        C0 = vmlaq_laneq_u32(C0, B1, A0, 1);
-        C0 = vmlaq_laneq_u32(C0, B2, A0, 2);
-        C0 = vmlaq_laneq_u32(C0, B3, A0, 3);
+        C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+        C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+        C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
+        C0 = vmlal_n_u16(C0, B3, A[A0 + 3]);
 
-        C1 = vmlaq_laneq_u32(C1, B0, A1, 0);
-        C1 = vmlaq_laneq_u32(C1, B1, A1, 1);
-        C1 = vmlaq_laneq_u32(C1, B2, A1, 2);
-        C1 = vmlaq_laneq_u32(C1, B3, A1, 3);
+        C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+        C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+        C1 = vmlal_n_u16(C1, B2, A[A1 + 2]);
+        C1 = vmlal_n_u16(C1, B3, A[A1 + 3]);
 
-        C2 = vmlaq_laneq_u32(C2, B0, A2, 0);
-        C2 = vmlaq_laneq_u32(C2, B1, A2, 1);
-        C2 = vmlaq_laneq_u32(C2, B2, A2, 2);
-        C2 = vmlaq_laneq_u32(C2, B3, A2, 3);
+        C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+        C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+        C2 = vmlal_n_u16(C2, B2, A[A2 + 2]);
+        C2 = vmlal_n_u16(C2, B3, A[A2 + 3]);
 
-        C3 = vmlaq_laneq_u32(C3, B0, A3, 0);
-        C3 = vmlaq_laneq_u32(C3, B1, A3, 1);
-        C3 = vmlaq_laneq_u32(C3, B2, A3, 2);
-        C3 = vmlaq_laneq_u32(C3, B3, A3, 3);
+        C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+        C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+        C3 = vmlal_n_u16(C3, B2, A[A3 + 2]);
+        C3 = vmlal_n_u16(C3, B3, A[A3 + 3]);
       }
 
       // Store the result block
-      Ci = C_c_pad * r + c;
+      Ci = C_c * r + c;
       vst1q_u32(&tmp[Ci], C0);
-      vst1q_u32(&tmp[Ci + C_c_pad], C1);
-      vst1q_u32(&tmp[Ci + 2 * C_c_pad], C2);
-      vst1q_u32(&tmp[Ci + 3 * C_c_pad], C3);
+      vst1q_u32(&tmp[Ci + C_c], C1);
+      vst1q_u32(&tmp[Ci + 2 * C_c], C2);
+      vst1q_u32(&tmp[Ci + 3 * C_c], C3);
     }
 
-  // Reduce and store (not with NEON)
-  for (int c = 0; c < C_c; c++)
-    for (int r = 0; r < C_r; r++)
-      pmod_mat_set_entry(C, C_r, C_c, r, c, modulo_reduce(tmp[r * C_c_pad + c]));
-  BENCH_END("pmod_mat_mul");
-}
-
-void pmod_mat_mul3(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
-{
-  BENCH_START("pmod_mat_mul");
-  GFq_t tmp[C_r * C_c];
-
-  for (int c = 0; c < C_c; c++)
-    for (int r = 0; r < C_r; r++)
+  // Reduce the result matrix using NEON intrinsics
+  uint32x4_t C_red;
+  uint16x4_t C_red_u16;
+  uint32x4_t C_tmp;
+  uint32x4_t C_diff;
+  uint32x4_t C_mask;
+  uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
+  uint32x4_t C_one = vdupq_n_u32(1);
+  for (int r = 0; r < C_r_up; r++)
+    for (int c = 0; c < C_c; c += 4)
     {
-      uint32_t val = 0;
+      // Load 4 values from the result matrix
+      C_red = vld1q_u32(&tmp[r * C_c + c]);
 
-      for (int i = 0; i < A_c; i++)
-        val = (val + (uint32_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint32_t)pmod_mat_entry(B, B_r, B_c, i, c));
+      // Apply two reductions
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
 
-      tmp[r * C_c + c] = modulo_reduce(val);
+      // Reduce to a value between 0 and MEDS_p - 1:
+      C_diff = vsubq_u32(C_red, C_MEDS_p);
+      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+
+      // Convert to smaller type
+      C_red_u16 = vqmovn_u32(C_red);
+
+      // Store into the result matrix
+      int result_index = r * C_c_up + c;
+      // Handle last few elements separately if C_c * C_r is not a multiple of 4
+      if (c + 4 <= C_c_up)
+        vst1_u16(&C_up[result_index], C_red_u16);
+      else
+      {
+        for (int i = 0; i < 3; i++)
+          if (c + i < C_c_up)
+          {
+            GFq_t val = vget_lane_u16(C_red_u16, i);
+            pmod_mat_set_entry(C_up, C_r_up, C_c_up, r, c + i, val);
+          }
+      }
     }
 
-  for (int c = 0; c < C_c; c++)
-    for (int r = 0; r < C_r; r++)
-      pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
   BENCH_END("pmod_mat_mul");
 }
 
-void pmod_mat_mul2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];
@@ -249,7 +262,7 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
 /**
  * @brief Solve a system of linear equations using the Gaussian Elimination Algorithm with pivoting:
  * https://web.mit.edu/10.001/Web/Course_Notes/GaussElimPivoting.html
- * 
+ *
  * @param M The matrix of the system of linear equations.
  * @param M_r The number of rows of the matrix.
  * @param M_c The number of columns of the matrix.
@@ -259,7 +272,7 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
  * @return -1 if the system of linear equations is inconsistent.
  *         0 if we were able to solve the system of linear equations and swap was not set.
  *         The row number of the last swap if we were able to solve the system of linear equations and swap was set.
-*/
+ */
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
   BENCH_START("pmod_mat_syst_ct");
@@ -327,7 +340,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       for (int c = r; c < M_c; c++)
       {
         uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
-        
+
         uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
         pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * GFq_eq0(Mrr)) % MEDS_p);
@@ -390,7 +403,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
   // In this loop, we make sure the elements above the diagonal are zero
   // We do this by subtracting the current row from the other rows with the appropriate difference factor
   // The goal is to prepare the previous rows for the next iteration (making sure they have a zero in the columns right of the diagonal)
-  
+
   // Loop through the rows in reverse order (so we start with the last row which contains only one non-zero element)
   for (int r = max_r - 1; r >= 0; r--)
     // For every row above the current one, make sure the element in the current column is zero
