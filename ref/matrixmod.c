@@ -246,17 +246,26 @@ void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
 int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  BENCH_START("pmod_mat_syst_ct");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  BENCH_END("pmod_mat_syst_ct");
+  return result;
 }
 
 int pmod_mat_syst_ct_partial(pmod_mat_t *M, int M_r, int M_c, int max_r)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  BENCH_START("pmod_mat_syst_ct_partial");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  BENCH_END("pmod_mat_syst_ct_partial");
+  return result;
 }
 
 int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  BENCH_START("pmod_mat_rref");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  BENCH_END("pmod_mat_rref");
+  return result;
 }
 
 /**
@@ -275,10 +284,10 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
  */
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
-  BENCH_START("pmod_mat_syst_ct");
+  BENCH_START("pmod_mat_syst_ct_partial_swap_backsub");
   int ret = M_r * swap;
 
-  BENCH_START("pmod_mat_syst_ct_forward_elim");
+  BENCH_START("[1] pmod_mat_syst_ct_forward_elim");
   // Step 1: Forward elimination
   for (int r = 0; r < max_r; r++)
   {
@@ -389,7 +398,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
   }
-  BENCH_END("pmod_mat_syst_ct_forward_elim");
+  BENCH_END("[1] pmod_mat_syst_ct_forward_elim");
 
   // At this point, the entire matrix is in RREF.
 
@@ -397,7 +406,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
   if (!backsub)
     return ret;
 
-  BENCH_START("pmod_mat_syst_ct_backsub");
+  BENCH_START("[2] pmod_mat_syst_ct_backsub");
 
   // back substitution;
   // In this loop, we make sure the elements above the diagonal are zero
@@ -439,8 +448,8 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
-  BENCH_END("pmod_mat_syst_ct_backsub");
-  BENCH_END("pmod_mat_syst_ct");
+  BENCH_END("[2] pmod_mat_syst_ct_backsub");
+  BENCH_END("pmod_mat_syst_ct_partial_swap_backsub");
   return ret;
 }
 
