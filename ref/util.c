@@ -62,10 +62,10 @@ void rnd_sys_mat(pmod_mat_t *M, int M_r, int M_c, const uint8_t *seed, size_t se
 
 void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_len)
 {
+  BENCH_START("rnd_inv_matrix");
   keccak_state shake;
   shake256_absorb_once(&shake, seed, seed_len);
 
-  BENCH_START("rnd_inv_matrix");
   while (0 == 0)
   {
     for (int r = 0; r < M_r; r++)
@@ -84,6 +84,7 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
 
 int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 {
+  BENCH_START("parse_hash");
   if (len_h < MEDS_t)
     return -1;
 
@@ -152,12 +153,14 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
     i++;
   }
 
+  BENCH_END("parse_hash");
   return 0;
 }
 
 // For testing only! NOT CONSTANT TIME!
 int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
 {
+  BENCH_START("solve_symb_nc");
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_symb requires MEDS_n == MEDS_m+1");
 
   pmod_mat_t Pj0[MEDS_m * MEDS_n] = {0};
@@ -233,6 +236,7 @@ int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
   LOG_MAT(A, MEDS_m, MEDS_m);
   LOG_MAT(B_inv, MEDS_n, MEDS_n);
 
+  BENCH_END("solve_symb_nc");
   return 0;
 }
 
@@ -258,14 +262,12 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
   // Systemize core sub-system while pivoting all but the last row.
-  BENCH_START("solve_opt_syst_ct_partial");
   int piv;
   if ((piv = pmod_mat_syst_ct_partial(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1)) != 0)
   {
     LOG("no sol %i", __LINE__);
     return -1;
   }
-  BENCH_END("solve_opt_syst_ct_partial");
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
@@ -313,9 +315,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   int N1_r;
 
   // Sytemize 2nd sub-system.
-  BENCH_START("solve_opt_mat_rref");
   N1_r = pmod_mat_rref(N1, MEDS_m - 1, MEDS_m);
-  BENCH_END("solve_opt_mat_rref");
 
   if (N1_r == -1)
   {
@@ -521,8 +521,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(A_tilde, MEDS_m, MEDS_m);
   LOG_MAT(B_tilde_inv, MEDS_n, MEDS_n);
 
-  BENCH_END("solve_opt");
-
   return 0;
 }
 
@@ -719,15 +717,18 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
 void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G)
 {
+  BENCH_START("pi");
   for (int i = 0; i < MEDS_k; i++)
   {
     pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, A, MEDS_m, MEDS_m, &G[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n);
     pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, &Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, B, MEDS_n, MEDS_n);
   }
+  BENCH_END("pi");
 }
 
 int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
 {
+  BENCH_START("SF");
   pmod_mat_t M[MEDS_k * MEDS_k];
 
   for (int r = 0; r < MEDS_k; r++)
@@ -737,8 +738,10 @@ int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
   {
     pmod_mat_mul(Gprime, MEDS_k, MEDS_m * MEDS_n, M, MEDS_k, MEDS_k, G, MEDS_k, MEDS_m * MEDS_n);
 
+    BENCH_END("SF");
     return 0;
   }
 
+  BENCH_END("SF");
   return -1;
 }

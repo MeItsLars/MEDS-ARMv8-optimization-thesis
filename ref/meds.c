@@ -227,7 +227,6 @@ int crypto_sign(
     const unsigned char *sk
   )
 {
-  BENCH_START("SEC-Setup");
   // skip secret seed
   sk += MEDS_sec_seed_bytes;
 
@@ -351,16 +350,12 @@ int crypto_sign(
 
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
-  BENCH_END("SEC-Setup");
-
   for (int i = 0; i < MEDS_t; i++)
   {
-    BENCH_START("SEC-Challenge");
     pmod_mat_t G_tilde_ti[MEDS_k * MEDS_m * MEDS_n];
 
     while (1 == 1)
     {
-      BENCH_START("SEC-Challenge-Init");
       uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
 
 
@@ -390,32 +385,22 @@ int crypto_sign(
 
       LOG_MAT_FMT(M_tilde[i], 2, MEDS_k, "M_tilde[%i]", i);
 
-      BENCH_END("SEC-Challenge-Init");
-      BENCH_START("SEC-Challenge-C");
-
       pmod_mat_t C[2 * MEDS_m * MEDS_n];
 
       pmod_mat_mul(C, 2, MEDS_m * MEDS_n, M_tilde[i], 2, MEDS_k, G_0, MEDS_k, MEDS_m * MEDS_n);
 
       LOG_MAT(C, 2, MEDS_m * MEDS_n);
 
-      BENCH_END("SEC-Challenge-C");
-      BENCH_START("SEC-Challenge-Solve");
-
       pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
 
       int solve_result = solve(A_tilde[i], B_tilde_inv, C);
-      
-      BENCH_END("SEC-Challenge-Solve");
 
       if (solve_result < 0)
       {
         LOG("no sol");
         continue;
       }
-
-      BENCH_START("SEC-Challenge-Inv");
 
       if (pmod_mat_inv(B_tilde[i], B_tilde_inv, MEDS_n, MEDS_n) < 0)
       {
@@ -432,19 +417,12 @@ int crypto_sign(
       LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
       LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
 
-      BENCH_END("SEC-Challenge-Inv");
-      BENCH_START("SEC-Challenge-Pi");
-
       pi(G_tilde_ti, A_tilde[i], B_tilde[i], G_0);
       
       LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m*MEDS_n, "G_tilde[%i]", i);
 
-      BENCH_END("SEC-Challenge-Pi");
-      BENCH_START("SEC-Challenge-SF");
-
       int sf_result = SF(G_tilde_ti, G_tilde_ti);
 
-      BENCH_END("SEC-Challenge-SF");
       if (sf_result == 0)
         break;
     }
@@ -465,7 +443,6 @@ int crypto_sign(
     LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m*MEDS_n - MEDS_k)) * GFq_bits, 8));
 
     shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m*MEDS_n - MEDS_k)) * GFq_bits, 8));
-    BENCH_END("SEC-Challenge");
   }
 
   shake256_absorb(&h_shake, (uint8_t*)m, mlen);
@@ -496,7 +473,6 @@ int crypto_sign(
 
   stree_to_path(stree, h, path, alpha);
 
-  BENCH_START("SEC-ChallengeResponses");
   for (int i = 0; i < MEDS_t; i++)
   {
     if (h[i] > 0)
@@ -515,7 +491,6 @@ int crypto_sign(
       bs_finalize(&bs);
     }
   }
-  BENCH_END("SEC-ChallengeResponses");
 
   memcpy(sm + MEDS_SIG_BYTES - MEDS_digest_bytes - MEDS_st_salt_bytes, digest, MEDS_digest_bytes);
   memcpy(sm + MEDS_SIG_BYTES - MEDS_st_salt_bytes, alpha, MEDS_st_salt_bytes);
