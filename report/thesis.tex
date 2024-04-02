@@ -12,6 +12,9 @@
 \usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{parskip}
+\usepackage{tabularx}
+\usepackage{booktabs}
 \hypersetup{
     colorlinks,
     citecolor=black,
@@ -24,7 +27,7 @@
 % Set the line spacing between paragraphs
 % \setlength{\parskip}{1em}
 % Remove paragraph indentation
-\setlength{\parindent}{0pt}
+% \setlength{\parindent}{0pt}
 
 % URL LINE BREAKS
 \expandafter\def\expandafter\UrlBreaks\expandafter{\UrlBreaks% save the current one
@@ -93,15 +96,15 @@
 \chapter{Introduction}
 \label{ch:introduction}
 As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm and Grover's algorithm to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
-~\\\\
+
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
-~\\\\
+
 In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
-~\\\\
+
 Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds. \todo[inline]{Comparison with other similar schemes? Or this go in MEDS section?}
-~\\\\
+
 In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of MEDS, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
-~\\\\
+
 We investigate the following research questions in this thesis (see also Chapter \ref{ch:researchobjectives}):
 \begin{itemize}
   \item What are the bottlenecks in the MEDS implementation?
@@ -109,7 +112,7 @@ We investigate the following research questions in this thesis (see also Chapter
   \item How can we optimize the MEDS implementation for ARMv8?
   \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
-~\\\\
+
 The underlying background of this thesis is explained in Chapter \ref{ch:background}.
 \todo[inline]{Add more about the structure of the thesis.}
 
@@ -125,7 +128,7 @@ Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based 
 \subsection{Signature Schemes}
 \label{sec:signatureschemes}
 A digital signature scheme is a cryptographic scheme with the purpose of verifying the authenticity of a message. The scheme allows a party to sign a piece of data such as a message or a document, after which any party can verify the signature and thereby the authenticity of the data.
-~\\\\
+
 A digital signature scheme consists of three algorithms:
 \begin{itemize}
   \item \textbf{Key generation}: This algorithm generates 2 keys, a private key and a public key. The private key is used to sign the data, and the public key is used to verify the signature.
@@ -160,16 +163,16 @@ where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank
 
 \subsubsection{Sigma Protocol \& Fiat-Shamir Transform}
 The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem.
-~\\\\
+
 To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
-~\\\\
+
 The security of the scheme is finally achieved using the following two techniques:
 \begin{itemize}
   \item \textbf{Multiple Challenges}: An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme uses $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
   \item \textbf{Multiple Public Keys}: As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme uses multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, where $s$ is the number of public keys.
 \end{itemize}
 By selecting $t$ and $s$ appropriately, the security of the scheme can be increased to the desired level. Multiple combinations of $t$ and $s$ can be used to achieve various security levels. The selection of these parameters also has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
-\\\\~
+
 To reduce the size of the public key and the signature, the MEDS scheme utilizes a few smart techniques, such as the use of seed trees, fixed-weight challenge strings, and the compression of public keys \cite{chou2023meds}. Further optimizations to reduce the size of the public key and the signature are actively being researched.
 
 \section{ARMv8 and NEON}
@@ -182,8 +185,11 @@ ARMv8 is the architecture that is used in the ARM Cortex-A72 and a lot of other 
 
 \subsection{Vectorization and SIMD}
 Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on multiple numbers in a time that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to parallelization.
-~\\\\
+
 In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
+
+\subsection{Related Work}
+\todo[inline]{Related Work}
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
@@ -191,15 +197,131 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
 \todo[inline]{Explain SIMD speedup}
 \todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
 
+\chapter{Profiling}
+\section{Profiling Techniques}
+\todo[inline]{Explain profiling techniques?}
+In order to obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program, these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage, and that this part can be optimized to improve the overall performance.
+
+Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or a specific functions. There exist a wide variety of profilers for LANG, such as gprof CITE, perf CITE, and Valgrind CITE. In our case however, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function.
+
+\subsection{Cycle Counting}
+Cycle counting is a technique that is used to measure the number of CPU cycles that it takes to execute a certain program or function. This is usually done by accessing the performance monitoring unit (PMU) of the CPU, which is a CPU component that measures the performance of the processor. Typically, these PMUs contain a register that can be read to obtain the number of cycles executed since a certain point in time. On Linux, it is very easy to access this data using the perf tool CITE, which can be used to measure the number of instructions executed, number of cache misses, etc.
+
+\subsubsection{Advantages}
+The advantages of profiling the code using a cycle counter are:
+\begin{itemize}
+  \item \textbf{Exact}: Measuring the cycle counter results in the most exact measurement of time. For comparison, using a technique that measures the current time in (nano)seconds is less accurate, because the CPU is capable of executing multiple cycles in a single nanosecond.
+  \item \textbf{Low Overhead}: Measuring the cycle counter has a very low additional performance overhead to the program, as it usually consists of reading a single register.
+  \item \textbf{Precise}: By annotating the code with our own cycle counter, we can measure the performance of specific functions or even specific lines of code.
+\end{itemize}
+
+\subsubsection{Disadvantages}
+The disadvantages of profiling the code using a cycle counter are:
+\begin{itemize}
+  \item \textbf{Interference}: The program to be measured shares the CPU (core) with other programs, which can interfere with measurements. If another program is switched in by the operating system, the cycle counter will also count the cycles that were used by this program. Although this usually doesn't have a big impact on profiling results, this is very problematic for obtaining accurate benchmarks.
+  \item \textbf{Architecture}: The way in which the cycle counter is accessed is different for each architecture. However, since we use the perf tool, this is abstracted away for us.
+\end{itemize}
+
+\subsubsection{Problem Mitigation}
+There are a few problems with cycle counting that we need to mitigate. First of all, there are a few features on modern CPUs that will cause this technique to produce inaccurate results. These features include frequency scaling (based on the current workload, a CPU can change its clock frequency to save power) and hyperthreading (multiple threads share the same CPU core). It is essential to disable these features to obtain accurate results.
+
+Another problem is the problem of program interference (see above). Unfortunately, this is a problem that is hard to prevent completely, but we can work around it. By running the program multiple times and taking the median of the results, we can reduce the impact of interference on the results. This is a common technique in benchmarking.
+
+\section{MEDS Profiling Results}
+We added cycle count measurements to the MEDS code.
+\begin{table}[]
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pi} & 5.1 & 22.5\% & 3 \\
+    \texttt{SF} & 2.9 & 12.9\% & 3 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Keygen Profiling Results: Operations}
+  \label{tab:medskeygenoperations}
+  ~\\
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pmod\_mat\_mul} & 10.1 & 44.1\% & 138 \\
+    \texttt{rnd\_sys\_mat} & 6.8 & 30.0\% & 1 \\
+    \texttt{shake256\_squeeze} & 2.6 & 11.5\% & 12121 \\
+    \texttt{pmod\_mat\_syst\_ct} & 2.2 & 9.7\% & 15 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Keygen Profiling Results: Functions}
+  \label{tab:medskeygenfunctions}
+\end{table}
+
+\begin{table}[]
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pi} & 1033.7 & 38.8\% & 608 \\
+    \texttt{SF} & 602.2 & 22.6\% & 608 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Signing Profiling Results: Operations}
+  \label{tab:medssigningoperations}
+  ~\\
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pmod\_mat\_mul} & 1576.7 & 59.1\% & 27995 \\
+    \texttt{pmod\_mat\_syst\_ct} & 455.1 & 17.1\% & 3043 \\
+    \texttt{shake256\_absorb} & 161.8 & 6.1\% & 1830 \\
+    \texttt{GF\_inv} & 31.0 & 1.2\% & 66924 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Signing Profiling Results: Functions}
+  \label{tab:medssigningfunctions}
+\end{table}
+
+\begin{table}[]
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pi} & 1033.7 & 38.8\% & 608 \\
+    \texttt{SF} & 602.2 & 22.6\% & 608 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Verification Profiling Results: Operations}
+  \label{tab:medsverificationoperations}
+  ~\\
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+    \midrule
+    \texttt{pmod\_mat\_mul} & 1577.5 & 59.3\% & 27013 \\
+    \texttt{pmod\_mat\_syst\_ct} & 455.3 & 17.1\% & 3045 \\
+    \texttt{shake256\_absorb} & 161.3 & 6.1\% & 1101 \\
+    \texttt{GF\_inv} & 30.5 & 1.2\% & 66989 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS-41711 Verification Profiling Results: Functions}
+  \label{tab:medsverificationfunctions}
+\end{table}
+
 \chapter{Methodology}
 \label{ch:methodology}
 
-\section{Benchmarking and Profiling}
-\todo[inline]{Explain profiling techniques?}
-\todo[inline]{Maybe better in methodology?}
-
-\todo[inline]{Give MEDS profiling results on ARM}
+\section{Optimization Techniques}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
+
+\subsection{Matrix Multiplication}
+
+\chapter{Results}
+\label{ch:results}
+
+\section{Optimization Results}
 \todo[inline]{Check; should I include the performance results in this section or in the results section? What about intermediate results?}
 
 \chapter{Discussion}
@@ -213,6 +335,7 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
 - Create a non-constant time implementation for gaussian elimination (can be used in verification).
 - Create a parallel implementation for gaussian elimination.
 - Check if it is possible to parallelize over the entire challenge \& response loop.
+- Optimize shake256? See \url{https://eprint.iacr.org/2022/1243} and \url{https://github.com/cothan/NEON-SHA3\_2x}
 
 \chapter{Conclusion}
 \label{ch:conclusion}
