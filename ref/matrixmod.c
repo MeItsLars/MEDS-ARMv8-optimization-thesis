@@ -75,7 +75,7 @@ void print_binary(GFq_t val)
   printf("\n");
 }
 
-void pmod_mat_mul(
+void pmod_mat_mul_new(
     pmod_mat_t *C_up, int C_r_up, int C_c_up,
     pmod_mat_t *A_up, int A_r_up, int A_c_up,
     pmod_mat_t *B_up, int B_r_up, int B_c_up)
@@ -96,7 +96,7 @@ void pmod_mat_mul(
   for (int r = 0; r < A_r_up; r++)
     for (int c = 0; c < A_c_up; c++)
       A[r * A_c + c] = pmod_mat_entry(A_up, A_r_up, A_c_up, r, c);
-    
+
   for (int r = A_r_up; r < A_r; r++)
     for (int c = 0; c < A_c; c++)
       A[r * A_c + c] = 0;
@@ -104,7 +104,7 @@ void pmod_mat_mul(
   for (int r = 0; r < B_r_up; r++)
     for (int c = 0; c < B_c_up; c++)
       B[r * B_c + c] = pmod_mat_entry(B_up, B_r_up, B_c_up, r, c);
-  
+
   for (int r = B_r_up; r < B_r; r++)
     for (int c = 0; c < B_c; c++)
       B[r * B_c + c] = 0;
@@ -222,7 +222,7 @@ void pmod_mat_mul(
   BENCH_END("pmod_mat_mul");
 }
 
-void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];
@@ -275,10 +275,10 @@ int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
  */
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
-  BENCH_START("pmod_mat_syst_ct");
+  BENCH_START("pmod_mat_syst_ct_partial_swap_backsub");
   int ret = M_r * swap;
 
-  BENCH_START("pmod_mat_syst_ct_forward_elim");
+  BENCH_START("[1] pmod_mat_syst_ct_forward_elim");
   // Step 1: Forward elimination
   for (int r = 0; r < max_r; r++)
   {
@@ -352,7 +352,10 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
     // If, after everything, the element on the diagonal is (still) zero, return that we failed
     // to convert this row in the matrix to RREF
     if (val == 0)
+    {
+      BENCH_END("pmod_mat_syst_ct_partial_swap_backsub");
       return -1;
+    }
 
     // Compute the multiplicative inverse of the element on the diagonal
     val = GF_inv(val);
@@ -389,15 +392,18 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
   }
-  BENCH_END("pmod_mat_syst_ct_forward_elim");
+  BENCH_END("[1] pmod_mat_syst_ct_forward_elim");
 
   // At this point, the entire matrix is in RREF.
 
   // If we don't need to perform back substitution, we're done
   if (!backsub)
+  {
     return ret;
+    BENCH_END("pmod_mat_syst_ct_partial_swap_backsub");
+  }
 
-  BENCH_START("pmod_mat_syst_ct_backsub");
+  BENCH_START("[2] pmod_mat_syst_ct_backsub");
 
   // back substitution;
   // In this loop, we make sure the elements above the diagonal are zero
@@ -439,8 +445,8 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
-  BENCH_END("pmod_mat_syst_ct_backsub");
-  BENCH_END("pmod_mat_syst_ct");
+  BENCH_END("[2] pmod_mat_syst_ct_backsub");
+  BENCH_END("pmod_mat_syst_ct_partial_swap_backsub");
   return ret;
 }
 
