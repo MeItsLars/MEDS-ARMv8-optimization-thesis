@@ -199,7 +199,6 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
 
 \chapter{Profiling}
 \section{Profiling Techniques}
-\todo[inline]{Explain profiling techniques?}
 In order to obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program, these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage, and that this part can be optimized to improve the overall performance.
 
 Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or a specific functions. There exist a wide variety of profilers for LANG, such as gprof CITE, perf CITE, and Valgrind CITE. In our case however, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function.
@@ -228,7 +227,9 @@ There are a few problems with cycle counting that we need to mitigate. First of 
 Another problem is the problem of program interference (see above). Unfortunately, this is a problem that is hard to prevent completely, but we can work around it. By running the program multiple times and taking the median of the results, we can reduce the impact of interference on the results. This is a common technique in benchmarking.
 
 \section{MEDS Profiling Results}
-We added cycle count measurements to the MEDS code.
+\subsection{Measurement Setup}
+We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three operations of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenoperations} and \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningoperations} and \ref{tab:medssigningfunctions} (signing), \ref{tab:medsverificationoperations} and \ref{tab:medsverificationfunctions} (verification). For each of the three operations, we provide one table for functions and one table for MEDS operations that make use of one or more functions. We only list the functions and operations that take up more than 1\% of the total number of cycles. For each function or operation, we provide the number of megacycles (MCycles) that were used in that function/operation, the percentage of the total number of cycles that were used by that function/operation, and the number of times that function/operation was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation depend on the input.
+
 \begin{table}[]
   \centering
   \begin{tabular}{lrrr}
@@ -309,6 +310,21 @@ We added cycle count measurements to the MEDS code.
   \caption{MEDS-41711 Verification Profiling Results: Functions}
   \label{tab:medsverificationfunctions}
 \end{table}
+
+\subsection{Result Analysis}
+Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for about 95.3\% of the total number of cycles. For signing and verification, this number is about 83.6\%. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
+
+\subsubsection{Matrix Multiplication}
+For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time. For signing and verification, this is almost 60\%. This function is used to multiply two matrices $A^{m \times n}$ and $B^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
+% This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
+
+\subsubsection{Matrix Systemization}
+The \texttt{pmod\_mat\_syst\_ct} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 17\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
+
+\todo[inline]{Perform complexity analysis?}
+
+\subsubsection{Shake256}
+A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family CITE and is based on the Keccak sponge construction CITE. MEDS uses Shake256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
 
 \chapter{Methodology}
 \label{ch:methodology}
