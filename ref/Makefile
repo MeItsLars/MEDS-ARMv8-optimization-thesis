@@ -4,6 +4,7 @@ PARAM = toy
 
 LIBS = -lssl -lcrypto
 CC := gcc
+AS := as
 
 ifdef DEBUG
 CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -Wno-unused-function
@@ -31,31 +32,38 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 
 default: $(EXES)
 
-OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o cyclecounter.o
+C_OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o cyclecounter.o
+ASM_OBJECTS = benchmatmul_asm.o
 HEADERS = $(wildcard *.h) $(OBJDIR)/params.h $(OBJDIR)/api.h
 
-BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}
+# Define all object files
+BUILDOBJ := ${C_OBJECTS:%=$(OBJDIR)/%} ${ASM_OBJECTS:%=$(OBJDIR)/%}
 
-
+# Generate params.h and api.h
 $(OBJDIR)/params.h: params.py $(OBJDIR)
 	python3 $< -p $(PARAM) > params.h
 
 $(OBJDIR)/api.h: params.py $(OBJDIR)
 	python3 $< -a $(PARAM) > api.h
 
-
 $(EXES) : % :
 	@make $(OBJDIR)/$(@F)
 
+# Create build directory if it doesn't exist
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-$(BUILDOBJ) : $(OBJDIR)/%.o: %.c $(HEADERS) | $(OBJDIR)
+# Compile C files
+$(OBJDIR)/%.o: %.c $(HEADERS) $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Compile ASM files
+$(OBJDIR)/%.o: %.s $(HEADERS) $(OBJDIR)
+	$(AS) $< -o $@
+
+# Link all objects
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)
 	$(CC) $(@F).c $(BUILDOBJ) $(CFLAGS) $(LIBS) -o $@
-
 
 RUN: test
 	@echo ""

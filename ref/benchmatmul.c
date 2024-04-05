@@ -26,6 +26,8 @@ int benchmark_enabled = 0;
 
 #define MATMUL_ROUNDS 1000
 
+extern void pmod_mat_mul_asm(uint16_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c);
+
 // Default matrix multiplication implementation
 void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
@@ -156,7 +158,7 @@ __attribute__((optimize("no-tree-vectorize"))) void pmod_mat_mul_3(pmod_mat_t *C
 }
 
 // Matrix multiplication with a smart modulo reduction and NEON intrinsics in the first multiply loop
-void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c)
+void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
   // int A_r_pad = (A_r + 3) & ~3;
@@ -383,7 +385,7 @@ int main(int argc, char *argv[])
     old_matmul_cc += get_cyclecounter();
 
     long long new_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_4(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
+    pmod_mat_mul_asm(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
@@ -412,6 +414,7 @@ int main(int argc, char *argv[])
 
   // Compare matrices
   int exact_equalities = 0;
+  int close_equalities = 0;
   int modulo_equalities = 0;
   for (int i = 0; i < MEDS_k; i++)
     for (int j = 0; j < MEDS_k; j++)
@@ -420,19 +423,26 @@ int main(int argc, char *argv[])
       GFq_t val2 = pmod_mat_entry(C2, MEDS_k, MEDS_k, i, j);
       if (val1 == val2)
         exact_equalities++;
+      if (val1 % MEDS_p == val2 % MEDS_p)
+        modulo_equalities++;
       val1 = val1 > MEDS_p ? val1 - MEDS_p : val1;
       val2 = val2 > MEDS_p ? val2 - MEDS_p : val2;
       if (val1 == val2)
-        modulo_equalities++;
+        close_equalities++;
     }
 
   int expected_equalities = MEDS_k * MEDS_k;
 
   printf("Equalities: %d / %d\n", exact_equalities, expected_equalities);
+  printf("Close equalities (+/- 1 * MEDS_p): %d / %d\n", close_equalities, expected_equalities);
   printf("Modulo equalities: %d / %d\n", modulo_equalities, expected_equalities);
   if (expected_equalities == exact_equalities)
   {
     printf("Matrices are EQUAL\n");
+  }
+  else if (close_equalities == expected_equalities)
+  {
+    printf("Matrices are EQUAL with a tolerance of +/- 1 * MEDS_p\n");
   }
   else if (modulo_equalities == expected_equalities)
   {
