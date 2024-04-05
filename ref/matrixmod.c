@@ -246,17 +246,26 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
 
 int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  BENCH_START("pmod_mat_syst_ct");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  BENCH_END("pmod_mat_syst_ct");
+  return result;
 }
 
 int pmod_mat_syst_ct_partial(pmod_mat_t *M, int M_r, int M_c, int max_r)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  BENCH_START("pmod_mat_syst_ct_partial");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  BENCH_END("pmod_mat_syst_ct_partial");
+  return result;
 }
 
 int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  BENCH_START("pmod_mat_rref");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  BENCH_END("pmod_mat_rref");
+  return result;
 }
 
 /**
