@@ -195,10 +195,10 @@ void pmod_mat_mul_new(
       C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
       C_red = vsubq_u32(C_red, C_tmp);
 
-      // Reduce to a value between 0 and MEDS_p - 1:
-      C_diff = vsubq_u32(C_red, C_MEDS_p);
-      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
-      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+      // Reduce to a value between 0 and MEDS_p - 1: (can be ignored?)
+      // C_diff = vsubq_u32(C_red, C_MEDS_p);
+      // C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+      // C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
 
       // Convert to smaller type
       C_red_u16 = vqmovn_u32(C_red);

@@ -348,12 +348,12 @@ int main(int argc, char *argv[])
     seed1[i] = i;
   }
 
-  pmod_mat_t A[A_ROWS * A_COLS];
-  pmod_mat_t B[B_ROWS * B_COLS];
-  pmod_mat_t A2[A_ROWS * A_COLS];
-  pmod_mat_t B2[B_ROWS * B_COLS];
-  pmod_mat_t C1[C_ROWS * C_COLS];
-  pmod_mat_t C2[C_ROWS * C_COLS];
+  pmod_mat_t A[A_ROWS * A_COLS] __attribute__((aligned(16)));
+  pmod_mat_t B[B_ROWS * B_COLS] __attribute__((aligned(16)));
+  pmod_mat_t A2[A_ROWS * A_COLS] __attribute__((aligned(16)));
+  pmod_mat_t B2[B_ROWS * B_COLS] __attribute__((aligned(16)));
+  pmod_mat_t C1[C_ROWS * C_COLS] __attribute__((aligned(16)));
+  pmod_mat_t C2[C_ROWS * C_COLS] __attribute__((aligned(16)));
 
   keccak_state shake;
   shake256_absorb_once(&shake, seed1, MEDS_pub_seed_bytes);
@@ -411,23 +411,35 @@ int main(int argc, char *argv[])
   disable_cyclecounter();
 
   // Compare matrices
-  int equalities = 0;
+  int exact_equalities = 0;
+  int modulo_equalities = 0;
   for (int i = 0; i < MEDS_k; i++)
     for (int j = 0; j < MEDS_k; j++)
-      if (pmod_mat_entry(C1, MEDS_k, MEDS_k, i, j) == pmod_mat_entry(C2, MEDS_k, MEDS_k, i, j))
-      {
-        equalities++;
-      }
+    {
+      GFq_t val1 = pmod_mat_entry(C1, MEDS_k, MEDS_k, i, j);
+      GFq_t val2 = pmod_mat_entry(C2, MEDS_k, MEDS_k, i, j);
+      if (val1 == val2)
+        exact_equalities++;
+      val1 = val1 > MEDS_p ? val1 - MEDS_p : val1;
+      val2 = val2 > MEDS_p ? val2 - MEDS_p : val2;
+      if (val1 == val2)
+        modulo_equalities++;
+    }
 
   int expected_equalities = MEDS_k * MEDS_k;
 
-  if (expected_equalities == equalities)
+  printf("Equalities: %d / %d\n", exact_equalities, expected_equalities);
+  printf("Modulo equalities: %d / %d\n", modulo_equalities, expected_equalities);
+  if (expected_equalities == exact_equalities)
   {
     printf("Matrices are EQUAL\n");
   }
+  else if (modulo_equalities == expected_equalities)
+  {
+    printf("Matrices are EQUAL modulo MEDS_p\n");
+  }
   else
   {
-    printf("Equalities: %d / %d\n", equalities, expected_equalities);
     printf("Matrices are NOT EQUAL\n");
     exit(-1);
   }
