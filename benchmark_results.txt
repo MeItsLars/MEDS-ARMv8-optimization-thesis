@@ -4,10 +4,14 @@ Version                                          | Cycle Median
 v0 Original                                      | ~ 1.150.000
 v1 Parallelized mult & reduction                 | ~   150.000
 v2 Parallelized mult & reduction with m2-padding | ~   150.000
+v3 Parallelized mult & no red with all-padding   | ~   150.000
+v3 Parallelized mult & reduction with all-pad    | ~   160.000
 
 MEDS (PARAM=oldlevel341711)
-Version                          | Keygen Median | Sign Median   | Verify Median
----------------------------------------------------------------------------------
-Original                         | 21.417.136    | 2.667.048.960 | 2.645.522.688    38764
-With matmul v1 & matrix padding  | 13.410.972    | 1.470.792.192 | 1.439.757.568    9095
-With matmul v2                   | ?             | 1.371.640.448 | ?                9063        DOES NOT WORK BECAUSE C_c % 2 != 0
+Version                          | Keygen Median | Sign Median   | Verify Median | Matmul cycle count | Notes
+-------------------------------------------------------------------------------------------------------------------------------
+Original                         | 21.417.136    | 2.667.048.960 | 2.645.522.688 | 38764              |
+With matmul v1 & matrix padding  | 13.410.972    | 1.470.792.192 | 1.439.757.568 | 9095               |
+With matmul v2                   | ?             | 1.371.640.448 | ?             | 9063               | Doesn't work (padding)
+With matmul v3                   | 14.772.460    | 1.393.826.560 | 1.395.400.960 | 7545               |
+With matmul v4                   | 14.613.865    | 1.475.441.024 | 1.478.902.656 | 9497               |

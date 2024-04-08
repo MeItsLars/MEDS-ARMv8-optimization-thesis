@@ -75,7 +75,257 @@ void print_binary(GFq_t val)
   printf("\n");
 }
 
-void pmod_mat_mul(
+// NEON matrix multiplication with padding
+void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  BENCH_START("pmod_mat_mul");
+  // Add at least 4 elements to the result matrix to prevent a segmentation fault
+  uint32_t tmp[C_r * C_c + 4];
+
+  int Ai, Bi, Ci;
+  uint16x4_t B0, B1, B2, B3;
+  uint32x4_t C0, C1, C2, C3;
+
+  for (int c = 0; c < C_c; c += 4)
+    for (int r = 0; r < C_r; r += 4)
+    {
+      // In every inner loop, we compute a 4x4 block of the result matrix
+      // This 4x4 block is represented by the vectors (of size 4) C0, C1, C2, C3
+
+      int r_dist = C_r - r; // Distance between r and the bottom of the result matrix
+      int c_dist = C_c - c; // Distance between c and the right of the result matrix
+
+      C0 = vmovq_n_u32(0);
+      C1 = vmovq_n_u32(0);
+      C2 = vmovq_n_u32(0);
+      C3 = vmovq_n_u32(0);
+
+      // In every iteration of the following loop, we compute a contribution to the 4x4 result block
+      // Specifically, we compute the product of a 4x4 block of A and a 4x4 block of B and add it to the result block
+      for (int k = 0; k < A_c; k += 4)
+      {
+        int k_dist = A_c - k; // Distance between k and the right of A and the bottom of B
+
+        Ai = r * A_c + k; // Index A[r][k]
+        Bi = k * B_c + c; // Index B[k][c]
+
+        int A0 = Ai;           // A[r + 0][k]
+        int A1 = Ai + A_c;     // A[r + 1][k]
+        int A2 = Ai + 2 * A_c; // A[r + 2][k]
+        int A3 = Ai + 3 * A_c; // A[r + 3][k]
+
+        // Compute a 4x4 submatrix of the result
+        if (k_dist > 3)
+        {
+          // Load the 16 elements from B.
+          // In the case where c_dist < 4, we can still load the excess elements, as they do not matter.
+          // However, to prevent a segmentation fault, we can't do this for B3.
+          B0 = vld1_u16(&B[Bi]);
+          B1 = vld1_u16(&B[Bi + B_c]);
+          B2 = vld1_u16(&B[Bi + 2 * B_c]);
+          B3 = vld1_u16(&B[Bi + 3 * B_c]);
+          // An alternative solution to the above code is to make sure that B has a few extra (unallocated) elements
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+          C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+          C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
+          C0 = vmlal_n_u16(C0, B3, A[A0 + 3]);
+
+          if (r_dist > 1)
+          {
+            C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+            C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+            C1 = vmlal_n_u16(C1, B2, A[A1 + 2]);
+            C1 = vmlal_n_u16(C1, B3, A[A1 + 3]);
+          }
+
+          // Only compute the bottom two rows if r is at least 4 away from the bottom of the result matrix
+          if (r_dist > 2)
+          {
+            C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+            C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+            C2 = vmlal_n_u16(C2, B2, A[A2 + 2]);
+            C2 = vmlal_n_u16(C2, B3, A[A2 + 3]);
+          }
+
+          if (r_dist > 3)
+          {
+            C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+            C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+            C3 = vmlal_n_u16(C3, B2, A[A3 + 2]);
+            C3 = vmlal_n_u16(C3, B3, A[A3 + 3]);
+          }
+        }
+        else if (k_dist > 2)
+        {
+          B0 = vld1_u16(&B[Bi]);
+          B1 = vld1_u16(&B[Bi + B_c]);
+          B2 = vld1_u16(&B[Bi + 2 * B_c]);
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+          C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+          C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
+
+          C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+          C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+          C1 = vmlal_n_u16(C1, B2, A[A1 + 2]);
+
+          C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+          C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+          C2 = vmlal_n_u16(C2, B2, A[A2 + 2]);
+
+          C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+          C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+          C3 = vmlal_n_u16(C3, B2, A[A3 + 2]);
+        }
+        else if (k_dist > 1)
+        {
+          B0 = vld1_u16(&B[Bi]);
+          B1 = vld1_u16(&B[Bi + B_c]);
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+          C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+
+          C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+          C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+
+          C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+          C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+
+          C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+          C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+        }
+        else
+        {
+          B0 = vld1_u16(&B[Bi]);
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+
+          C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+
+          C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+
+          C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+        }
+      }
+
+      // Store the result block
+      // Depending on whether r and c are far enough from the bottom and right of the result matrix,
+      // we store the result block in different ways.
+      Ci = C_c * r + c; // Index C[r][c]
+
+      if (c_dist > 3)
+      {
+        // Store all 4 values of C0-C4
+        if (r_dist > 0)
+          vst1q_u32(&tmp[Ci], C0);
+        if (r_dist > 1)
+          vst1q_u32(&tmp[Ci + C_c], C1);
+        if (r_dist > 2)
+          vst1q_u32(&tmp[Ci + 2 * C_c], C2);
+        if (r_dist > 3)
+          vst1q_u32(&tmp[Ci + 3 * C_c], C3);
+      }
+      else
+      {
+        // Store some values of C0-C4
+        if (r_dist > 0)
+        {
+          if (c_dist > 0)
+            tmp[Ci] = C0[0];
+          if (c_dist > 1)
+            tmp[Ci + 1] = C0[1];
+          if (c_dist > 2)
+            tmp[Ci + 2] = C0[2];
+        }
+        if (r_dist > 1)
+        {
+          if (c_dist > 0)
+            tmp[Ci + C_c] = C1[0];
+          if (c_dist > 1)
+            tmp[Ci + C_c + 1] = C1[1];
+          if (c_dist > 2)
+            tmp[Ci + C_c + 2] = C1[2];
+        }
+        if (r_dist > 2)
+        {
+          if (c_dist > 0)
+            tmp[Ci + 2 * C_c] = C2[0];
+          if (c_dist > 1)
+            tmp[Ci + 2 * C_c + 1] = C2[1];
+          if (c_dist > 2)
+            tmp[Ci + 2 * C_c + 2] = C2[2];
+        }
+        if (r_dist > 3)
+        {
+          if (c_dist > 0)
+            tmp[Ci + 3 * C_c] = C3[0];
+          if (c_dist > 1)
+            tmp[Ci + 3 * C_c + 1] = C3[1];
+          if (c_dist > 2)
+            tmp[Ci + 3 * C_c + 2] = C3[2];
+        }
+      }
+    }
+
+  // The following seems faster???
+  // for (int r = 0; r < C_r; r++)
+  //   for (int c = 0; c < C_c; c++)
+  //     pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c] % MEDS_p);
+
+  // Reduce the result matrix using NEON intrinsics
+  uint32x4_t C_red;
+  uint16x4_t C_red_u16;
+  uint32x4_t C_tmp;
+  uint32x4_t C_diff;
+  uint32x4_t C_mask;
+  uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
+  uint32x4_t C_one = vdupq_n_u32(1);
+  for (int r = 0; r < C_r; r++)
+    for (int c = 0; c < C_c; c += 4)
+    {
+      // Load 4 values from the result matrix
+      C_red = vld1q_u32(&tmp[r * C_c + c]);
+
+      // Apply two reductions
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
+
+      // Reduce to a value between 0 and MEDS_p - 1:
+      C_diff = vsubq_u32(C_red, C_MEDS_p);
+      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+
+      // Convert to smaller type
+      C_red_u16 = vqmovn_u32(C_red);
+
+      // Store into the result matrix.
+      // Technique depends on whether c is at least 4 away from the right of the result matrix
+      int result_index = r * C_c + c;
+      int c_dist = C_c - c;
+      if (c_dist > 3)
+      {
+        vst1_u16(&C[result_index], C_red_u16);
+      }
+      else
+      {
+        // Store some values of C0-C4
+        if (c_dist > 0)
+          C[result_index] = C_red_u16[0];
+        if (c_dist > 1)
+          C[result_index + 1] = C_red_u16[1];
+        if (c_dist > 2)
+          C[result_index + 2] = C_red_u16[2];
+      }
+    }
+  BENCH_END("pmod_mat_mul");
+}
+
+void pmod_mat_mul_pad2(
     pmod_mat_t *C_up, int C_r_up, int C_c_up,
     pmod_mat_t *A_up, int A_r_up, int A_c_up,
     pmod_mat_t *B_up, int B_r_up, int B_c_up)
