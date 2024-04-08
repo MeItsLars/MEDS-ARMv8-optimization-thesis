@@ -75,7 +75,7 @@ void print_binary(GFq_t val)
   printf("\n");
 }
 
-void pmod_mat_mul_new(
+void pmod_mat_mul(
     pmod_mat_t *C_up, int C_r_up, int C_c_up,
     pmod_mat_t *A_up, int A_r_up, int A_c_up,
     pmod_mat_t *B_up, int B_r_up, int B_c_up)
@@ -195,10 +195,10 @@ void pmod_mat_mul_new(
       C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
       C_red = vsubq_u32(C_red, C_tmp);
 
-      // Reduce to a value between 0 and MEDS_p - 1: (can be ignored?)
-      // C_diff = vsubq_u32(C_red, C_MEDS_p);
-      // C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
-      // C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+      // Reduce to a value between 0 and MEDS_p - 1: (can not be ignored directly)
+      C_diff = vsubq_u32(C_red, C_MEDS_p);
+      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
 
       // Convert to smaller type
       C_red_u16 = vqmovn_u32(C_red);
@@ -222,7 +222,7 @@ void pmod_mat_mul_new(
   BENCH_END("pmod_mat_mul");
 }
 
-void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+void pmod_mat_mul_original(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   BENCH_START("pmod_mat_mul");
   GFq_t tmp[C_r * C_c];

@@ -104,7 +104,7 @@ BENCH_ALL:
 
 BENCHMARK:
 	make benchmark PARAM=$(PARAM) BENCHMARK=true
-	$(OBJDIR)/benchmark verify
+	$(OBJDIR)/benchmark sign 1
 
 BENCH_MATMUL:
 	make benchmatmul PARAM=$(PARAM) BENCHMARK=true

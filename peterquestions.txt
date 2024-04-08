@@ -19,6 +19,8 @@
   I should explain it to the extent that for every optimization done, it should be easy to understand why we use it and where it is used.
 
 ==== NEW ====
+- Update on situation
+
 - Why are medians of matmul and RREF so different for each run?
 > Aligned loads do not seem to work.
 - Still doesn't seem to work

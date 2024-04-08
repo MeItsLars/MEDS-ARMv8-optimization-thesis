@@ -1,11 +1,13 @@
 MATRIX MULTIPLICATION (A: 24 x 24*24, B: 24*24 x 24, PARAM=oldlevel341711)
-Version                                | Cycle Median
+Version                                          | Cycle Median
 --------------------------------------------------------------------------
-v0 Original                            | ~ 1.150.000
-v1 Parallelized mult & reduction       | ~   150.000
+v0 Original                                      | ~ 1.150.000
+v1 Parallelized mult & reduction                 | ~   150.000
+v2 Parallelized mult & reduction with m2-padding | ~   150.000
 
 MEDS (PARAM=oldlevel341711)
 Version                          | Keygen Median | Sign Median   | Verify Median
 ---------------------------------------------------------------------------------
-Original                         | 21.417.136    | 2.667.048.960 | 2.645.522.688
-With matmul v1 & matrix padding  | 13.410.972    | 1.470.792.192 | 1.439.757.568
+Original                         | 21.417.136    | 2.667.048.960 | 2.645.522.688    38764
+With matmul v1 & matrix padding  | 13.410.972    | 1.470.792.192 | 1.439.757.568    9095
+With matmul v2                   | ?             | 1.371.640.448 | ?                9063        DOES NOT WORK BECAUSE C_c % 2 != 0

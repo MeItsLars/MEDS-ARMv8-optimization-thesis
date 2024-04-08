@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <assert.h>
+#include <math.h>
 
 #include <sys/random.h>
 #include <sys/time.h>
@@ -24,7 +25,7 @@ benchresult benchresults[1000];
 int number_of_benchresults = 0;
 int benchmark_enabled = 0;
 
-#define MATMUL_ROUNDS 1000
+#define MATMUL_ROUNDS 100
 
 extern void pmod_mat_mul_asm(uint16_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c);
 
@@ -157,8 +158,8 @@ __attribute__((optimize("no-tree-vectorize"))) void pmod_mat_mul_3(pmod_mat_t *C
       pmod_mat_set_entry(C, C_r, C_c, r, c, mod_reduce(tmp[r * C_c + c]));
 }
 
-// Matrix multiplication with a smart modulo reduction and NEON intrinsics in the first multiply loop
-void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+// NEON matrix multiplication, assuming C_r and C_c are multiples of 4
+void pmod_mat_mul_simd_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   // Step 1: Prepare matrices. Pad the rows and columns to be a multiple of 4
   // int A_r_pad = (A_r + 3) & ~3;
@@ -284,7 +285,7 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
       // directly into the result matrix should theoretically be faster. But, after trying it, the result
       // turned out to be a bit slower.
     }
-  
+
   // A loop that reduces all elements in 'tmp' using the % operator seems to achieve the same performance
   // as the parallel version below. However, the parallel version allows us to establish a lower bound on
   // the number of cycles required for the reduction.
@@ -321,10 +322,226 @@ void pmod_mat_mul_4(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
 
       // Store into the result matrix
       int result_index = r * C_c + c;
-      // TODO: Handle last few elements separately if C_c * C_r is not a multiple of 4
-      assert(result_index < C_c * C_r);
       vst1_u16(&C[result_index], C_red_u16);
     }
+}
+
+// NEON matrix multiplication, assuming C_r and C_c are multiples of 2
+void pmod_mat_mul_simd_1_pad(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  // Add at least 2 elements to the result matrix to prevent a segmentation fault
+  uint32_t tmp[C_r * C_c + 2];
+
+  int Ai, Bi, Ci;
+  uint16x4_t B0, B1, B2, B3;
+  uint32x4_t C0, C1, C2, C3;
+
+  for (int c = 0; c < C_c; c += 4)
+    for (int r = 0; r < C_r; r += 4)
+    {
+      // In every inner loop, we compute a 4x4 block of the result matrix
+      // This 4x4 block is represented by the vectors (of size 4) C0, C1, C2, C3
+
+      int r_do_4 = r + 4 <= C_r; // Whether r is at least 4 away from the bottom of the result matrix
+      int c_do_4 = c + 4 <= C_c; // Whether c is at least 4 away from the right of the result matrix
+
+      C0 = vmovq_n_u32(0);
+      C1 = vmovq_n_u32(0);
+      C2 = vmovq_n_u32(0);
+      C3 = vmovq_n_u32(0);
+
+      // In every iteration of the following loop, we compute a contribution to the 4x4 result block
+      // Specifically, we compute the product of a 4x4 block of A and a 4x4 block of B and add it to the result block
+      for (int k = 0; k < A_c; k += 4)
+      {
+        int k_do_4 = k + 4 <= A_c; // Whether k is at least 4 away from the right of A and the bottom of B
+
+        Ai = r * A_c + k; // Index A[r][k]
+        Bi = k * B_c + c; // Index B[k][c]
+
+        int A0 = Ai;           // A[r + 0][k]
+        int A1 = Ai + A_c;     // A[r + 1][k]
+        int A2 = Ai + 2 * A_c; // A[r + 2][k]
+        int A3 = Ai + 3 * A_c; // A[r + 3][k]
+
+        if (k_do_4)
+        {
+          // Compute a 4x4 submatrix of the result
+
+          // Load the 16 elements from B.
+          // In the case where c_do_4 is 0, we can still load the excess elements, as they do not matter.
+          // However, to prevent a segmentation fault, we can't do this for B3.
+          B0 = vld1_u16(&B[Bi]);
+          B1 = vld1_u16(&B[Bi + B_c]);
+          B2 = vld1_u16(&B[Bi + 2 * B_c]);
+          if (c_do_4)
+            B3 = vld1_u16(&B[Bi + 3 * B_c]);
+          else
+          {
+            // c is 2 away from the right of the result matrix, meaning we can only load 2 elements.
+            B3 = vmov_n_u16(0);
+            B3[0] = B[Bi + 3 * B_c];
+            B3[1] = B[Bi + 3 * B_c + 1];
+          }
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+          C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+          C0 = vmlal_n_u16(C0, B2, A[A0 + 2]);
+          C0 = vmlal_n_u16(C0, B3, A[A0 + 3]);
+
+          C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+          C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+          C1 = vmlal_n_u16(C1, B2, A[A1 + 2]);
+          C1 = vmlal_n_u16(C1, B3, A[A1 + 3]);
+
+          // Only compute the bottom two rows if r is at least 4 away from the bottom of the result matrix
+          if (r_do_4)
+          {
+            C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+            C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+            C2 = vmlal_n_u16(C2, B2, A[A2 + 2]);
+            C2 = vmlal_n_u16(C2, B3, A[A2 + 3]);
+
+            C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+            C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+            C3 = vmlal_n_u16(C3, B2, A[A3 + 2]);
+            C3 = vmlal_n_u16(C3, B3, A[A3 + 3]);
+          }
+        }
+        else
+        {
+          // Compute a 2x2 submatrix of the result
+          B0 = vld1_u16(&B[Bi]);
+          B1 = vld1_u16(&B[Bi + B_c]);
+
+          C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
+          C0 = vmlal_n_u16(C0, B1, A[A0 + 1]);
+
+          C1 = vmlal_n_u16(C1, B0, A[A1 + 0]);
+          C1 = vmlal_n_u16(C1, B1, A[A1 + 1]);
+
+          C2 = vmlal_n_u16(C2, B0, A[A2 + 0]);
+          C2 = vmlal_n_u16(C2, B1, A[A2 + 1]);
+
+          C3 = vmlal_n_u16(C3, B0, A[A3 + 0]);
+          C3 = vmlal_n_u16(C3, B1, A[A3 + 1]);
+        }
+      }
+
+      // Store the result block
+      // Depending on whether r and c are far enough from the bottom and right of the result matrix,
+      // we store the result block in different ways.
+      Ci = C_c * r + c; // Index C[r][c]
+      if (c_do_4)
+      {
+        // Store 4 elements at a time
+        vst1q_u32(&tmp[Ci], C0);
+        vst1q_u32(&tmp[Ci + C_c], C1);
+        // Only store the bottom two rows if r is at least 4 away from the bottom of the result matrix
+        if (r_do_4)
+        {
+          vst1q_u32(&tmp[Ci + 2 * C_c], C2);
+          vst1q_u32(&tmp[Ci + 3 * C_c], C3);
+        }
+      }
+      else
+      {
+        // Store 2 elements at a time (paralellization not possible)
+        tmp[Ci] = C0[0];
+        tmp[Ci + 1] = C0[1];
+        tmp[Ci + C_c] = C1[0];
+        tmp[Ci + C_c + 1] = C1[1];
+        // Only store the bottom two rows if r is at least 4 away from the bottom of the result matrix
+        if (r_do_4)
+        {
+          tmp[Ci + 2 * C_c] = C2[0];
+          tmp[Ci + 2 * C_c + 1] = C2[1];
+          tmp[Ci + 3 * C_c] = C3[0];
+          tmp[Ci + 3 * C_c + 1] = C3[1];
+        }
+      }
+    }
+
+  // The following seems faster???
+  // for (int r = 0; r < C_r; r++)
+  //   for (int c = 0; c < C_c; c++)
+  //     pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c] % MEDS_p);
+
+  // Reduce the result matrix using NEON intrinsics
+  uint32x4_t C_red;
+  uint16x4_t C_red_u16;
+  uint32x4_t C_tmp;
+  uint32x4_t C_diff;
+  uint32x4_t C_mask;
+  uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
+  uint32x4_t C_one = vdupq_n_u32(1);
+  for (int r = 0; r < C_r; r++)
+    for (int c = 0; c < C_c; c += 4)
+    {
+      // Load 4 values from the result matrix
+      C_red = vld1q_u32(&tmp[r * C_c + c]);
+
+      // Apply two reductions
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
+      C_tmp = vshrq_n_u32(C_red, GFq_bits);
+      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+      C_red = vsubq_u32(C_red, C_tmp);
+
+      // Reduce to a value between 0 and MEDS_p - 1:
+      C_diff = vsubq_u32(C_red, C_MEDS_p);
+      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+
+      // Convert to smaller type
+      C_red_u16 = vqmovn_u32(C_red);
+
+      // Store into the result matrix.
+      // Technique depends on whether c is at least 4 away from the right of the result matrix
+      int result_index = r * C_c + c;
+      int c_do_4 = c + 4 <= C_c;
+      if (c_do_4)
+        vst1_u16(&C[result_index], C_red_u16);
+      else
+      {
+        // Store 2 elements at a time (paralellization not possible)
+        C[result_index] = C_red_u16[0];
+        C[result_index + 1] = C_red_u16[1];
+      }
+    }
+}
+
+// This implementation is based on the one in https://github.com/IIS-summer-2023/meds-simd-lowlevel/blob/main/ref/matrixmod.c
+// It is slower than my own implementation.
+void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  int words_per_block = 4;
+  int blocks = ceil(C_c / words_per_block);
+
+  for (int block = 0; block < blocks; block++)
+  {
+    for (int i = 0; i < A_r; i++)
+    {
+      uint32x4_t result = vdupq_n_u32(0);
+      for (int j = 0; j < A_c; j++)
+      {
+        uint16x4_t a = vdup_n_u16(A[i * A_c + j]);
+        uint16x4_t b = vld1_u16(B + j * B_c + block * words_per_block);
+        result = vmlal_u16(result, a, b);
+      }
+
+      uint32x4_t tmp = vshrq_n_u32(result, GFq_bits);
+      tmp = vmulq_n_u32(tmp, MEDS_p);
+      result = vsubq_u32(result, tmp);
+      tmp = vshrq_n_u32(result, GFq_bits);
+      tmp = vmulq_n_u32(tmp, MEDS_p);
+      result = vsubq_u32(result, tmp);
+
+      uint16x4_t res_16x4 = vqmovn_u32(result);
+      vst1_u16(C + i * C_c + block * words_per_block, res_16x4);
+    }
+  }
 }
 
 float min_cycle_bound(int m, int o, int n)
@@ -385,7 +602,7 @@ int main(int argc, char *argv[])
     old_matmul_cc += get_cyclecounter();
 
     long long new_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_asm(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
+    pmod_mat_mul_simd_1_pad(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
@@ -395,7 +612,7 @@ int main(int argc, char *argv[])
   // Print results
   double old_matmul_median_cc = median(old_matmul_cycles, MATMUL_ROUNDS);
   double new_matmul_median_cc = median(new_matmul_cycles, MATMUL_ROUNDS);
-  float cycle_bound = min_cycle_bound(MEDS_k, MEDS_m * MEDS_n, MEDS_k);
+  float cycle_bound = min_cycle_bound(C_ROWS, A_COLS, C_COLS);
   float improvement_possible = (new_matmul_median_cc / cycle_bound) * 100;
   float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
   float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
@@ -416,11 +633,11 @@ int main(int argc, char *argv[])
   int exact_equalities = 0;
   int close_equalities = 0;
   int modulo_equalities = 0;
-  for (int i = 0; i < MEDS_k; i++)
-    for (int j = 0; j < MEDS_k; j++)
+  for (int r = 0; r < C_ROWS; r++)
+    for (int c = 0; c < C_COLS; c++)
     {
-      GFq_t val1 = pmod_mat_entry(C1, MEDS_k, MEDS_k, i, j);
-      GFq_t val2 = pmod_mat_entry(C2, MEDS_k, MEDS_k, i, j);
+      GFq_t val1 = pmod_mat_entry(C1, C_ROWS, C_COLS, r, c);
+      GFq_t val2 = pmod_mat_entry(C2, C_ROWS, C_COLS, r, c);
       if (val1 == val2)
         exact_equalities++;
       if (val1 % MEDS_p == val2 % MEDS_p)
@@ -431,7 +648,7 @@ int main(int argc, char *argv[])
         close_equalities++;
     }
 
-  int expected_equalities = MEDS_k * MEDS_k;
+  int expected_equalities = C_ROWS * C_COLS;
 
   printf("Equalities: %d / %d\n", exact_equalities, expected_equalities);
   printf("Close equalities (+/- 1 * MEDS_p): %d / %d\n", close_equalities, expected_equalities);
