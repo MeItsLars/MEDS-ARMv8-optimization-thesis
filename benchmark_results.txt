@@ -4,7 +4,7 @@ Version                                          | Cycle Median
 v0 Original                                      | ~ 1.150.000
 v1 Parallelized mult & reduction                 | ~   150.000
 v2 Parallelized mult & reduction with m2-padding | ~   150.000
-v3 Parallelized mult & no red with all-padding   | ~   150.000
+v3 Parallelized mult & % red with all-padding    | ~   150.000
 v3 Parallelized mult & reduction with all-pad    | ~   160.000
 
 MEDS (PARAM=oldlevel341711)

@@ -4,7 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
-#include <assert.h>
 #include <math.h>
 
 #include <sys/random.h>
@@ -28,6 +27,8 @@ int benchmark_enabled = 0;
 #define MATMUL_ROUNDS 100
 
 extern void pmod_mat_mul_asm(uint16_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c);
+
+extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
 // Default matrix multiplication implementation
 void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
@@ -512,11 +513,65 @@ void pmod_mat_mul_simd_1_pad2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, in
     }
 }
 
+void pmod_mat_reduce(pmod_mat_t *C, int C_r, int C_c, uint32_t *tmp)
+{
+  for (int i = 0; i < C_r * C_c; i++)
+    C[i] = tmp[i] % MEDS_p;
+}
+
+void pmod_mat_reduce_2(pmod_mat_t *C, int C_r, int C_c, uint32_t *tmp)
+{
+  for (int i = 0; i < C_r * C_c; i++)
+  {
+    uint32_t val = tmp[i];
+    uint32_t temp = (val * 2149057666) >> 43;
+    C[i] = val - temp * MEDS_p;
+  }
+}
+
+void pmod_mat_reduce_2_simd(pmod_mat_t *C, int C_r, int C_c, uint32_t *tmp)
+{
+  // Define constants
+  const uint32x4_t MEDS_p_v = vdupq_n_u32(MEDS_p);
+  const uint32x2_t multiplier_v = vdup_n_u32(2149057666);
+  const int shift_amount = 43;
+
+  // Loop over the matrix elements in steps of 4 (NEON register width)
+  for (int i = 0; i < C_r * C_c; i += 4)
+  {
+    // Load 4 elements from tmp
+    uint32x4_t val_v = vld1q_u32(&tmp[i]);
+
+    // Multiply each element by the multiplier
+    uint64x2_t temp_64x2_1 = vmull_u32(vget_low_u32(val_v), multiplier_v);
+    temp_64x2_1 = vshrq_n_u64(temp_64x2_1, shift_amount);
+    uint64x2_t temp_64x2_2 = vmull_u32(vget_high_u32(val_v), multiplier_v);
+    temp_64x2_2 = vshrq_n_u64(temp_64x2_2, shift_amount);
+
+    // Convert to 32-bit
+    uint32x2_t temp_32x2_1 = vmovn_u64(temp_64x2_1);
+    uint32x2_t temp_32x2_2 = vmovn_u64(temp_64x2_2);
+
+    // Duplicate to create a 32-bit vector
+    uint32x4_t temp_v = vcombine_u32(temp_32x2_1, temp_32x2_2);
+
+    // Multiply each temp element by MEDS_p
+    temp_v = vmulq_u32(temp_v, MEDS_p_v);
+
+    // Subtract temp * MEDS_p from val
+    uint32x4_t result_v = vsubq_u32(val_v, temp_v);
+    uint16x4_t result_v_u16 = vqmovn_u32(result_v);
+
+    // Store the result back to C
+    vst1_u16(&C[i], result_v_u16);
+  }
+}
+
 // NEON matrix multiplication with padding
 void pmod_mat_mul_simd_1_pad(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
   // Add at least 4 elements to the result matrix to prevent a segmentation fault
-  uint32_t tmp[C_r * C_c + 4];
+  uint32_t tmp[C_r * C_c + 4] __attribute__((aligned(16)));
 
   int Ai, Bi, Ci;
   uint16x4_t B0, B1, B2, B3;
@@ -559,7 +614,19 @@ void pmod_mat_mul_simd_1_pad(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int
           B0 = vld1_u16(&B[Bi]);
           B1 = vld1_u16(&B[Bi + B_c]);
           B2 = vld1_u16(&B[Bi + 2 * B_c]);
-          B3 = vld1_u16(&B[Bi + 3 * B_c]);
+          if (c_dist > 3)
+            B3 = vld1_u16(&B[Bi + 3 * B_c]);
+          else
+          {
+            // c is close to the right of the result matrix, meaning we can only load a few elements.
+            B3 = vmov_n_u16(0);
+            if (c_dist > 0)
+              B3[0] = B[Bi + 3 * B_c];
+            if (c_dist > 1)
+              B3[1] = B[Bi + 3 * B_c + 1];
+            if (c_dist > 2)
+              B3[2] = B[Bi + 3 * B_c + 2];
+          }
           // An alternative solution to the above code is to make sure that B has a few extra (unallocated) elements
 
           C0 = vmlal_n_u16(C0, B0, A[A0 + 0]);
@@ -704,68 +771,73 @@ void pmod_mat_mul_simd_1_pad(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int
       }
     }
 
+  pmod_mat_reduce(C, C_r, C_c, &tmp);
+
   // The following seems faster???
-  // for (int r = 0; r < C_r; r++)
-  //   for (int c = 0; c < C_c; c++)
-  //     pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c] % MEDS_p);
+  // for (int i = 0; i < C_r * C_c; i++)
+  //   C[i] = tmp[i] % MEDS_p;
 
   // Reduce the result matrix using NEON intrinsics
-  uint32x4_t C_red;
-  uint16x4_t C_red_u16;
-  uint32x4_t C_tmp;
-  uint32x4_t C_diff;
-  uint32x4_t C_mask;
-  uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
-  uint32x4_t C_one = vdupq_n_u32(1);
-  for (int r = 0; r < C_r; r++)
-    for (int c = 0; c < C_c; c += 4)
-    {
-      // Load 4 values from the result matrix
-      C_red = vld1q_u32(&tmp[r * C_c + c]);
+  // uint32x4_t C_red;
+  // uint16x4_t C_red_u16;
+  // uint32x4_t C_tmp;
+  // uint32x4_t C_diff;
+  // uint32x4_t C_mask;
+  // uint32x4_t C_MEDS_p = vdupq_n_u32(MEDS_p);
+  // uint32x4_t C_one = vdupq_n_u32(1);
+  // for (int r = 0; r < C_r; r++)
+  //   for (int c = 0; c < C_c; c += 4)
+  //   {
+  //     // Load 4 values from the result matrix
+  //     C_red = vld1q_u32(&tmp[r * C_c + c]);
 
-      // Apply two reductions
-      C_tmp = vshrq_n_u32(C_red, GFq_bits);
-      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
-      C_red = vsubq_u32(C_red, C_tmp);
-      C_tmp = vshrq_n_u32(C_red, GFq_bits);
-      C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
-      C_red = vsubq_u32(C_red, C_tmp);
+  //     // Apply two reductions
+  //     C_tmp = vshrq_n_u32(C_red, GFq_bits);
+  //     C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+  //     C_red = vsubq_u32(C_red, C_tmp);
+  //     C_tmp = vshrq_n_u32(C_red, GFq_bits);
+  //     C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
+  //     C_red = vsubq_u32(C_red, C_tmp);
 
-      // Reduce to a value between 0 and MEDS_p - 1:
-      C_diff = vsubq_u32(C_red, C_MEDS_p);
-      C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
-      C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
+  //     // Reduce to a value between 0 and MEDS_p - 1:
+  //     C_diff = vsubq_u32(C_red, C_MEDS_p);
+  //     C_mask = vandq_u32(vshrq_n_u32(C_diff, 31), C_one);
+  //     C_red = vaddq_u32(vmulq_u32(C_mask, C_red), vmulq_u32(vsubq_u32(C_one, C_mask), C_diff));
 
-      // Convert to smaller type
-      C_red_u16 = vqmovn_u32(C_red);
+  //     // Convert to smaller type
+  //     C_red_u16 = vqmovn_u32(C_red);
 
-      // Store into the result matrix.
-      // Technique depends on whether c is at least 4 away from the right of the result matrix
-      int result_index = r * C_c + c;
-      int c_dist = C_c - c;
-      if (c_dist > 3)
-      {
-        vst1_u16(&C[result_index], C_red_u16);
-      }
-      else
-      {
-        // Store some values of C0-C4
-        if (c_dist > 0)
-          C[result_index] = C_red_u16[0];
-        if (c_dist > 1)
-          C[result_index + 1] = C_red_u16[1];
-        if (c_dist > 2)
-          C[result_index + 2] = C_red_u16[2];
-      }
-    }
+  //     // Store into the result matrix.
+  //     // Technique depends on whether c is at least 4 away from the right of the result matrix
+  //     int result_index = r * C_c + c;
+  //     int c_dist = C_c - c;
+  //     if (c_dist > 3)
+  //     {
+  //       vst1_u16(&C[result_index], C_red_u16);
+  //     }
+  //     else
+  //     {
+  //       // Store some values of C0-C4
+  //       if (c_dist > 0)
+  //         C[result_index] = C_red_u16[0];
+  //       if (c_dist > 1)
+  //         C[result_index + 1] = C_red_u16[1];
+  //       if (c_dist > 2)
+  //         C[result_index + 2] = C_red_u16[2];
+  //     }
+  //   }
 }
 
 // This implementation is based on the one in https://github.com/IIS-summer-2023/meds-simd-lowlevel/blob/main/ref/matrixmod.c
 // It is slower than my own implementation.
 void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
+  uint32_t tmp[C_r * C_c];
+
   int words_per_block = 4;
   int blocks = ceil(C_c / words_per_block);
+
+  int remainder = C_c % words_per_block;
 
   for (int block = 0; block < blocks; block++)
   {
@@ -778,18 +850,12 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
         uint16x4_t b = vld1_u16(B + j * B_c + block * words_per_block);
         result = vmlal_u16(result, a, b);
       }
-
-      uint32x4_t tmp = vshrq_n_u32(result, GFq_bits);
-      tmp = vmulq_n_u32(tmp, MEDS_p);
-      result = vsubq_u32(result, tmp);
-      tmp = vshrq_n_u32(result, GFq_bits);
-      tmp = vmulq_n_u32(tmp, MEDS_p);
-      result = vsubq_u32(result, tmp);
-
-      uint16x4_t res_16x4 = vqmovn_u32(result);
-      vst1_u16(C + i * C_c + block * words_per_block, res_16x4);
+      vst1q_u32(&tmp[i * C_c + block * words_per_block], result);
     }
   }
+
+  for (int i = 0; i < C_r * C_c; i++)
+    C[i] = tmp[i] % MEDS_p;
 }
 
 float min_cycle_bound(int m, int o, int n)
@@ -798,9 +864,9 @@ float min_cycle_bound(int m, int o, int n)
 }
 
 #define A_ROWS 24
-#define A_COLS 24 * 24
+#define A_COLS 24
 #define B_ROWS A_COLS
-#define B_COLS 24
+#define B_COLS 24 * 24
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
