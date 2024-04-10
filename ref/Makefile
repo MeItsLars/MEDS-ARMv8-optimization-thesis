@@ -32,12 +32,17 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 
 default: $(EXES)
 
+ASM_SOURCES := $(wildcard *.s)
+ASM_OBJECTS := $(patsubst %.s,%.o,$(ASM_SOURCES))
 C_OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o cyclecounter.o
-ASM_OBJECTS = benchmatmul_asm.o
 HEADERS = $(wildcard *.h) $(OBJDIR)/params.h $(OBJDIR)/api.h
 
 # Define all object files
-BUILDOBJ := ${C_OBJECTS:%=$(OBJDIR)/%} ${ASM_OBJECTS:%=$(OBJDIR)/%}
+BUILDOBJ := ${ASM_OBJECTS:%=$(OBJDIR)/%} ${C_OBJECTS:%=$(OBJDIR)/%}
+
+# Build executable
+$(EXES) : % :
+	@make $(OBJDIR)/$(@F)
 
 # Generate params.h and api.h
 $(OBJDIR)/params.h: params.py $(OBJDIR)
@@ -46,20 +51,17 @@ $(OBJDIR)/params.h: params.py $(OBJDIR)
 $(OBJDIR)/api.h: params.py $(OBJDIR)
 	python3 $< -a $(PARAM) > api.h
 
-$(EXES) : % :
-	@make $(OBJDIR)/$(@F)
-
 # Create build directory if it doesn't exist
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-# Compile C files
-$(OBJDIR)/%.o: %.c $(HEADERS) $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
 # Compile ASM files
 $(OBJDIR)/%.o: %.s $(HEADERS) $(OBJDIR)
 	$(AS) $< -o $@
+
+# Compile C files
+$(OBJDIR)/%.o: %.c $(HEADERS) $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Link all objects
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)

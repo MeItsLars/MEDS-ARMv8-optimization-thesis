@@ -1,97 +1,158 @@
 .cpu cortex-a72
 .arch armv8-a
 
-// void pmod_mat_mul_asm(uint16_t *C, int C_r, int C_c, uint16_t *A, int A_r, int A_c, uint16_t *B, int B_r, int B_c)
+// void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int n, int o);
+
+// https://wiki.cdot.senecapolytechnic.ca/wiki/AArch64_Register_and_Instruction_Quick_Start
+
+// A0 stored in v0.4s
+// A1 stored in v1.4s
+// A2 stored in v2.4s
+// A3 stored in v3.4s
+// B0 stored in v4.4h
+// B1 stored in v5.4h
+// B2 stored in v6.4h
+// B3 stored in v7.4h
+// C0 stored in v8.4h
+// C1 stored in v9.4h
+// C2 stored in v10.4h
+// C3 stored in v11.4h
+// C0_tmp stored in v12.4s
+// C1_tmp stored in v13.4s
+// C2_tmp stored in v14.4s
+// C3_tmp stored in v15.4s
+// MEDS_p stored in v16.4s
+
+// x0:  C
+// x1:  A
+// x2:  B
+// x3:  m = C_r = A_r
+// x4:  n = A_c = B_r
+// x5:  o = C_c = B_c
+// x6:  2m = 2C_r = 2A_r
+// x7:  2n = 2A_c = 2B_r
+// x8:  2o = 2C_c = 2B_c
+// x9:  r
+// x10: c
+// x11: k
+// x12: Ai
+// x13: Bi
+
+// x9-x15: temporary
+// x19-x28: callee-saved (meaning we need to save them if we use them)
+
+// Load Bc into x8 but only lower half to fix segmentation fault?
+// ldrh w8, [sp, 0]
 
 .section .text
 
 .global pmod_mat_mul_asm
 pmod_mat_mul_asm:
-    // Function prologue
-    stp x29, x30, [sp, -16]!
-    mov x29, sp
+    // Initialize MEDS_p into v16.4s
+    mov w9, #4093
+    dup v16.4s, w9
 
-    // Do nothing in the body
+    // Widen m, n and o so that we can use them as offsets
+    lsl x6, x3, #1
+    lsl x7, x4, #1
+    lsl x8, x5, #1
 
-    // Function epilogue
-    ldp x29, x30, [sp], 16
+    mov x9, #0  // Initialize r = 0
+r_loop:
+    mov x10, #0 // Initialize c = 0
+c_loop:
+    mov x11, #0 // Initialize k = 0
+k_loop:
+    // Initialize Ai and Bi to become:
+    // Ai = idx of A[r * A_c + k] = A + 2 * (r * A_c + k)
+    madd x12, x9, x4, x11     // x12 = r * A_c + k
+    add x12, x1, x12, lsl #1 // x12 = A + 2 * (r * A_c + k)
+    // Bi = idx of B[k * B_c + c] = B + 2 * (k * B_c + c)
+    madd x13, x11, x5, x10    // x13 = k * B_c + c
+    add x13, x2, x13, lsl #1 // x13 = B + 2 * (k * B_c + c)
+
+    // Initialize A0-A3
+    ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x4
+
+    // Load B0-B3
+    ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x5
+    
+    // Compute C0
+    umull v8.4s, v4.4h, v0.4h[0] // C0 = B0 * A[A0 + 0]
+    umlal v8.4s, v5.4h, v0.4h[1] // C0 = C0 + B1 * A[A0 + 1]
+    umlal v8.4s, v6.4h, v0.4h[2] // C0 = C0 + B2 * A[A0 + 2]
+    umlal v8.4s, v7.4h, v0.4h[3] // C0 = C0 + B3 * A[A0 + 3]
+
+    // Compute C1
+    umull v9.4s, v4.4h, v1.4h[0] // C1 = B0 * A[A1 + 0]
+    umlal v9.4s, v5.4h, v1.4h[1] // C1 = C1 + B1 * A[A1 + 1]
+    umlal v9.4s, v6.4h, v1.4h[2] // C1 = C1 + B2 * A[A1 + 2]
+    umlal v9.4s, v7.4h, v1.4h[3] // C1 = C1 + B3 * A[A1 + 3]
+
+    // Compute C2
+    umull v10.4s, v4.4h, v2.4h[0] // C2 = B0 * A[A2 + 0]
+    umlal v10.4s, v5.4h, v2.4h[1] // C2 = C2 + B1 * A[A2 + 1]
+    umlal v10.4s, v6.4h, v2.4h[2] // C2 = C2 + B2 * A[A2 + 2]
+    umlal v10.4s, v7.4h, v2.4h[3] // C2 = C2 + B3 * A[A2 + 3]
+
+    // Compute C3
+    umull v11.4s, v4.4h, v3.4h[0] // C3 = B0 * A[A3 + 0]
+    umlal v11.4s, v5.4h, v3.4h[1] // C3 = C3 + B1 * A[A3 + 1]
+    umlal v11.4s, v6.4h, v3.4h[2] // C3 = C3 + B2 * A[A3 + 2]
+    umlal v11.4s, v7.4h, v3.4h[3] // C3 = C3 + B3 * A[A3 + 3]
+
+    // Reduce C0-C3 modulo 4093
+    // C0 = C0 % 4093
+    ushr v12.4s, v8.4s, #12
+    mul v12.4s, v12.4s, v16.4s
+    sub v8.4s, v8.4s, v12.4s
+    ushr v12.4s, v8.4s, #12
+    mul v12.4s, v12.4s, v16.4s
+    sub v8.4s, v8.4s, v12.4s
+    // C1 = C1 % 4093
+    ushr v13.4s, v9.4s, #12
+    mul v13.4s, v13.4s, v16.4s
+    sub v9.4s, v9.4s, v13.4s
+    ushr v13.4s, v9.4s, #12
+    mul v13.4s, v13.4s, v16.4s
+    sub v9.4s, v9.4s, v13.4s
+    // C2 = C2 % 4093
+    ushr v14.4s, v10.4s, #12
+    mul v14.4s, v14.4s, v16.4s
+    sub v10.4s, v10.4s, v14.4s
+    ushr v14.4s, v10.4s, #12
+    mul v14.4s, v14.4s, v16.4s
+    sub v10.4s, v10.4s, v14.4s
+    // C3 = C3 % 4093
+    ushr v15.4s, v11.4s, #12
+    mul v15.4s, v15.4s, v16.4s
+    sub v11.4s, v11.4s, v15.4s
+    ushr v15.4s, v11.4s, #12
+    mul v15.4s, v15.4s, v16.4s
+    sub v11.4s, v11.4s, v15.4s
+
+    // Shrink C0-C3 to 16-bit
+    sqxtn v8.4h, v8.4s
+    sqxtn v9.4h, v9.4s
+    sqxtn v10.4h, v10.4s
+    sqxtn v11.4h, v11.4s
+k_loop_end:
+    // Store C0-C3
+    st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x0], x5
+
+    // Increment k and branch if k < A_c
+    add x11, x11, #4
+    cmp x11, x4
+    blt k_loop
+c_loop_end:
+    // Increment c and branch if c < C_c
+    add x10, x10, #4
+    cmp x10, x5
+    blt c_loop
+r_loop_end:
+    // Increment r and branch if r < C_r
+    add x9, x9, #4
+    cmp x9, x3
+    blt r_loop
+end:
     ret
-
-// extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
-
-  //     C_tmp = vshrq_n_u32(C_red, GFq_bits);
-  //     C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
-  //     C_red = vsubq_u32(C_red, C_tmp);
-  //     C_tmp = vshrq_n_u32(C_red, GFq_bits);
-  //     C_tmp = vmulq_n_u32(C_tmp, MEDS_p);
-  //     C_red = vsubq_u32(C_red, C_tmp);
-  //     C_red_u16 = vqmovn_u32(C_red);
-
-.global pmod_mat_reduce_asm
-pmod_mat_reduce_asm:
-    // The four function parameters are stored in x0, x1, x2, x3
-
-    // Store relevant values in NEON registers v17 and v18
-    mov x4, 1153
-    movk x4, 0x8018, lsl 16
-    mov x5, 4093 // MEDS_p
-    dup v17.2d, x4
-    dup v18.2d, x5
-
-    // Compute C_r*C_c
-    mul x1, x1, x2
-/*
-    // Loop from 0 to C_r*C_c
-    // Increment with 2, because we will use the NEON registers
-    mov x4, 0
-    loop:
-        // Load the values from tmp
-        ld1 {v1.2d}, [x3], #16   // v1 = tmp[i], tmp[i+1]
-        ld1 {v5.2d}, [x3], #16   // v5 = tmp[i+2], tmp[i+3]
-
-        // Multiply the tmp values with w4
-        umull v2.2d, v1.2d, v17.2d
-        umull v6.2d, v5.2d, v17.2d
-        // Shift right by 43
-        uqrshl v2.2d, v2.2d, #43
-        uqrshl v6.2d, v6.2d, #43
-        // Multiply the tmp values with w5 (MEDS_p)
-        umull v2.2d, v2.2d, v18.2d
-        umull v6.2d, v6.2d, v18.2d
-        // Subtract the result from the original value
-        sub v1.2d, v1.2d, v2.2d
-        sub v5.2d, v5.2d, v6.2d
-
-        // Store the results back to C
-        st1 {v1.2d}, [x0], #8
-        st1 {v5.2d}, [x0], #8
-
-        // Increment i and check if we are done
-        add x4, x4, 4
-        cmp x4, x1
-        b.lt loop
-*/
-    ret
-
-/*
-pmod_mat_reduce_asm:
-        mul     w5, w1, w2
-        cmp     w5, 0
-        ble     .L1
-        mov     w7, 1153
-        sxtw    x5, w5
-        mov     x2, 0
-        movk    w7, 0x8018, lsl 16
-        mov     w6, 4093
-.L3:
-        ldr     w4, [x3, x2, lsl 2]
-        umull   x1, w4, w7
-        lsr     x1, x1, 43
-        msub    w1, w1, w6, w4
-        strh    w1, [x0, x2, lsl 1]
-        add     x2, x2, 1
-        cmp     x2, x5
-        bne     .L3
-.L1:
-        ret
-*/
