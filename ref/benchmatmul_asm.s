@@ -23,28 +23,25 @@
 // C3_tmp stored in v15.4s
 // MEDS_p stored in v16.4s
 
-// x0:  C
+// x0:  C > contains the running value for C; it is incremented by 2 * C_c at the end of each loop_r
 // x1:  A
 // x2:  B
-// x3:  m = C_r = A_r
-// x4:  o = A_c = B_r
-// x5:  n = C_c = B_c
-// x6:  2m = 2C_r = 2A_r
-// x7:  2o = 2A_c = 2B_r
-// x8:  2n = 2C_c = 2B_c
+// x3:  m = C_r = A_r > becomes 2m
+// x4:  o = A_c = B_r > becomes 2o
+// x5:  n = C_c = B_c > becomes 2n
+// x6:  -
+// x4:  -
+// x5:  -
 // x9:  r
 // x10: c
 // x11: k
 // x12: Ai
 // x13: Bi
 // x14: Ci
-// x15: temp register for loading A and B
+// x15: temp register for loading values from A and B
 
 // x9-x15: temporary
 // x19-x28: callee-saved (meaning we need to save them if we use them)
-
-// Load Bc into x8 but only lower half to fix segmentation fault?
-// ldrh w8, [sp, 0]
 
 .section .text
 
@@ -55,9 +52,9 @@ pmod_mat_mul_asm:
     dup v16.4s, w9
 
     // Widen m, o and n so that we can use them as offsets
-    lsl x6, x3, #1
-    lsl x7, x4, #1
-    lsl x8, x5, #1
+    lsl x3, x3, #1
+    lsl x4, x4, #1
+    lsl x5, x5, #1
 
     mov x9, #0  // Initialize r = 0
 r_loop:
@@ -66,28 +63,28 @@ c_loop:
     mov x11, #0 // Initialize k = 0
 k_loop_1:
     // Ai = idx of A[r * A_c + k] = A + 2r * A_c + 2k
-    madd x12, x7, x9, x1 // Ai = A + 2rA_c (since k = 0)
+    madd x12, x4, x9, x1 // Ai = A + 2rA_c (since k = 0)
     // Bi = idx of B[k * B_c + c] = B + 2k * B_c + 2c
     add x13, x2, x10, lsl #1 // Bi = B + 2c (since k = 0)
 
     // Initialize A0-A3
-    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x7
+    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x4
     ld1 {v0.4h}, [x12]
-    add x15, x12, x7
+    add x15, x12, x4
     ld1 {v1.4h}, [x15]
-    add x15, x15, x7
+    add x15, x15, x4
     ld1 {v2.4h}, [x15]
-    add x15, x15, x7
+    add x15, x15, x4
     ld1 {v3.4h}, [x15]
 
     // Load B0-B3
-    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x8
+    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x5
     ld1 {v4.4h}, [x13]
-    add x15, x13, x8
+    add x15, x13, x5
     ld1 {v5.4h}, [x15]
-    add x15, x15, x8
+    add x15, x15, x5
     ld1 {v6.4h}, [x15]
-    add x15, x15, x8
+    add x15, x15, x5
     ld1 {v7.4h}, [x15]
 
     // Use umull for the first instruction    
@@ -121,26 +118,26 @@ k_loop_2:
     // Ai = idx of A[r * A_c + k] = A + 2r * A_c + 2k
     add x12, x12, #8         // Ai += 8 (k=4; 2k=8)
     // Bi = idx of B[k * B_c + c] = B + 2k * B_c + 2c
-    add x13, x13, x8, lsl #2 // Bi += 2B_c << 2 (k=4; 2k=8)
+    add x13, x13, x5, lsl #2 // Bi += 2B_c << 2 (k=4; 2k=8)
 
     // Initialize A0-A3
-    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x7
+    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x4
     ld1 {v0.4h}, [x12]
-    add x15, x12, x7
+    add x15, x12, x4
     ld1 {v1.4h}, [x15]
-    add x15, x15, x7
+    add x15, x15, x4
     ld1 {v2.4h}, [x15]
-    add x15, x15, x7
+    add x15, x15, x4
     ld1 {v3.4h}, [x15]
 
     // Load B0-B3
-    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x8
+    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x5
     ld1 {v4.4h}, [x13]
-    add x15, x13, x8
+    add x15, x13, x5
     ld1 {v5.4h}, [x15]
-    add x15, x15, x8
+    add x15, x15, x5
     ld1 {v6.4h}, [x15]
-    add x15, x15, x8
+    add x15, x15, x5
     ld1 {v7.4h}, [x15]
     
     // Compute C0
@@ -169,7 +166,7 @@ k_loop_2:
 k_loop_end:
     // Increment k and branch if k < A_c
     add x11, x11, #4
-    cmp x11, x4
+    cmp x11, x4, lsr #1
     blt k_loop_2
     
     // Once we are done with the k-loop, we need to reduce C0-C3 modulo 4093 and store the result in C
@@ -207,28 +204,27 @@ k_loop_end:
     sub v11.4s, v11.4s, v15.4s
     sqxtn v11.4h, v11.4s
 
-    // Ci = idx of C[C_c * r + c] = C + 2 * (r * C_c + c)
-    madd x14, x9, x5, x10    // x14 = r * C_c + c
-    add x14, x0, x14, lsl #1 // x14 = C + 2 * (r * C_c + c)
+    // Ci = idx of C[C_c * r + c] = C + 2 * (r * C_c + c) = C + 2rC_c + 2c
+    add x14, x0, x10, lsl #1 // Ci = C + 2c
 
     // Store C0-C3
-    // st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x14], x8
-    st1 {v8.4h}, [x14]
-    add x14, x14, x8
-    st1 {v9.4h}, [x14]
-    add x14, x14, x8
-    st1 {v10.4h}, [x14]
-    add x14, x14, x8
+    // st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x14], x5
+    st1 {v8.4h}, [x14], x5
+    st1 {v9.4h}, [x14], x5
+    st1 {v10.4h}, [x14], x5
     st1 {v11.4h}, [x14]
 c_loop_end:
     // Increment c and branch if c < C_c
     add x10, x10, #4
-    cmp x10, x5
+    cmp x10, x5, lsr #1
     blt c_loop
 r_loop_end:
     // Increment r and branch if r < C_r
     add x9, x9, #4
-    cmp x9, x3
+    // Set Ci = C + 2rC_c; add 2rC_c to C
+    add x0, x0, x5, lsl #2 
+
+    cmp x9, x3, lsr #1
     blt r_loop
 end:
     ret
