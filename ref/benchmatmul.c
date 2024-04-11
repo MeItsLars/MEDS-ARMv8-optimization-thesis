@@ -24,9 +24,9 @@ benchresult benchresults[1000];
 int number_of_benchresults = 0;
 int benchmark_enabled = 0;
 
-#define MATMUL_ROUNDS 1
+#define MATMUL_ROUNDS 128
 
-extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int n, int o);
+extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o, int n);
 
 extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
@@ -858,13 +858,22 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
 
 float min_cycle_bound(int m, int o, int n)
 {
-  return 0.25 * m * o * (n + 13) + 0.25 * (m * n + n * o + m * o);
+  // return 0.25 * m * o * (n + 13) + 0.25 * (m * n + n * o + m * o);
+  return (m*0.25) * (n*0.25) * ( // r-c loop
+    4 + // Initialize C
+    (o*0.25) * ( // k loop
+      4 +   // Load A
+      4 +   // Load B
+      4 * 4 // Compute C
+    ) +
+    32      // Reduce and store C
+  );
 }
 
-#define A_ROWS 4
-#define A_COLS 4
+#define A_ROWS 24
+#define A_COLS 24 * 24
 #define B_ROWS A_COLS
-#define B_COLS 4
+#define B_COLS 24
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
@@ -910,10 +919,11 @@ int main(int argc, char *argv[])
       }
 
     long long old_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_simd_1_pad(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
+    pmod_mat_mul_1(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     old_matmul_cc += get_cyclecounter();
 
     long long new_matmul_cc = -get_cyclecounter();
+    // pmod_mat_mul_simd_1_pad(C2, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     pmod_mat_mul_asm(C2, A2, B2, A_ROWS, A_COLS, B_COLS);
     new_matmul_cc += get_cyclecounter();
 
@@ -922,14 +932,14 @@ int main(int argc, char *argv[])
   }
 
   // Print results
-  printf("A:\n");
-  pmod_mat_fprint(stdout, A, A_ROWS, A_COLS);
-  printf("B:\n");
-  pmod_mat_fprint(stdout, B, B_ROWS, B_COLS);
-  printf("C1:\n");
-  pmod_mat_fprint(stdout, C1, C_ROWS, C_COLS);
-  printf("C2:\n");
-  pmod_mat_fprint(stdout, C2, C_ROWS, C_COLS);
+  // printf("A:\n");
+  // pmod_mat_fprint(stdout, A, A_ROWS, A_COLS);
+  // printf("B:\n");
+  // pmod_mat_fprint(stdout, B, B_ROWS, B_COLS);
+  // printf("C1:\n");
+  // pmod_mat_fprint(stdout, C1, C_ROWS, C_COLS);
+  // printf("C2:\n");
+  // pmod_mat_fprint(stdout, C2, C_ROWS, C_COLS);
 
   double old_matmul_median_cc = median(old_matmul_cycles, MATMUL_ROUNDS);
   double new_matmul_median_cc = median(new_matmul_cycles, MATMUL_ROUNDS);

@@ -1,7 +1,7 @@
 .cpu cortex-a72
 .arch armv8-a
 
-// void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int n, int o);
+// void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o, int n);
 
 // https://wiki.cdot.senecapolytechnic.ca/wiki/AArch64_Register_and_Instruction_Quick_Start
 
@@ -27,16 +27,17 @@
 // x1:  A
 // x2:  B
 // x3:  m = C_r = A_r
-// x4:  n = A_c = B_r
-// x5:  o = C_c = B_c
+// x4:  o = A_c = B_r
+// x5:  n = C_c = B_c
 // x6:  2m = 2C_r = 2A_r
-// x7:  2n = 2A_c = 2B_r
-// x8:  2o = 2C_c = 2B_c
+// x7:  2o = 2A_c = 2B_r
+// x8:  2n = 2C_c = 2B_c
 // x9:  r
 // x10: c
 // x11: k
 // x12: Ai
 // x13: Bi
+// x14: Ci
 
 // x9-x15: temporary
 // x19-x28: callee-saved (meaning we need to save them if we use them)
@@ -52,7 +53,7 @@ pmod_mat_mul_asm:
     mov w9, #4093
     dup v16.4s, w9
 
-    // Widen m, n and o so that we can use them as offsets
+    // Widen m, o and n so that we can use them as offsets
     lsl x6, x3, #1
     lsl x7, x4, #1
     lsl x8, x5, #1
@@ -62,44 +63,72 @@ r_loop:
     mov x10, #0 // Initialize c = 0
 c_loop:
     mov x11, #0 // Initialize k = 0
+
+    dup v8.4h, wzr  // Initialize C0
+    dup v9.4h, wzr  // Initialize C1
+    dup v10.4h, wzr // Initialize C2
+    dup v11.4h, wzr // Initialize C3
 k_loop:
     // Initialize Ai and Bi to become:
     // Ai = idx of A[r * A_c + k] = A + 2 * (r * A_c + k)
     madd x12, x9, x4, x11     // x12 = r * A_c + k
-    add x12, x1, x12, lsl #1 // x12 = A + 2 * (r * A_c + k)
+    add x12, x1, x12, lsl #1 // x12 = A + 2 * (r * A_c + k) = A + 2*r*A_c + 2k
     // Bi = idx of B[k * B_c + c] = B + 2 * (k * B_c + c)
     madd x13, x11, x5, x10    // x13 = k * B_c + c
-    add x13, x2, x13, lsl #1 // x13 = B + 2 * (k * B_c + c)
+    add x13, x2, x13, lsl #1 // x13 = B + 2 * (k * B_c + c) = B + 2c + 2k*B_c
 
     // Initialize A0-A3
-    ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x4
+    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x7
+    ld1 {v0.4h}, [x12]
+    add x12, x12, x7
+    ld1 {v1.4h}, [x12]
+    add x12, x12, x7
+    ld1 {v2.4h}, [x12]
+    add x12, x12, x7
+    ld1 {v3.4h}, [x12]
 
     // Load B0-B3
-    ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x5
+    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x8
+    ld1 {v4.4h}, [x13]
+    add x13, x13, x8
+    ld1 {v5.4h}, [x13]
+    add x13, x13, x8
+    ld1 {v6.4h}, [x13]
+    add x13, x13, x8
+    ld1 {v7.4h}, [x13]
     
+    // can use umull for first instruction later?
     // Compute C0
-    umull v8.4s, v4.4h, v0.4h[0] // C0 = B0 * A[A0 + 0]
+    umlal v8.4s, v4.4h, v0.4h[0] // C0 = C0 + B0 * A[A0 + 0]
     umlal v8.4s, v5.4h, v0.4h[1] // C0 = C0 + B1 * A[A0 + 1]
     umlal v8.4s, v6.4h, v0.4h[2] // C0 = C0 + B2 * A[A0 + 2]
     umlal v8.4s, v7.4h, v0.4h[3] // C0 = C0 + B3 * A[A0 + 3]
 
     // Compute C1
-    umull v9.4s, v4.4h, v1.4h[0] // C1 = B0 * A[A1 + 0]
+    umlal v9.4s, v4.4h, v1.4h[0] // C1 = C1 + B0 * A[A1 + 0]
     umlal v9.4s, v5.4h, v1.4h[1] // C1 = C1 + B1 * A[A1 + 1]
     umlal v9.4s, v6.4h, v1.4h[2] // C1 = C1 + B2 * A[A1 + 2]
     umlal v9.4s, v7.4h, v1.4h[3] // C1 = C1 + B3 * A[A1 + 3]
 
     // Compute C2
-    umull v10.4s, v4.4h, v2.4h[0] // C2 = B0 * A[A2 + 0]
+    umlal v10.4s, v4.4h, v2.4h[0] // C2 = C2 + B0 * A[A2 + 0]
     umlal v10.4s, v5.4h, v2.4h[1] // C2 = C2 + B1 * A[A2 + 1]
     umlal v10.4s, v6.4h, v2.4h[2] // C2 = C2 + B2 * A[A2 + 2]
     umlal v10.4s, v7.4h, v2.4h[3] // C2 = C2 + B3 * A[A2 + 3]
 
     // Compute C3
-    umull v11.4s, v4.4h, v3.4h[0] // C3 = B0 * A[A3 + 0]
+    umlal v11.4s, v4.4h, v3.4h[0] // C3 = C3 + B0 * A[A3 + 0]
     umlal v11.4s, v5.4h, v3.4h[1] // C3 = C3 + B1 * A[A3 + 1]
     umlal v11.4s, v6.4h, v3.4h[2] // C3 = C3 + B2 * A[A3 + 2]
     umlal v11.4s, v7.4h, v3.4h[3] // C3 = C3 + B3 * A[A3 + 3]
+k_loop_end:
+    // Increment k and branch if k < A_c
+    add x11, x11, #4
+    cmp x11, x4
+    blt k_loop
+    
+    // Once we are done with the k-loop, we need to reduce C0-C3 modulo 4093
+    // and store the result in C
 
     // Reduce C0-C3 modulo 4093
     // C0 = C0 % 4093
@@ -136,14 +165,20 @@ k_loop:
     sqxtn v9.4h, v9.4s
     sqxtn v10.4h, v10.4s
     sqxtn v11.4h, v11.4s
-k_loop_end:
-    // Store C0-C3
-    st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x0], x5
 
-    // Increment k and branch if k < A_c
-    add x11, x11, #4
-    cmp x11, x4
-    blt k_loop
+    // Ci = idx of C[C_c * r + c] = C + 2 * (r * C_c + c)
+    madd x14, x9, x5, x10    // x14 = r * C_c + c
+    add x14, x0, x14, lsl #1 // x14 = C + 2 * (r * C_c + c)
+
+    // Store C0-C3 if we are done with the k-loop
+    // st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x14], x8
+    st1 {v8.4h}, [x14]
+    add x14, x14, x8
+    st1 {v9.4h}, [x14]
+    add x14, x14, x8
+    st1 {v10.4h}, [x14]
+    add x14, x14, x8
+    st1 {v11.4h}, [x14]
 c_loop_end:
     // Increment c and branch if c < C_c
     add x10, x10, #4
