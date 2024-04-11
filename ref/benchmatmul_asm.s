@@ -38,6 +38,7 @@
 // x12: Ai
 // x13: Bi
 // x14: Ci
+// x15: temp register for loading A and B
 
 // x9-x15: temporary
 // x19-x28: callee-saved (meaning we need to save them if we use them)
@@ -63,41 +64,85 @@ r_loop:
     mov x10, #0 // Initialize c = 0
 c_loop:
     mov x11, #0 // Initialize k = 0
-
-    dup v8.4h, wzr  // Initialize C0
-    dup v9.4h, wzr  // Initialize C1
-    dup v10.4h, wzr // Initialize C2
-    dup v11.4h, wzr // Initialize C3
-k_loop:
-    // Initialize Ai and Bi to become:
-    // Ai = idx of A[r * A_c + k] = A + 2 * (r * A_c + k)
-    madd x12, x9, x4, x11     // x12 = r * A_c + k
-    add x12, x1, x12, lsl #1 // x12 = A + 2 * (r * A_c + k) = A + 2*r*A_c + 2k
-    // Bi = idx of B[k * B_c + c] = B + 2 * (k * B_c + c)
-    madd x13, x11, x5, x10    // x13 = k * B_c + c
-    add x13, x2, x13, lsl #1 // x13 = B + 2 * (k * B_c + c) = B + 2c + 2k*B_c
+k_loop_1:
+    // Ai = idx of A[r * A_c + k] = A + 2r * A_c + 2k
+    madd x12, x7, x9, x1 // Ai = A + 2rA_c (since k = 0)
+    // Bi = idx of B[k * B_c + c] = B + 2k * B_c + 2c
+    add x13, x2, x10, lsl #1 // Bi = B + 2c (since k = 0)
 
     // Initialize A0-A3
     // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x7
     ld1 {v0.4h}, [x12]
-    add x12, x12, x7
-    ld1 {v1.4h}, [x12]
-    add x12, x12, x7
-    ld1 {v2.4h}, [x12]
-    add x12, x12, x7
-    ld1 {v3.4h}, [x12]
+    add x15, x12, x7
+    ld1 {v1.4h}, [x15]
+    add x15, x15, x7
+    ld1 {v2.4h}, [x15]
+    add x15, x15, x7
+    ld1 {v3.4h}, [x15]
 
     // Load B0-B3
     // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x8
     ld1 {v4.4h}, [x13]
-    add x13, x13, x8
-    ld1 {v5.4h}, [x13]
-    add x13, x13, x8
-    ld1 {v6.4h}, [x13]
-    add x13, x13, x8
-    ld1 {v7.4h}, [x13]
+    add x15, x13, x8
+    ld1 {v5.4h}, [x15]
+    add x15, x15, x8
+    ld1 {v6.4h}, [x15]
+    add x15, x15, x8
+    ld1 {v7.4h}, [x15]
+
+    // Use umull for the first instruction    
+    // Compute C0
+    umull v8.4s, v4.4h, v0.4h[0] // C0 = B0 * A[A0 + 0]
+    umlal v8.4s, v5.4h, v0.4h[1] // C0 = C0 + B1 * A[A0 + 1]
+    umlal v8.4s, v6.4h, v0.4h[2] // C0 = C0 + B2 * A[A0 + 2]
+    umlal v8.4s, v7.4h, v0.4h[3] // C0 = C0 + B3 * A[A0 + 3]
+
+    // Compute C1
+    umull v9.4s, v4.4h, v1.4h[0] // C1 = B0 * A[A1 + 0]
+    umlal v9.4s, v5.4h, v1.4h[1] // C1 = C1 + B1 * A[A1 + 1]
+    umlal v9.4s, v6.4h, v1.4h[2] // C1 = C1 + B2 * A[A1 + 2]
+    umlal v9.4s, v7.4h, v1.4h[3] // C1 = C1 + B3 * A[A1 + 3]
+
+    // Compute C2
+    umull v10.4s, v4.4h, v2.4h[0] // C2 = B0 * A[A2 + 0]
+    umlal v10.4s, v5.4h, v2.4h[1] // C2 = C2 + B1 * A[A2 + 1]
+    umlal v10.4s, v6.4h, v2.4h[2] // C2 = C2 + B2 * A[A2 + 2]
+    umlal v10.4s, v7.4h, v2.4h[3] // C2 = C2 + B3 * A[A2 + 3]
+
+    // Compute C3
+    umull v11.4s, v4.4h, v3.4h[0] // C3 = B0 * A[A3 + 0]
+    umlal v11.4s, v5.4h, v3.4h[1] // C3 = C3 + B1 * A[A3 + 1]
+    umlal v11.4s, v6.4h, v3.4h[2] // C3 = C3 + B2 * A[A3 + 2]
+    umlal v11.4s, v7.4h, v3.4h[3] // C3 = C3 + B3 * A[A3 + 3]
+
+    // Jump to end of the k-loop for incrementing later. (NOT NEEDED IN PYTHON!)
+    b k_loop_end
+k_loop_2:
+    // Ai = idx of A[r * A_c + k] = A + 2r * A_c + 2k
+    add x12, x12, #8         // Ai += 8 (k=4; 2k=8)
+    // Bi = idx of B[k * B_c + c] = B + 2k * B_c + 2c
+    add x13, x13, x8, lsl #2 // Bi += 2B_c << 2 (k=4; 2k=8)
+
+    // Initialize A0-A3
+    // ld1 {v0.4h, v1.4h, v2.4h, v3.4h}, [x12], x7
+    ld1 {v0.4h}, [x12]
+    add x15, x12, x7
+    ld1 {v1.4h}, [x15]
+    add x15, x15, x7
+    ld1 {v2.4h}, [x15]
+    add x15, x15, x7
+    ld1 {v3.4h}, [x15]
+
+    // Load B0-B3
+    // ld1 {v4.4h, v5.4h, v6.4h, v7.4h}, [x13], x8
+    ld1 {v4.4h}, [x13]
+    add x15, x13, x8
+    ld1 {v5.4h}, [x15]
+    add x15, x15, x8
+    ld1 {v6.4h}, [x15]
+    add x15, x15, x8
+    ld1 {v7.4h}, [x15]
     
-    // can use umull for first instruction later?
     // Compute C0
     umlal v8.4s, v4.4h, v0.4h[0] // C0 = C0 + B0 * A[A0 + 0]
     umlal v8.4s, v5.4h, v0.4h[1] // C0 = C0 + B1 * A[A0 + 1]
@@ -125,12 +170,10 @@ k_loop_end:
     // Increment k and branch if k < A_c
     add x11, x11, #4
     cmp x11, x4
-    blt k_loop
+    blt k_loop_2
     
-    // Once we are done with the k-loop, we need to reduce C0-C3 modulo 4093
-    // and store the result in C
+    // Once we are done with the k-loop, we need to reduce C0-C3 modulo 4093 and store the result in C
 
-    // Reduce C0-C3 modulo 4093
     // C0 = C0 % 4093
     ushr v12.4s, v8.4s, #12
     mul v12.4s, v12.4s, v16.4s
@@ -138,6 +181,7 @@ k_loop_end:
     ushr v12.4s, v8.4s, #12
     mul v12.4s, v12.4s, v16.4s
     sub v8.4s, v8.4s, v12.4s
+    sqxtn v8.4h, v8.4s
     // C1 = C1 % 4093
     ushr v13.4s, v9.4s, #12
     mul v13.4s, v13.4s, v16.4s
@@ -145,6 +189,7 @@ k_loop_end:
     ushr v13.4s, v9.4s, #12
     mul v13.4s, v13.4s, v16.4s
     sub v9.4s, v9.4s, v13.4s
+    sqxtn v9.4h, v9.4s
     // C2 = C2 % 4093
     ushr v14.4s, v10.4s, #12
     mul v14.4s, v14.4s, v16.4s
@@ -152,6 +197,7 @@ k_loop_end:
     ushr v14.4s, v10.4s, #12
     mul v14.4s, v14.4s, v16.4s
     sub v10.4s, v10.4s, v14.4s
+    sqxtn v10.4h, v10.4s
     // C3 = C3 % 4093
     ushr v15.4s, v11.4s, #12
     mul v15.4s, v15.4s, v16.4s
@@ -159,18 +205,13 @@ k_loop_end:
     ushr v15.4s, v11.4s, #12
     mul v15.4s, v15.4s, v16.4s
     sub v11.4s, v11.4s, v15.4s
-
-    // Shrink C0-C3 to 16-bit
-    sqxtn v8.4h, v8.4s
-    sqxtn v9.4h, v9.4s
-    sqxtn v10.4h, v10.4s
     sqxtn v11.4h, v11.4s
 
     // Ci = idx of C[C_c * r + c] = C + 2 * (r * C_c + c)
     madd x14, x9, x5, x10    // x14 = r * C_c + c
     add x14, x0, x14, lsl #1 // x14 = C + 2 * (r * C_c + c)
 
-    // Store C0-C3 if we are done with the k-loop
+    // Store C0-C3
     // st1 {v8.4h, v9.4h, v10.4h, v11.4h}, [x14], x8
     st1 {v8.4h}, [x14]
     add x14, x14, x8

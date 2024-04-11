@@ -862,11 +862,12 @@ float min_cycle_bound(int m, int o, int n)
   return (m*0.25) * (n*0.25) * ( // r-c loop
     4 + // Initialize C
     (o*0.25) * ( // k loop
-      4 +   // Load A
-      4 +   // Load B
+      4 +  // Load A
+      4 +  // Load B
       4 * 4 // Compute C
     ) +
-    32      // Reduce and store C
+    9*4 + // Reduce C
+    4     // Store C
   );
 }
 
@@ -919,7 +920,7 @@ int main(int argc, char *argv[])
       }
 
     long long old_matmul_cc = -get_cyclecounter();
-    pmod_mat_mul_1(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
+    pmod_mat_mul_simd_1(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     old_matmul_cc += get_cyclecounter();
 
     long long new_matmul_cc = -get_cyclecounter();
