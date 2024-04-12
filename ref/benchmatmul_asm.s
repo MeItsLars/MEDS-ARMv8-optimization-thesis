@@ -5,18 +5,18 @@
 
 // https://wiki.cdot.senecapolytechnic.ca/wiki/AArch64_Register_and_Instruction_Quick_Start
 
-// A0 stored in v0.4s
-// A1 stored in v1.4s
-// A2 stored in v2.4s
-// A3 stored in v3.4s
+// A0 stored in v0.4h
+// A1 stored in v1.4h
+// A2 stored in v2.4h
+// A3 stored in v3.4h
 // B0 stored in v4.4h
 // B1 stored in v5.4h
 // B2 stored in v6.4h
 // B3 stored in v7.4h
-// C0 stored in v8.4h
-// C1 stored in v9.4h
-// C2 stored in v10.4h
-// C3 stored in v11.4h
+// C0 stored in v8.4s
+// C1 stored in v9.4s
+// C2 stored in v10.4s
+// C3 stored in v11.4s
 // C0_tmp stored in v12.4s
 // C1_tmp stored in v13.4s
 // C2_tmp stored in v14.4s
@@ -30,8 +30,8 @@
 // x4:  o = A_c = B_r > becomes 2o
 // x5:  n = C_c = B_c > becomes 2n
 // x6:  -
-// x4:  -
-// x5:  -
+// x7:  -
+// x8:  -
 // x9:  r
 // x10: c
 // x11: k
@@ -42,8 +42,6 @@
 
 // x9-x15: temporary
 // x19-x28: callee-saved (meaning we need to save them if we use them)
-
-.section .text
 
 .global pmod_mat_mul_asm
 pmod_mat_mul_asm:
