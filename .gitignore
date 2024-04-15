@@ -7,3 +7,5 @@
 *.symvers
 
 *.output
+*.out
+*.synctex(busy)

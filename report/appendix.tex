@@ -1,2 +1,144 @@
 \appendix
-\chapter{Implementations}
+\chapter{MEDS Operations}
+Epic operations.
+
+\newpage
+\section{Key Generation}
+\begin{algorithm}
+\caption{MEDS.KeyGen()}\label{alg:medskeygen}
+\hspace*{\algorithmicindent} \textbf{Input:} -\\
+\hspace*{\algorithmicindent} \textbf{Output:} public key $\textbf{pk} \in \mathcal{B}^{\ell_\textbf{pk}}$, secret key $\textbf{sk} \in \mathcal{B}^{\ell_\textbf{sk}}$
+\begin{algorithmic}[1]
+% Generate a random secret seed
+\State $\delta \in \mathcal{B}^{\ell_\text{sec\_seed}} \gets \text{Randombytes}(\ell_\text{sec\_seed})$
+% Generate random secret and public seed from the previously generated secret seed
+\State $\sigma_{\textbf{G}_0} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma \in \mathcal{B}^{\ell_\text{sec\_seed}} \gets \text{XOF}(\delta, \ell_\text{pub\_seed}, \ell_\text{sec\_seed})$
+% Generate a random matrix G_0 from the public seed
+\State $\textbf{G}_0 \in \mathds{F}_q^{k \times mn} \gets \text{ExpandSysMat}(\sigma_{\textbf{G}_0})$
+% Generate G_i for every s
+\ForAll{$i \in \{1, \ldots, s - 1\}$}
+    % Generate two new seeds from the current state of the secret seed and replace the current secret seed
+    \State $\sigma_{\textbf{T}_i}, \sigma \in \mathcal{B}^{\ell_\text{sec\_seed}} \gets \text{XOF}(\sigma, \ell_\text{sec\_seed}, \ell_\text{sec\_seed})$
+    % Generate a random invertible matrix T_i
+    \State $\textbf{T}_i \in \text{GL}_k(q) \gets \text{ExpandInvMat}(\sigma_{\textbf{T}_i}, k)$
+    % Compute G_0' = T_i * G_0
+    \State $\textbf{G}_0' \in \mathds{F}_q^{k \times mn} \gets \textbf{T}_i \textbf{G}_0$
+    % Solve system of equations to obtain A and B
+    \State $\check{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \check{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\textbf{G}_0')$
+    % Retry if there was no solution
+    \If{$(\check{\textbf{A}}_i = \bot \textbf{ and } \check{\textbf{B}}_i = \bot) \textbf{ or } \check{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \check{\textbf{B}}_i \notin \text{GL}_n(q)$}
+        \State \textbf{goto} line 5
+    \EndIf
+    % Get A_i, A_i^-1, B_i, and B_i^-1 from the solution
+    \State $\textbf{A}_i, \textbf{A}_i^{-1} \in \text{GL}_m(q) \gets \check{\textbf{A}}_i, \check{\textbf{A}}_i^{-1}$
+    \State $\textbf{B}_i, \textbf{B}_i^{-1} \in \text{GL}_n(q) \gets \check{\textbf{B}}_i, \check{\textbf{B}}_i^{-1}$
+    % Compute Gi
+    \State $\textbf{G}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\textbf{A}_i, \textbf{B}_i}(\textbf{G}_0)$
+    % Compute Compute T_i^-1 as a k*k submatrix of G_i
+    \State $\textbf{T}_i^{-1} \in \mathds{F}_q^{k \times k} \gets \textbf{G}_i[;0,k-1]$
+    % Convert Gi to systematic form
+    \State $\textbf{G}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\textbf{G}_i)$
+    % Retry if the matrix is not in systematic form
+    \If{$\textbf{G}_i = \bot$}
+        \State \textbf{goto} line 5
+    \EndIf
+    \EndFor
+% Compute the pk from the data
+\State $\text{pk} \in \mathcal{B}^{\ell_\textbf{pk}} \gets (\sigma_{\textbf{G}_0}~|~\text{CompressG}(\textbf{G}_1)~|~\ldots~|~\text{CompressG}(\textbf{G}_{s-1}))$
+% Compute the sk from the data
+\State $\text{sk} \in \mathcal{B}^{\ell_\textbf{sk}} \gets (\delta~|~\sigma_{\textbf{G}_0}~|~\text{Compress}(\textbf{A}_1^{-1})~|~\ldots~|~\text{Compress}(\textbf{A}_{s-1}^{-1})$\\
+$\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{B}_1^{-1})~|~\ldots~|~\text{Compress}(\textbf{B}_{s-1}^{-1})$\\
+$\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-1})~|~\ldots~|~\text{Compress}(\textbf{T}_{s-1}^{-1}))$
+% Return the public and secret key
+\State \textbf{return} $\text{pk}, \text{sk}$
+\end{algorithmic}
+\end{algorithm}
+
+\newpage
+
+\section{Signing}
+\begin{algorithm}
+\caption{MEDS.Sign()}\label{alg:medssign}
+\hspace*{\algorithmicindent} \textbf{Input:} secret key $\textbf{sk} \in \mathcal{B}^{\ell_\textbf{sk}}$, message $m \in \mathcal{B}^{\ell_m}$\\
+\hspace*{\algorithmicindent} \textbf{Output:} signed message $m_s \in \mathcal{B}^{\ell_\text{sig} + \ell_m}$
+\begin{algorithmic}[1]
+% Initialize parsing index
+\State $f_\text{sk} \gets \ell_\text{sec\_seed}$
+% Parse sigma_G_0 from the secret key
+\State $\sigma_{\textbf{G}_0} \gets \text{pk}[f_\text{sk}, f_\text{sk} + \ell_\text{pub\_seed} - 1]$
+% Increment index
+\State $f_\text{sk} \gets f_\text{sk} + \ell_\text{pub\_seed}$
+% Construct G0
+\State $\textbf{G}_0 \in \mathds{F}_q^{k \times mn} \gets \text{ExpandSysMat}(\sigma_{\textbf{G}_0})$
+% Obtain all A_i from the secret key
+\ForAll{$i \in \{1, \ldots, s - 1\}$}
+    % Parse A_i from the secret key
+    \State $\textbf{A}_i^{-1} \in \mathds{F}_q^{m \times m} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}])$
+    % Update the parsing index
+    \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}$
+\EndFor
+% Obtain all B_i from the secret key
+\ForAll{$i \in \{1, \ldots, s - 1\}$}
+    % Parse B_i from the secret key
+    \State $\textbf{B}_i^{-1} \in \mathds{F}_q^{n \times n} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}])$
+    % Update the parsing index
+    \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}$
+\EndFor
+% Obtain all T_i from the secret key
+\ForAll{$i \in \{1, \ldots, s - 1\}$}
+    % Parse T_i from the secret key
+    \State $\textbf{T}_i^{-1} \in \mathds{F}_q^{k \times k} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{k \times k}}])$
+    % Update the parsing index
+    \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{k \times k}}$
+\EndFor
+% Generate a random seed
+\State $\delta \in \mathcal{B}^{\ell_\text{sec\_seed}} \gets \text{Randombytes}(\ell_\text{sec\_seed})$
+% Generate a random tree seed and salt from the secret seed
+\State $\rho \in \mathcal{B}^{\ell_\text{tree\_seed}}, \alpha \in \mathcal{B}^{\ell_\text{salt}} \gets \text{XOF}(\delta, \ell_\text{tree\_seed}, \ell_\text{salt})$
+% Construct t commitment seeds from the tree seed
+\State $\sigma_0, \ldots, \sigma_{t-1} \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{SeedTree}_t(\rho, \alpha)$
+% Generate t commitments from the challenge seeds
+\ForAll{$i \in \{0, \ldots, t - 1\}$}
+    % Construct a commitment seed for the current commitment
+    \State $\sigma'_i \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i, 4}))$
+    % Generate seeds based on the current commitment seed
+    \State $\sigma_{\tilde{\textbf{M}}_i} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma_i \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{XOF}(\sigma'_i, \ell_\text{pub\_seed}, \ell_\text{tree\_seed})$
+    % Generate matrix ~M_i
+    \State $\tilde{\textbf{M}}_i \in \mathds{F}_q^{2 \times k} \gets \text{ExpandSysMat}(\sigma_{\tilde{\textbf{M}}_i})$
+    % Compute C = ~M_i * G_0
+    \State $\textbf{C} \in \mathds{F}_q^{2 \times mn} \gets \tilde{\textbf{M}}_i \textbf{G}_0$
+    % Solve the system of equations to obtain A and B
+    \State $\widetilde{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \widetilde{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\textbf{C})$
+    % Retry if there was no solution
+    \If{$(\widetilde{\textbf{A}}_i = \bot \textbf{ and } \widetilde{\textbf{B}}_i = \bot) \textbf{ or } \widetilde{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \widetilde{\textbf{B}}_i \notin \text{GL}_n(q)$}
+        \State \textbf{goto} line 18
+    \EndIf
+    % Compute G_i
+    \State $\tilde{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\widetilde{\textbf{A}}_i, \widetilde{\textbf{B}}_i}(\textbf{G}_0)$
+    % Convert G_i to systematic form
+    \State $\tilde{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\tilde{\textbf{G}}_i)$
+    % Retry if the matrix is not in systematic form
+    \If{$\tilde{\textbf{G}}_i = \bot$}
+        \State \textbf{goto} line 18
+    \EndIf
+\EndFor
+% Create hash
+\State $d \in \mathcal{B}^{\ell_\text{digest}} \gets \text{H}(\text{Compress}(\tilde{\textbf{G}}_0[;k,mn-1])~|~\ldots$\\
+$\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\tilde{\textbf{G}}_{t-1}[;k,mn-1])~|~m)$
+% Parse challenges from the hash
+\State $h_0, \ldots, h_{t-1} \in \{0, \ldots, s-1\} \gets \text{ParseHash}_{s,t,w}(d)$
+% For each challenge, compute the response
+\ForAll{$i \in \{0, \ldots, t - 1\}$}
+    % Only for non-zero challenges
+    \If{$h_i \geq 0$}
+        % Compute response
+        \State $\kappa_i \in \mathds{F}_q^{2 \times k} \gets \tilde{\textbf{M}}_i T_{h_i}^{-1}$
+    \EndIf
+\EndFor
+% Construct seed tree paths
+\State $p \in \mathcal{B}^{\ell_\text{path}} \gets \text{SeedTreeToPath}_t(h_0, \ldots, h_{t-1}, \rho, \alpha)$
+% Return the signature
+\State \textbf{return} $m_s \in \mathcal{B}^{w \cdot \ell_{\mathds{F}_q^{2 \times k}} + \ell_\text{path} + \ell_\text{digest} + \ell_\text{salt} + \ell_\text{m} = \ell_\text{sig} + \ell_\text{m}}$\\
+$\quad\quad\quad\quad= (\kappa_0~|~\ldots~|~\kappa_{t-1}~|~p~|~d~|~\alpha~|~m)$
+\end{algorithmic}
+\end{algorithm}
