@@ -12,6 +12,7 @@ R_Ai = "x8"
 R_Bi = "x9"
 R_T1 = "x10"
 R_T1h = "w10"
+R_T2h = "w11"
 
 RN_A0 = "v0.4h"
 RN_A1 = "v1.4h"
@@ -37,6 +38,61 @@ RN_MEDSp = "v16.4s"
 
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
+
+def add_load_n_full_rows(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount):
+    # If we only need to load 1 row, be done with it
+    if ramount == 1:
+        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
+        return
+
+    # Otherwise, check the rni/rni2 difference
+    if rni == rni2:
+        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}], {rninc}")
+    else:
+        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
+        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+    if ramount > 1:
+        add(asm, 1, f"ld1 {{{rn2}}}, [{rni2}], {rninc}")
+    if ramount > 2:
+        add(asm, 1, f"ld1 {{{rn3}}}, [{rni2}], {rninc}")
+    if ramount > 3:
+        add(asm, 1, f"ld1 {{{rn4}}}, [{rni2}]")
+
+def add_load_n_full_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, camount):
+    # This is a bit harder, because we can't use a full NEON load instruction
+    # Instead, we need to 'cut off' the loading at 'camount'
+    # We can ignore this for the first 'ramount-1' rows, because those memory addresses will definitely be valid
+    # even though we will load data that we don't need. The 4th row will need to be cut off
+
+    # Load first row of 'camount' columns
+    if rni == rni2:
+        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}], {rninc}")
+    else:
+        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
+        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+    # Load second row of 'camount' columns
+    add(asm, 1, f"ld1 {{{rn2}}}, [{rni2}], {rninc}")
+    # Load third row of 'camount' columns
+    add(asm, 1, f"ld1 {{{rn3}}}, [{rni2}], {rninc}")
+    # Load fourth row of 'camount' columns without a direct NEON instruction
+    if camount > 3:
+        add(asm, 1, f"ld1 {{{rn4}}}, [{rni2}]")
+        return
+
+    # Load the elements one by one
+    # 1. Clear rn4 so that it becomes 0
+    add(asm, 1, f"dup {rn4}, wzr")
+    # 2. Load 'camount' columns into the lanes of rn4
+    rn4_p = rn4[:-3]
+    if camount > 0:
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ins {rn4_p}.h[0], {R_T2h}")
+    if camount > 1:
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ins {rn4_p}.h[1], {R_T2h}")
+    if camount > 2:
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ins {rn4_p}.h[2], {R_T2h}")
 
 def add_load_store(asm, ins, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
     if ramount > 0:
@@ -76,9 +132,9 @@ def add_mult(asm, initial, rn_C, rn_A):
 
 def add_load_and_mult(asm, context, initial, pad_r, pad_c):
     # Load A
-    add_load(asm, RN_A0, RN_A1, RN_A2, RN_A3, R_Ai, R_T1, R_2o, context.r_pad_dist if pad_r else 4, 4)
+    add_load_n_full_rows(asm, RN_A0, RN_A1, RN_A2, RN_A3, R_Ai, R_T1, R_2o, context.r_pad_dist if pad_r else 4)
     # Load B
-    add_load(asm, RN_B0, RN_B1, RN_B2, RN_B3, R_Bi, R_T1, R_2n, 4, context.c_pad_dist if pad_c else 4)
+    add_load_n_full_cols(asm, RN_B0, RN_B1, RN_B2, RN_B3, R_Bi, R_T1, R_2n, context.c_pad_dist if pad_c else 4)
     # Add multiplications
     if not pad_r or context.r_pad_dist > 0:
         add_mult(asm, initial, RN_C0, RN_A0)
@@ -208,16 +264,25 @@ class Context:
     def __str__(self):
         return f"r: {self.r}, c: {self.c}, k: {self.k}, r_size: {self.r_size}, c_size: {self.c_size}, k_size: {self.k_size}, r_pad_dist: {self.r_pad_dist}, c_pad_dist: {self.c_pad_dist}, k_pad_dist: {self.k_pad_dist}, MEDS_p: {self.MEDS_p}, GFq_bits: {self.GFq_bits}"
 
-for r in range(1, 8):
-    fun_id, asm = generate_mat_mul_asm(Context(r, 4, 4, 4093, 12))
-    with open(f"{dir_path}/{fun_id}.s", "w") as f:
-        for line in asm:
-            f.write(line + "\n")
+# for r in range(1, 8):
+#     fun_id, asm = generate_mat_mul_asm(Context(r, 4, 4, 4093, 12))
+#     with open(f"{dir_path}/{fun_id}.s", "w") as f:
+#         for line in asm:
+#             f.write(line + "\n")
 
-    print(f"Generated {fun_id}.s")
+#     print(f"Generated {fun_id}.s")
         
-for c in range(1, 8):
-    fun_id, asm = generate_mat_mul_asm(Context(4, c, 4, 4093, 12))
+# for c in range(1, 8):
+#     fun_id, asm = generate_mat_mul_asm(Context(4, c, 4, 4093, 12))
+#     with open(f"{dir_path}/{fun_id}.s", "w") as f:
+#         for line in asm:
+#             f.write(line + "\n")
+
+#     print(f"Generated {fun_id}.s")
+
+
+for r in range(5, 6):
+    fun_id, asm = generate_mat_mul_asm(Context(4, r, 4, 4093, 12))
     with open(f"{dir_path}/{fun_id}.s", "w") as f:
         for line in asm:
             f.write(line + "\n")
