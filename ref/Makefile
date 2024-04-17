@@ -4,14 +4,10 @@ PARAM = toy
 
 LIBS = -lssl -lcrypto
 CC := gcc
-AS := as
 
 ifdef DEBUG
-CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -Wno-unused-function
+CFLAGS := -g -Wall -D$(PARAM) -DDEBUG
 OBJDIR := debug/$(PARAM)
-else ifdef BENCHMARK
-CFLAGS := -O3 -Wall -D$(PARAM) -DBENCHMARK -Wno-unused-function
-OBJDIR := build/$(PARAM)
 else
 #CFLAGS := -O3 -march=native -Wall -D$(PARAM)
 CFLAGS := -O3 -Wall -D$(PARAM)
@@ -24,7 +20,7 @@ endif
 
 CFLAGS += -I$(OBJDIR) -INIST
 
-EXES = test bench benchmark KAT_test benchmatmul benchrref
+EXES = test bench KAT_test
 
 TARGETS := ${EXES:%=$(OBJDIR)/%}
 
@@ -32,40 +28,31 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 
 default: $(EXES)
 
-ASM_SOURCES := $(wildcard *.s)
-ASM_OBJECTS := $(patsubst %.s,%.o,$(ASM_SOURCES))
-C_OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o cyclecounter.o
-HEADERS = $(wildcard *.h) $(OBJDIR)/params.h $(OBJDIR)/api.h
+OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o
+HEADERS = $(wildcard *.h) params.h $(OBJDIR)/api.h
 
-# Define all object files
-BUILDOBJ := ${ASM_OBJECTS:%=$(OBJDIR)/%} ${C_OBJECTS:%=$(OBJDIR)/%}
+BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}
 
-# Build executable
+
+params.h: params.py
+	python $< -p > $@
+
+$(OBJDIR)/api.h: params.py $(OBJDIR)
+	python $< -a $(PARAM) > $@
+
+
 $(EXES) : % :
 	@make $(OBJDIR)/$(@F)
 
-# Generate params.h and api.h
-$(OBJDIR)/params.h: params.py $(OBJDIR)
-	python3 $< -p $(PARAM) > params.h
-
-$(OBJDIR)/api.h: params.py $(OBJDIR)
-	python3 $< -a $(PARAM) > api.h
-
-# Create build directory if it doesn't exist
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-# Compile ASM files
-$(OBJDIR)/%.o: %.s $(HEADERS) $(OBJDIR)
-	$(AS) $< -o $@
-
-# Compile C files
-$(OBJDIR)/%.o: %.c $(HEADERS) $(OBJDIR)
+$(BUILDOBJ) : $(OBJDIR)/%.o: %.c $(HEADERS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Link all objects
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)
 	$(CC) $(@F).c $(BUILDOBJ) $(CFLAGS) $(LIBS) -o $@
+
 
 RUN: test
 	@echo ""
@@ -103,18 +90,6 @@ BENCH_ALL:
 	echo ""; \
 	cat bench.txt; \
 	done
-
-BENCHMARK:
-	make benchmark PARAM=$(PARAM) BENCHMARK=true
-	$(OBJDIR)/benchmark sign 1
-
-BENCH_MATMUL:
-	make benchmatmul PARAM=$(PARAM) BENCHMARK=true
-	$(OBJDIR)/benchmatmul
-
-BENCH_RREF:
-	make benchrref PARAM=$(PARAM) BENCHMARK=true
-	$(OBJDIR)/benchrref
 
 all:
 	for p in `./params.py -l`; do \

@@ -1,3 +1,17 @@
+# VSCode
+.vscode
+
+# Latex
+*.output
+*.out
+*.synctex(busy)
+
+# CMake files
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+
+# Compilation files
 *.o
 *.ko
 *.mod
@@ -5,9 +19,3 @@
 *.cmd
 *.order
 *.symvers
-
-*.output
-*.out
-*.synctex(busy)
-
-.vscode

@@ -170,9 +170,9 @@ def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # Remove one final MEDS_p if the value in the lane is at least MEDS_p
-    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
-    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
-    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    # add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
+    # add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
+    # add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # If neccesary, shrink to 16 bits
     if final_shrink:
         add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
@@ -340,7 +340,7 @@ class Context:
 
 # print(f"Generated {fun_id}.s")
 
-fun_id, asm = generate_mat_mul_asm(Context(29, 65, 103, 4093, 12))
+fun_id, asm = generate_mat_mul_asm(Context(24, 24, 24*24, 4093, 12))
 with open(f"{dir_path}/{fun_id}.s", "w") as f:
     for line in asm:
         f.write(line + "\n")

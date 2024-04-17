@@ -884,10 +884,10 @@ float min_cycle_bound(int m, int o, int n)
   );
 }
 
-#define A_ROWS 29
-#define A_COLS 103
+#define A_ROWS 24
+#define A_COLS 24*24
 #define B_ROWS A_COLS
-#define B_COLS 65
+#define B_COLS 24
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
@@ -939,7 +939,7 @@ int main(int argc, char *argv[])
     long long new_matmul_cc = -get_cyclecounter();
     // pmod_mat_mul_simd_1_pad(C2, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     // pmod_mat_mul_asm(C2, A2, B2, A_ROWS, A_COLS, B_COLS);
-    pmod_mat_mul_asm_29_103_65(C2, A2, B2);
+    pmod_mat_mul_asm_24_576_24(C2, A2, B2);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
