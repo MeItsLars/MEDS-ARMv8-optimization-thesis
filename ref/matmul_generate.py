@@ -39,65 +39,66 @@ RN_MEDSp = "v16.4s"
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
 
-def add_load_n_full_rows(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount):
-    # If we only need to load 1 row, be done with it
-    if ramount == 1:
-        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
+def load_row_with_n_cols(asm, rn, rni, rni2, rninc, overflow, camount):
+    """
+    Adds assembly that loads a single matrix row consisting of 0 < n <= 4 elements into a NEON register.
+
+    Parameters:
+    - asm: The list of assembly instructions to add to
+    - rn: The name of the NEON register to load the row into
+    - rni: The name of the memory address to load the row from
+    - rni2: The name of the memory address to increment to after loading the row
+    - rninc: The amount to increment the memory address by after loading the row
+             or None if the memory address should not be incremented
+    - overflow: Whether it is okay to load 4 elements from memory, even if n < 4
+    - camount: The number of elements in the row to load (n)
+    """
+    if camount > 3 or overflow:
+        if rninc:
+            if rni == rni2:
+                add(asm, 1, f"ld1 {{{rn}}}, [{rni}], {rninc}")
+            else:
+                add(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
+                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+        else:
+            add(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
         return
 
-    # Otherwise, check the rni/rni2 difference
-    if rni == rni2:
-        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}], {rninc}")
-    else:
-        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
-        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
-    if ramount > 1:
-        add(asm, 1, f"ld1 {{{rn2}}}, [{rni2}], {rninc}")
-    if ramount > 2:
-        add(asm, 1, f"ld1 {{{rn3}}}, [{rni2}], {rninc}")
-    if ramount > 3:
-        add(asm, 1, f"ld1 {{{rn4}}}, [{rni2}]")
-
-def add_load_n_full_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, camount):
-    # This is a bit harder, because we can't use a full NEON load instruction
-    # Instead, we need to 'cut off' the loading at 'camount'
-    # We can ignore this for the first 'ramount-1' rows, because those memory addresses will definitely be valid
-    # even though we will load data that we don't need. The 4th row will need to be cut off
-
-    # Load first row of 'camount' columns
-    if rni == rni2:
-        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}], {rninc}")
-    else:
-        add(asm, 1, f"ld1 {{{rn1}}}, [{rni}]")
-        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
-    # Load second row of 'camount' columns
-    add(asm, 1, f"ld1 {{{rn2}}}, [{rni2}], {rninc}")
-    # Load third row of 'camount' columns
-    add(asm, 1, f"ld1 {{{rn3}}}, [{rni2}], {rninc}")
-    # Load fourth row of 'camount' columns without a direct NEON instruction
-    if camount > 3:
-        add(asm, 1, f"ld1 {{{rn4}}}, [{rni2}]")
-        return
-
+    # Fill the register with 0 first
+    add(asm, 1, f"dup {rn}, wzr")
     # Load the elements one by one
-    # 1. Clear rn4 so that it becomes 0
-    add(asm, 1, f"dup {rn4}, wzr")
-    # 2. Load 'camount' columns into the lanes of rn4
-    rn4_p = rn4[:-3]
-    if camount > 0:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}]")
-        add(asm, 1, f"ins {rn4_p}.h[0], {R_T2h}")
-    if camount > 1:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}, #2]")
-        add(asm, 1, f"ins {rn4_p}.h[1], {R_T2h}")
-    if camount > 2:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}, #4]")
-        add(asm, 1, f"ins {rn4_p}.h[2], {R_T2h}")
+    for i in range(camount):
+        # Load the i-th lane of rn
+        rn_p = rn[:-3]
+        add(asm, 1, f"ldrh {R_T2h}, [{rni}, #{i * 2}]")
+        add(asm, 1, f"ins {rn_p}.h[{i}], {R_T2h}")
+    
+    # Increment the memory address
+    if rninc:
+        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
 
-def add_store_row_n_cols(asm, rn, rni, rninc, camount):
-    inc = f", {rninc}" if rninc != None else ""
+def add_store_row_with_n_cols(asm, rn, rni, rni2, rninc, camount):
+    """
+    Adds assembly that stores a single matrix row consisting of 0 < n <= 4 elements from a NEON register into memory.
+
+    Parameters:
+    - asm: The list of assembly instructions to add to
+    - rn: The name of the NEON register to store the row from
+    - rni: The name of the memory address to store the row into
+    - rni2: The name of the memory address to increment to after storing the row
+    - rninc: The amount to increment the memory address by after storing the row
+             or None if the memory address should not be incremented
+    - camount: The number of elements in the row to store (n)
+    """
     if camount > 3:
-        add(asm, 1, f"st1 {{{rn}}}, [{rni}]{inc}")
+        if rninc:
+            if rni == rni2:
+                add(asm, 1, f"st1 {{{rn}}}, [{rni}], {rninc}")
+            else:
+                add(asm, 1, f"st1 {{{rn}}}, [{rni}]")
+                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+        else:
+            add(asm, 1, f"st1 {{{rn}}}, [{rni}]")
         return
 
     for i in range(camount):
@@ -111,25 +112,54 @@ def add_store_row_n_cols(asm, rn, rni, rninc, camount):
     if rninc:
         add(asm, 1, f"add {rni}, {rni}, {rninc}")
 
+def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
+    if ramount > 0:
+        load_row_with_n_cols(asm, rn1, rni, rni2, None if ramount == 1 else rninc, ramount > 1, camount)
+    if ramount > 1:
+        load_row_with_n_cols(asm, rn2, rni2, rni2, None if ramount == 2 else rninc, ramount > 2, camount)
+    if ramount > 2:
+        load_row_with_n_cols(asm, rn3, rni2, rni2, None if ramount == 3 else rninc, ramount > 3, camount)
+    if ramount > 3:
+        load_row_with_n_cols(asm, rn4, rni2, rni2, None, False, camount)
+
+def add_mult(asm, initial, rn_C, rn_A, kamount):
+    ins = "umull" if initial else "umlal"
+    add(asm, 1, f"{ins} {rn_C}, {RN_B0}, {rn_A}[0]")
+    if kamount > 1:
+        add(asm, 1, f"umlal {rn_C}, {RN_B1}, {rn_A}[1]")
+    if kamount > 2:
+        add(asm, 1, f"umlal {rn_C}, {RN_B2}, {rn_A}[2]")
+    if kamount > 3:
+        add(asm, 1, f"umlal {rn_C}, {RN_B3}, {rn_A}[3]")
+
+def add_load_and_mult(asm, context, initial, pad_r, pad_c, pad_k):
+    # Load A
+    add_load_r_rows_c_cols(asm, RN_A0, RN_A1, RN_A2, RN_A3, R_Ai, R_T1, R_2o,
+                           context.r_pad_dist if pad_r else 4,
+                           context.k_pad_dist if pad_k else 4)
+    # Load B
+    add_load_r_rows_c_cols(asm, RN_B0, RN_B1, RN_B2, RN_B3, R_Bi, R_T1, R_2n,
+                           context.k_pad_dist if pad_k else 4, 
+                           context.c_pad_dist if pad_c else 4)
+    # Add multiplications
+    if not pad_r or context.r_pad_dist > 0:
+        add_mult(asm, initial, RN_C0, RN_A0, context.k_pad_dist if pad_k else 4)
+    if not pad_r or context.r_pad_dist > 1:
+        add_mult(asm, initial, RN_C1, RN_A1, context.k_pad_dist if pad_k else 4)
+    if not pad_r or context.r_pad_dist > 2:
+        add_mult(asm, initial, RN_C2, RN_A2, context.k_pad_dist if pad_k else 4)
+    if not pad_r or context.r_pad_dist > 3:
+        add_mult(asm, initial, RN_C3, RN_A3, context.k_pad_dist if pad_k else 4)
+
 def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
     if ramount > 0:
-        if rni == rni2:
-            # add(asm, 1, f"st1 {{{rn1}}}, [{rni}], {rninc}")
-            add_store_row_n_cols(asm, rn1, rni, None if ramount == 1 else rninc, camount)
-        else:
-            # add(asm, 1, f"st1 {{{rn1}}}, [{rni}]")
-            add_store_row_n_cols(asm, rn1, rni, None, camount)
-            if ramount > 1:
-                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+        add_store_row_with_n_cols(asm, rn1, rni, rni2, None if ramount == 1 else rninc, camount)
     if ramount > 1:
-        # add(asm, 1, f"st1 {{{rn2}}}, [{rni2}], {rninc}")
-        add_store_row_n_cols(asm, rn2, rni2, None if ramount == 2 else rninc, camount)
+        add_store_row_with_n_cols(asm, rn2, rni2, rni2, None if ramount == 2 else rninc, camount)
     if ramount > 2:
-        # add(asm, 1, f"st1 {{{rn3}}}, [{rni2}], {rninc}")
-        add_store_row_n_cols(asm, rn3, rni2, None if ramount == 3 else rninc, camount)
+        add_store_row_with_n_cols(asm, rn3, rni2, rni2, None if ramount == 3 else rninc, camount)
     if ramount > 3:
-        # add(asm, 1, f"st1 {{{rn4}}}, [{rni2}]")
-        add_store_row_n_cols(asm, rn4, rni2, None, camount)
+        add_store_row_with_n_cols(asm, rn4, rni2, rni2, None, camount)
 
 def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     # Apply two reductions
@@ -147,56 +177,52 @@ def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     if final_shrink:
         add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
 
-def add_mult(asm, initial, rn_C, rn_A):
-    ins = "umull" if initial else "umlal"
-    add(asm, 1, f"{ins} {rn_C}, {RN_B0}, {rn_A}[0]")
-    add(asm, 1, f"umlal {rn_C}, {RN_B1}, {rn_A}[1]")
-    add(asm, 1, f"umlal {rn_C}, {RN_B2}, {rn_A}[2]")
-    add(asm, 1, f"umlal {rn_C}, {RN_B3}, {rn_A}[3]")
-
-def add_load_and_mult(asm, context, initial, pad_r, pad_c):
-    # Load A
-    add_load_n_full_rows(asm, RN_A0, RN_A1, RN_A2, RN_A3, R_Ai, R_T1, R_2o, context.r_pad_dist if pad_r else 4)
-    # Load B
-    add_load_n_full_cols(asm, RN_B0, RN_B1, RN_B2, RN_B3, R_Bi, R_T1, R_2n, context.c_pad_dist if pad_c else 4)
-    # Add multiplications
-    if not pad_r or context.r_pad_dist > 0:
-        add_mult(asm, initial, RN_C0, RN_A0)
-    if not pad_r or context.r_pad_dist > 1:
-        add_mult(asm, initial, RN_C1, RN_A1)
-    if not pad_r or context.r_pad_dist > 2:
-        add_mult(asm, initial, RN_C2, RN_A2)
-    if not pad_r or context.r_pad_dist > 3:
-        add_mult(asm, initial, RN_C3, RN_A3)
-
 def add_k_loop(asm, context, pad_r, pad_c):
     loop_id = f"k_loop{'_pr' if pad_r else ''}{'_pc' if pad_c else ''}"
 
-    # Incrment k
+    # Initialize k
     add(asm, 1, f"mov {R_k}, #0")
 
-    add(asm, 0, f"{loop_id}_1:")
-    # Compute Ai = A + 2 * r * A_c + 2k (k = 0, so we can ignore that)
-    add(asm, 1, f"madd {R_Ai}, {R_2o}, {R_r}, {R_A}")
-    # Compute Bi = B + 2c + 2k * B_c    (k = 0, so we can ignore that)
-    add(asm, 1, f"add {R_Bi}, {R_B}, {R_c}, lsl #1")
-    # Multiply
-    add_load_and_mult(asm, context, True, pad_r, pad_c)
-    # Branch to end of k loop
-    add(asm, 1, f"b {loop_id}_end")
-    
-    add(asm, 0, f"{loop_id}_2:")
-    # Add 2k to Ai
-    add(asm, 1, f"add {R_Ai}, {R_Ai}, #8")
-    # Add 2kB_c to Bi
-    add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #2")
-    # Multiply
-    add_load_and_mult(asm, context, False, pad_r, pad_c)
+    # This should always be true
+    if context.k_size > 0:
+        add(asm, 0, f"{loop_id}_1:")
+        # Compute Ai = A + 2 * r * A_c + 2k (k = 0, so we can ignore that)
+        add(asm, 1, f"madd {R_Ai}, {R_2o}, {R_r}, {R_A}")
+        # Compute Bi = B + 2c + 2k * B_c    (k = 0, so we can ignore that)
+        add(asm, 1, f"add {R_Bi}, {R_B}, {R_c}, lsl #1")
+        # Multiply
+        add_load_and_mult(asm, context, True, pad_r, pad_c, False)
 
-    add(asm, 0, f"{loop_id}_end:")
-    add(asm, 1, f"add {R_k}, {R_k}, #4")
-    add(asm, 1, f"cmp {R_k}, #{context.k_size}")
-    add(asm, 1, f"blt {loop_id}_2")
+        # Branch to end of k loop, but only if this is not the last iteration
+        if context.k_size > 1:
+            add(asm, 1, f"b {loop_id}_end")
+    
+    # If we have more than 1 iteration of k, we need to loop
+    if context.k_size > 1:
+        add(asm, 0, f"{loop_id}_2:")
+        # Add 2k to Ai
+        add(asm, 1, f"add {R_Ai}, {R_Ai}, #8")
+        # Add 2kB_c to Bi
+        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #2")
+        # Multiply
+        add_load_and_mult(asm, context, False, pad_r, pad_c, False)
+
+        # Check if we are done. Otherwise, jump back to the beginning of the loop
+        add(asm, 0, f"{loop_id}_end:")
+        add(asm, 1, f"add {R_k}, {R_k}, #4")
+        add(asm, 1, f"cmp {R_k}, #{context.k_size}")
+        add(asm, 1, f"blt {loop_id}_2")
+    
+    # Padding time! If we need to pad k, do it here!
+    if context.k_pad_dist > 0:
+        add(asm, 0, f"{loop_id}_pk:")
+        # Add 2k to Ai
+        add(asm, 1, f"add {R_Ai}, {R_Ai}, #8")
+        # Add 2kB_c to Bi
+        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #2")
+        # Multiply
+        add_load_and_mult(asm, context, False, pad_r, pad_c, True)
+
     # Reduce C modulo MEDS_p
     if not pad_r or context.r_pad_dist > 0:
         add_reduce(asm, RN_C0, RN_C0T, RN_C0h, context.GFq_bits, not pad_c)
@@ -251,6 +277,9 @@ def add_r_loop(asm, context):
     
 
 def generate_mat_mul_asm(context):
+    if context.k_size == 0:
+        raise ValueError("k must be at least 4")
+
     asm = []
     # Header and function information
     add(asm, 0, ".cpu cortex-a72")
@@ -304,14 +333,14 @@ class Context:
 
 #     print(f"Generated {fun_id}.s")
 
-fun_id, asm = generate_mat_mul_asm(Context(24, 67, 4, 4093, 12))
-with open(f"{dir_path}/{fun_id}.s", "w") as f:
-    for line in asm:
-        f.write(line + "\n")
+# fun_id, asm = generate_mat_mul_asm(Context(24, 67, 4, 4093, 12))
+# with open(f"{dir_path}/{fun_id}.s", "w") as f:
+#     for line in asm:
+#         f.write(line + "\n")
 
-print(f"Generated {fun_id}.s")
+# print(f"Generated {fun_id}.s")
 
-fun_id, asm = generate_mat_mul_asm(Context(4, 4, 4, 4093, 12))
+fun_id, asm = generate_mat_mul_asm(Context(29, 65, 103, 4093, 12))
 with open(f"{dir_path}/{fun_id}.s", "w") as f:
     for line in asm:
         f.write(line + "\n")

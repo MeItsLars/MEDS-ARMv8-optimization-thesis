@@ -31,6 +31,7 @@ extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o
 extern void pmod_mat_mul_asm_1_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_5(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_4_5_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_67(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_4_67(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_5_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
@@ -38,6 +39,7 @@ extern void pmod_mat_mul_asm_6_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_7_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_576_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_29_103_65(uint16_t *C, uint16_t *A, uint16_t *B);
 
 extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
@@ -882,10 +884,10 @@ float min_cycle_bound(int m, int o, int n)
   );
 }
 
-#define A_ROWS 24
-#define A_COLS 4
+#define A_ROWS 29
+#define A_COLS 103
 #define B_ROWS A_COLS
-#define B_COLS 67
+#define B_COLS 65
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
@@ -937,7 +939,7 @@ int main(int argc, char *argv[])
     long long new_matmul_cc = -get_cyclecounter();
     // pmod_mat_mul_simd_1_pad(C2, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
     // pmod_mat_mul_asm(C2, A2, B2, A_ROWS, A_COLS, B_COLS);
-    pmod_mat_mul_asm_24_4_67(C2, A2, B2);
+    pmod_mat_mul_asm_29_103_65(C2, A2, B2);
     new_matmul_cc += get_cyclecounter();
 
     old_matmul_cycles[round] = old_matmul_cc;
