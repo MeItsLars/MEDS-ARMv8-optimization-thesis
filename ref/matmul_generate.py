@@ -132,12 +132,18 @@ def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
         add_store_row_n_cols(asm, rn4, rni2, None, camount)
 
 def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
+    # Apply two reductions
     add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    # Remove one final MEDS_p if the value in the lane is at least MEDS_p
+    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
+    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
+    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    # If neccesary, shrink to 16 bits
     if final_shrink:
         add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
 

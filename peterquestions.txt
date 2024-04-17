@@ -18,9 +18,6 @@
 > Make sure to explain MEDS better. Include the algorithm (pseudocode). Include the parameter sets that will be used.
   I should explain it to the extent that for every optimization done, it should be easy to understand why we use it and where it is used.
 
-==== NEW ====
-- Update on situation
-
 - Why are medians of matmul and RREF so different for each run?
 > Aligned loads do not seem to work.
 - Still doesn't seem to work
@@ -33,3 +30,6 @@
 
 https://github.com/IIS-summer-2023/meds-simd-lowlevel
 https://github.com/IIS-summer-2023/meds-simd-highlevel
+
+==== NEW ====
+> Compare vector instruction? cmhs
