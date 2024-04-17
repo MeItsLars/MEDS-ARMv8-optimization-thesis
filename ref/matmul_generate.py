@@ -85,43 +85,61 @@ def add_load_n_full_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, camount):
     # 2. Load 'camount' columns into the lanes of rn4
     rn4_p = rn4[:-3]
     if camount > 0:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}]")
         add(asm, 1, f"ins {rn4_p}.h[0], {R_T2h}")
     if camount > 1:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}, #2]")
         add(asm, 1, f"ins {rn4_p}.h[1], {R_T2h}")
     if camount > 2:
-        add(asm, 1, f"ldrh {R_T2h}, [{rni2}], #2")
+        add(asm, 1, f"ldrh {R_T2h}, [{rni2}, #4]")
         add(asm, 1, f"ins {rn4_p}.h[2], {R_T2h}")
 
-def add_load_store(asm, ins, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
-    if ramount > 0:
-        if rni == rni2:
-            add(asm, 1, f"{ins} {{{rn1}}}, [{rni}], {rninc}")
-        else:
-            add(asm, 1, f"{ins} {{{rn1}}}, [{rni}]")
-            add(asm, 1, f"add {rni2}, {rni}, {rninc}")
-    if ramount > 1:
-        add(asm, 1, f"{ins} {{{rn2}}}, [{rni2}], {rninc}")
-    if ramount > 2:
-        add(asm, 1, f"{ins} {{{rn3}}}, [{rni2}], {rninc}")
-    if ramount > 3:
-        add(asm, 1, f"{ins} {{{rn4}}}, [{rni2}]")
+def add_store_row_n_cols(asm, rn, rni, rninc, camount):
+    inc = f", {rninc}" if rninc != None else ""
+    if camount > 3:
+        add(asm, 1, f"st1 {{{rn}}}, [{rni}]{inc}")
+        return
 
-def add_load(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
-    add_load_store(asm, "ld1", rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount)
+    for i in range(camount):
+        # Extract the i-th lane of rn   
+        rn_p = rn[:-3]
+        add(asm, 1, f"mov {R_T2h}, {rn_p}.s[{i}]")
+        # Store the i-th lane of rn
+        add(asm, 1, f"strh {R_T2h}, [{rni}, #{i * 2}]")
+    
+    # Increment the memory address
+    if rninc:
+        add(asm, 1, f"add {rni}, {rni}, {rninc}")
 
 def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
-    add_load_store(asm, "st1", rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount)
+    if ramount > 0:
+        if rni == rni2:
+            # add(asm, 1, f"st1 {{{rn1}}}, [{rni}], {rninc}")
+            add_store_row_n_cols(asm, rn1, rni, None if ramount == 1 else rninc, camount)
+        else:
+            # add(asm, 1, f"st1 {{{rn1}}}, [{rni}]")
+            add_store_row_n_cols(asm, rn1, rni, None, camount)
+            if ramount > 1:
+                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
+    if ramount > 1:
+        # add(asm, 1, f"st1 {{{rn2}}}, [{rni2}], {rninc}")
+        add_store_row_n_cols(asm, rn2, rni2, None if ramount == 2 else rninc, camount)
+    if ramount > 2:
+        # add(asm, 1, f"st1 {{{rn3}}}, [{rni2}], {rninc}")
+        add_store_row_n_cols(asm, rn3, rni2, None if ramount == 3 else rninc, camount)
+    if ramount > 3:
+        # add(asm, 1, f"st1 {{{rn4}}}, [{rni2}]")
+        add_store_row_n_cols(asm, rn4, rni2, None, camount)
 
-def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits):
+def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
-    add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
+    if final_shrink:
+        add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
 
 def add_mult(asm, initial, rn_C, rn_A):
     ins = "umull" if initial else "umlal"
@@ -175,13 +193,13 @@ def add_k_loop(asm, context, pad_r, pad_c):
     add(asm, 1, f"blt {loop_id}_2")
     # Reduce C modulo MEDS_p
     if not pad_r or context.r_pad_dist > 0:
-        add_reduce(asm, RN_C0, RN_C0T, RN_C0h, context.GFq_bits)
+        add_reduce(asm, RN_C0, RN_C0T, RN_C0h, context.GFq_bits, not pad_c)
     if not pad_r or context.r_pad_dist > 1:
-        add_reduce(asm, RN_C1, RN_C1T, RN_C1h, context.GFq_bits)
+        add_reduce(asm, RN_C1, RN_C1T, RN_C1h, context.GFq_bits, not pad_c)
     if not pad_r or context.r_pad_dist > 2:
-        add_reduce(asm, RN_C2, RN_C2T, RN_C2h, context.GFq_bits)
+        add_reduce(asm, RN_C2, RN_C2T, RN_C2h, context.GFq_bits, not pad_c)
     if not pad_r or context.r_pad_dist > 3:
-        add_reduce(asm, RN_C3, RN_C3T, RN_C3h, context.GFq_bits)
+        add_reduce(asm, RN_C3, RN_C3T, RN_C3h, context.GFq_bits, not pad_c)
     # Store C back into memory
     # From C + 2rC_c + 2c, compute Ci = C + 2c (C is incremented with 2rC_c in each iteration)
     add(asm, 1, f"add {R_T1}, {R_C}, {R_c}, lsl #1")
@@ -280,11 +298,16 @@ class Context:
 
 #     print(f"Generated {fun_id}.s")
 
+fun_id, asm = generate_mat_mul_asm(Context(24, 67, 4, 4093, 12))
+with open(f"{dir_path}/{fun_id}.s", "w") as f:
+    for line in asm:
+        f.write(line + "\n")
 
-for r in range(5, 6):
-    fun_id, asm = generate_mat_mul_asm(Context(4, r, 4, 4093, 12))
-    with open(f"{dir_path}/{fun_id}.s", "w") as f:
-        for line in asm:
-            f.write(line + "\n")
+print(f"Generated {fun_id}.s")
 
-    print(f"Generated {fun_id}.s")
+fun_id, asm = generate_mat_mul_asm(Context(4, 4, 4, 4093, 12))
+with open(f"{dir_path}/{fun_id}.s", "w") as f:
+    for line in asm:
+        f.write(line + "\n")
+
+print(f"Generated {fun_id}.s")
