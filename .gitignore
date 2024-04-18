@@ -1,3 +1,21 @@
+# VSCode
+.vscode
+
+# Latex
+*.output
+*.out
+*.synctex(busy)
+
+# CMake files
+build
+.*.swp
+*.req
+*.rsp
+**/params.h
+**/api.h
+build
+
+# Compilation files
 *.o
 *.ko
 *.mod
@@ -5,9 +23,4 @@
 *.cmd
 *.order
 *.symvers
-
-*.output
-*.out
-*.synctex(busy)
-
-.vscode
+pmod_mat_mul_asm_*.s
