@@ -24,7 +24,9 @@ profileresult profileresults[1000];
 int number_of_profileresults = 0;
 int profiler_enabled = 0;
 
-#define MATMUL_ROUNDS 1
+#define MATMUL_ROUNDS 500
+
+extern void nop_test();
 
 extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o, int n);
 
@@ -38,6 +40,17 @@ extern void pmod_mat_mul_asm_5_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_6_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_7_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_30_30_30(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_40_40_40(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_50_50_50(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_55_55_55(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_60_60_60(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_70_70_70(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_80_80_80(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_24_120_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_24_168_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_24_192_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_24_240_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_576_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_29_103_65(uint16_t *C, uint16_t *A, uint16_t *B);
 
@@ -872,22 +885,21 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
 float min_cycle_bound(int m, int o, int n)
 {
   // return 0.25 * m * o * (n + 13) + 0.25 * (m * n + n * o + m * o);
-  return (m*0.25) * (n*0.25) * ( // r-c loop
-    4 + // Initialize C
-    (o*0.25) * ( // k loop
-      4 +  // Load A
-      4 +  // Load B
-      4 * 4 // Compute C
-    ) +
-    9*4 + // Reduce C
-    4     // Store C
-  );
+  return (m * 0.25) * (n * 0.25) * (                          // r-c loop
+                                       (o * 0.25) * (         // k loop
+                                                        4 +   // Load A
+                                                        4 +   // Load B
+                                                        4 * 4 // Compute C
+                                                        ) +
+                                       9 * 4 + // Reduce C
+                                       4       // Store C
+                                   );
 }
 
-#define A_ROWS 24
-#define A_COLS 24*24
+#define A_ROWS 55
+#define A_COLS 55
 #define B_ROWS A_COLS
-#define B_COLS 24
+#define B_COLS 55
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
@@ -902,12 +914,12 @@ int main(int argc, char *argv[])
     seed1[i] = i;
   }
 
-  pmod_mat_t A[A_ROWS * A_COLS] __attribute__((aligned(16)));
-  pmod_mat_t B[B_ROWS * B_COLS] __attribute__((aligned(16)));
-  pmod_mat_t A2[A_ROWS * A_COLS] __attribute__((aligned(16)));
-  pmod_mat_t B2[B_ROWS * B_COLS] __attribute__((aligned(16)));
-  pmod_mat_t C1[C_ROWS * C_COLS] __attribute__((aligned(16)));
-  pmod_mat_t C2[C_ROWS * C_COLS] __attribute__((aligned(16)));
+  __attribute__((aligned(16))) pmod_mat_t A[A_ROWS * A_COLS];
+  __attribute__((aligned(16))) pmod_mat_t B[B_ROWS * B_COLS];
+  __attribute__((aligned(16))) pmod_mat_t A2[A_ROWS * A_COLS];
+  __attribute__((aligned(16))) pmod_mat_t B2[B_ROWS * B_COLS];
+  __attribute__((aligned(16))) pmod_mat_t C1[C_ROWS * C_COLS];
+  __attribute__((aligned(16))) pmod_mat_t C2[C_ROWS * C_COLS];
 
   keccak_state shake;
   shake256_absorb_once(&shake, seed1, MEDS_pub_seed_bytes);
@@ -915,61 +927,54 @@ int main(int argc, char *argv[])
   long long old_matmul_cycles[MATMUL_ROUNDS];
   long long new_matmul_cycles[MATMUL_ROUNDS];
 
-  for (int round = 0; round < MATMUL_ROUNDS; round++)
+  // Fill matrices with random values
+  for (int r = 0; r < A_ROWS; r++)
+    for (int c = 0; c < A_COLS; c++)
+    {
+      pmod_mat_set_entry(A, A_ROWS, A_COLS, r, c, rnd_GF(&shake));
+      A2[r * A_COLS + c] = pmod_mat_entry(A, A_ROWS, A_COLS, r, c);
+    }
+
+  for (int r = 0; r < B_ROWS; r++)
+    for (int c = 0; c < B_COLS; c++)
+    {
+      pmod_mat_set_entry(B, B_ROWS, B_COLS, r, c, rnd_GF(&shake));
+      B2[r * B_COLS + c] = pmod_mat_entry(B, B_ROWS, B_COLS, r, c);
+    }
+
+  for (int round = 0; round < MATMUL_ROUNDS - 1; round++)
   {
-    // Fill matrices with random values
-    for (int r = 0; r < A_ROWS; r++)
-      for (int c = 0; c < A_COLS; c++)
-      {
-        pmod_mat_set_entry(A, A_ROWS, A_COLS, r, c, rnd_GF(&shake));
-        A2[r * A_COLS + c] = pmod_mat_entry(A, A_ROWS, A_COLS, r, c);
-      }
-
-    for (int r = 0; r < B_ROWS; r++)
-      for (int c = 0; c < B_COLS; c++)
-      {
-        pmod_mat_set_entry(B, B_ROWS, B_COLS, r, c, rnd_GF(&shake));
-        B2[r * B_COLS + c] = pmod_mat_entry(B, B_ROWS, B_COLS, r, c);
-      }
-
-    long long old_matmul_cc = -get_cyclecounter();
+    old_matmul_cycles[round] = get_cyclecounter();
     pmod_mat_mul_simd_1_pad(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
-    old_matmul_cc += get_cyclecounter();
-
-    long long new_matmul_cc = -get_cyclecounter();
-    // pmod_mat_mul_simd_1_pad(C2, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
-    // pmod_mat_mul_asm(C2, A2, B2, A_ROWS, A_COLS, B_COLS);
-    pmod_mat_mul_asm_24_576_24(C2, A2, B2);
-    new_matmul_cc += get_cyclecounter();
-
-    old_matmul_cycles[round] = old_matmul_cc;
-    new_matmul_cycles[round] = new_matmul_cc;
   }
+  old_matmul_cycles[MATMUL_ROUNDS - 1] = get_cyclecounter();
 
-  // Print results
-  // printf("A:\n");
-  // pmod_mat_fprint(stdout, A, A_ROWS, A_COLS);
-  // printf("B:\n");
-  // pmod_mat_fprint(stdout, B, B_ROWS, B_COLS);
-  // printf("C1:\n");
-  // pmod_mat_fprint(stdout, C1, C_ROWS, C_COLS);
-  // printf("C2:\n");
-  // pmod_mat_fprint(stdout, C2, C_ROWS, C_COLS);
+  for (int round = 0; round < MATMUL_ROUNDS - 1; round++)
+  {
+    new_matmul_cycles[round] = get_cyclecounter();
+    pmod_mat_mul_asm_55_55_55(C2, A2, B2);
+  }
+  new_matmul_cycles[MATMUL_ROUNDS - 1] = get_cyclecounter();
 
-  double old_matmul_median_cc = median(old_matmul_cycles, MATMUL_ROUNDS);
-  double new_matmul_median_cc = median(new_matmul_cycles, MATMUL_ROUNDS);
+  double old_matmul_median_cc = median_2(old_matmul_cycles, MATMUL_ROUNDS, 0);
+  double new_matmul_median_cc = median_2(new_matmul_cycles, MATMUL_ROUNDS, 1);
+
+  printf("Addresses of the matrices:\n");
+  printf("A2: %p\n", A2);
+  printf("B2: %p\n", B2);
+  printf("C2: %p\n", C2);
   float cycle_bound = min_cycle_bound(C_ROWS, A_COLS, C_COLS);
   float improvement_possible = (new_matmul_median_cc / cycle_bound) * 100;
-  float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
-  float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
+  // float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
+  // float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
   double percentage = new_matmul_median_cc / old_matmul_median_cc * 100;
   double improvement = (new_matmul_median_cc - old_matmul_median_cc) / old_matmul_median_cc * 100;
   printf("Minimum cycle bound: %f\n", cycle_bound);
   printf("Improvement possible: -%f%% (x%f%%)\n", (improvement_possible - 100), improvement_possible / 100);
   printf("Old median: %f\n", old_matmul_median_cc);
   printf("New median: %f\n", new_matmul_median_cc);
-  printf("Old std: %f\n", old_matmul_std);
-  printf("New std: %f\n", new_matmul_std);
+  // printf("Old std: %f\n", old_matmul_std);
+  // printf("New std: %f\n", new_matmul_std);
   printf("Percentage: %f%%\n", percentage);
   printf("Improvement: %f%%\n", improvement);
 

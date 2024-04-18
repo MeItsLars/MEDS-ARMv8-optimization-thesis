@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "cyclecounter.h"
 
 typedef struct
@@ -46,6 +47,32 @@ static float median(long long arr[], int n)
     {
         return (arr[n / 2 - 1] + arr[n / 2]) / 2.0;
     }
+}
+
+static float median_2(long long arr[], int n, int print)
+{
+    long long differences[n - 1];
+    if (print == 1)
+    {
+        printf("MEDIANS:\n");
+    }
+    for (int i = 0; i < n - 1; i++)
+    {
+        differences[i] = arr[i + 1] - arr[i];
+        if (print)
+        {
+            printf("%lld ", differences[i]);
+        }
+    }
+    if (print == 1)
+    {
+        printf("\n");
+    }
+    qsort(differences, n - 1, sizeof(long long), compare);
+    if (n % 2 == 0)
+        return (differences[n / 2 - 1] + differences[n / 2]) / 2.0;
+    else
+        return differences[n / 2];
 }
 
 static float standard_deviation(long long arr[], int n)

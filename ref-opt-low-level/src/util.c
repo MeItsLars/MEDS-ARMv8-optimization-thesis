@@ -719,10 +719,19 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G)
 {
   PROFILER_START("pi");
+  pmod_mat_t Gtmp[MEDS_k * MEDS_m * MEDS_n];
   for (int i = 0; i < MEDS_k; i++)
   {
-    pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, A, MEDS_m, MEDS_m, &G[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n);
-    pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, &Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, B, MEDS_n, MEDS_n);
+    PROFILER_START("pmod_mat_mul");
+    PROFILER_START("pmod_mat_mul_asm_m_n_m");
+    pmod_mat_mul_asm_m_n_m(&Gtmp[i * MEDS_m * MEDS_n], A, &G[i * MEDS_m * MEDS_n]);
+    PROFILER_STOP("pmod_mat_mul_asm_m_n_m");
+    PROFILER_STOP("pmod_mat_mul");
+    PROFILER_START("pmod_mat_mul");
+    PROFILER_START("pmod_mat_mul_asm_m_n_n");
+    pmod_mat_mul_asm_m_n_n(&Gout[i * MEDS_m * MEDS_n], &Gtmp[i * MEDS_m * MEDS_n], B);
+    PROFILER_STOP("pmod_mat_mul_asm_m_n_n");
+    PROFILER_STOP("pmod_mat_mul");
   }
   PROFILER_STOP("pi");
 }
@@ -731,13 +740,23 @@ int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
 {
   PROFILER_START("SF");
   pmod_mat_t M[MEDS_k * MEDS_k];
+  // Temporary matrix so we can use matrix multiplication that stores directly to result matrix
+  pmod_mat_t Gtmp[MEDS_k * MEDS_m * MEDS_n];
 
   for (int r = 0; r < MEDS_k; r++)
+  {
     memcpy(&M[r * MEDS_k], &G[r * MEDS_m * MEDS_n], MEDS_k * sizeof(GFq_t));
+    // Copy G into Gtmp
+    memcpy(&Gtmp[r * MEDS_m * MEDS_n], &G[r * MEDS_m * MEDS_n], MEDS_m * MEDS_n * sizeof(GFq_t));
+  }
 
   if (pmod_mat_inv(M, M, MEDS_k, MEDS_k) == 0)
   {
-    pmod_mat_mul(Gprime, MEDS_k, MEDS_m * MEDS_n, M, MEDS_k, MEDS_k, G, MEDS_k, MEDS_m * MEDS_n);
+    PROFILER_START("pmod_mat_mul");
+    PROFILER_START("pmod_mat_mul_asm_k_mn_k");
+    pmod_mat_mul_asm_k_mn_k(Gprime, M, Gtmp);
+    PROFILER_STOP("pmod_mat_mul_asm_k_mn_k");
+    PROFILER_STOP("pmod_mat_mul");
 
     PROFILER_STOP("SF");
     return 0;

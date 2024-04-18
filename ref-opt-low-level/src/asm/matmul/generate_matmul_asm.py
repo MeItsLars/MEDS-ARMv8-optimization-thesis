@@ -1,4 +1,7 @@
 import os
+import sys
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 R_C = "x0"
 R_A = "x1"
@@ -170,9 +173,9 @@ def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # Remove one final MEDS_p if the value in the lane is at least MEDS_p
-    # add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
-    # add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
-    # add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
+    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
+    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # If neccesary, shrink to 16 bits
     if final_shrink:
         add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
@@ -276,7 +279,7 @@ def add_r_loop(asm, context):
         add(asm, 0, f"{loop_id}_pr_end:")
     
 
-def generate_mat_mul_asm(context):
+def generate_mat_mul_asm(context, fun_id):
     if context.k_size == 0:
         raise ValueError("k must be at least 4")
 
@@ -284,7 +287,6 @@ def generate_mat_mul_asm(context):
     # Header and function information
     add(asm, 0, ".cpu cortex-a72")
     add(asm, 0, ".arch armv8-a")
-    fun_id = f"pmod_mat_mul_asm_{context.r}_{context.k}_{context.c}"
     add(asm, 0, f".global {fun_id}")
     add(asm, 0, f"{fun_id}:")
     # Initialize MEDS_p into v16.4s
@@ -295,7 +297,7 @@ def generate_mat_mul_asm(context):
     add(asm, 1, f"mov {R_2n}, #{context.c * 2}")
     add_r_loop(asm, context)
     add(asm, 1, "ret")
-    return (fun_id, asm)
+    return asm
 
 # Get the directory that this python file is in
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -317,32 +319,59 @@ class Context:
     def __str__(self):
         return f"r: {self.r}, c: {self.c}, k: {self.k}, r_size: {self.r_size}, c_size: {self.c_size}, k_size: {self.k_size}, r_pad_dist: {self.r_pad_dist}, c_pad_dist: {self.c_pad_dist}, k_pad_dist: {self.k_pad_dist}, MEDS_p: {self.MEDS_p}, GFq_bits: {self.GFq_bits}"
 
-# for r in range(1, 8):
-#     fun_id, asm = generate_mat_mul_asm(Context(r, 4, 4, 4093, 12))
-#     with open(f"{dir_path}/{fun_id}.s", "w") as f:
-#         for line in asm:
-#             f.write(line + "\n")
+def generate_matmul_file(name, r, c, k, MEDS_p, GFq_bits, fun_id):
+    asm = generate_mat_mul_asm(Context(r, c, k, MEDS_p, GFq_bits), fun_id)
+    path = f"{dir_path}/{name}/{fun_id}.s"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        for line in asm:
+            f.write(line + "\n")
+    print(f'Generated {fun_id}.s ({r}, {c}, {k}, {MEDS_p}, {GFq_bits})')
 
-#     print(f"Generated {fun_id}.s")
-        
-# for c in range(1, 8):
-#     fun_id, asm = generate_mat_mul_asm(Context(4, c, 4, 4093, 12))
-#     with open(f"{dir_path}/{fun_id}.s", "w") as f:
-#         for line in asm:
-#             f.write(line + "\n")
 
-#     print(f"Generated {fun_id}.s")
+def generate_matmul_manually():
+    generate_matmul_file('oldlevel341711', 24, 24, 24, 4093, 12, 'pmod_mat_mul_asm_24_24_24')
+    generate_matmul_file('oldlevel341711', 30, 30, 30, 4093, 12, 'pmod_mat_mul_asm_30_30_30')
+    generate_matmul_file('oldlevel341711', 40, 40, 40, 4093, 12, 'pmod_mat_mul_asm_40_40_40')
+    generate_matmul_file('oldlevel341711', 50, 50, 50, 4093, 12, 'pmod_mat_mul_asm_50_50_50')
+    generate_matmul_file('oldlevel341711', 55, 55, 55, 4093, 12, 'pmod_mat_mul_asm_55_55_55')
+    generate_matmul_file('oldlevel341711', 60, 60, 60, 4093, 12, 'pmod_mat_mul_asm_60_60_60')
+    generate_matmul_file('oldlevel341711', 70, 70, 70, 4093, 12, 'pmod_mat_mul_asm_70_70_70')
+    generate_matmul_file('oldlevel341711', 80, 80, 80, 4093, 12, 'pmod_mat_mul_asm_80_80_80')
 
-# fun_id, asm = generate_mat_mul_asm(Context(24, 67, 4, 4093, 12))
-# with open(f"{dir_path}/{fun_id}.s", "w") as f:
-#     for line in asm:
-#         f.write(line + "\n")
+def parse_params_h(path):
+    with open(path, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith('#define MEDS_name '):
+                name = line.split('#define MEDS_name ')[1].rstrip('\n')[1:-1]
+            if line.startswith('#define MEDS_m '):
+                m = int(line.split('#define MEDS_m ')[1])
+            if line.startswith('#define MEDS_n '):
+                n = int(line.split('#define MEDS_n ')[1])
+            if line.startswith('#define MEDS_k '):
+                k = int(line.split('#define MEDS_k ')[1])
+            if line.startswith('#define MEDS_p '):
+                MEDS_p = int(line.split('#define MEDS_p ')[1])
+            if line.startswith('#define GFq_bits '):
+                GFq_bits = int(line.split('#define GFq_bits ')[1])
+    return (name, m, n, k, MEDS_p, GFq_bits)
 
-# print(f"Generated {fun_id}.s")
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python generate_matmul_asm.py <params.h | 'none'>")
+        sys.exit(1)
+    
+    params_h_path = sys.argv[1]
 
-fun_id, asm = generate_mat_mul_asm(Context(24, 24, 24*24, 4093, 12))
-with open(f"{dir_path}/{fun_id}.s", "w") as f:
-    for line in asm:
-        f.write(line + "\n")
-
-print(f"Generated {fun_id}.s")
+    if params_h_path == "none":
+        generate_matmul_manually()
+    else:
+        name, m, n, k, MEDS_p, GFq_bits = parse_params_h(params_h_path)
+        # Generate the 6 different multiplications required for MEDS
+        generate_matmul_file(name, k, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_k_mn_k')
+        generate_matmul_file(name, 2, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_mn_k')
+        generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_k_k')
+        generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_m')
+        generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_n')
+    
