@@ -7,9 +7,14 @@
 *.synctex(busy)
 
 # CMake files
-CMakeFiles
-CMakeCache.txt
-cmake_install.cmake
+build
+.*.swp
+*.req
+*.rsp
+**/params.h
+**/api.h
+build
+
 
 # Compilation files
 *.o

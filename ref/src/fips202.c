@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "fips202.h"
+#include "profiler.h"
 
 #define NROUNDS 24
 #define ROL(a, offset) ((a << offset) ^ (a >> (64-offset)))
@@ -624,7 +625,9 @@ void shake256_init(keccak_state *state)
 **************************************************/
 void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 {
+  PROFILER_START("shake256_absorb");
   state->pos = keccak_absorb(state->s, state->pos, SHAKE256_RATE, in, inlen);
+  PROFILER_STOP("shake256_absorb");
 }
 
 /*************************************************
@@ -636,8 +639,10 @@ void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 **************************************************/
 void shake256_finalize(keccak_state *state)
 {
+  PROFILER_START("shake256_finalize");
   keccak_finalize(state->s, state->pos, SHAKE256_RATE, 0x1F);
   state->pos = SHAKE256_RATE;
+  PROFILER_STOP("shake256_finalize");
 }
 
 /*************************************************
@@ -652,7 +657,9 @@ void shake256_finalize(keccak_state *state)
 **************************************************/
 void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 {
+  PROFILER_START("shake256_squeeze");
   state->pos = keccak_squeeze(out, outlen, state->s, state->pos, SHAKE256_RATE);
+  PROFILER_STOP("shake256_squeeze");
 }
 
 /*************************************************
@@ -666,8 +673,10 @@ void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 **************************************************/
 void shake256_absorb_once(keccak_state *state, const uint8_t *in, size_t inlen)
 {
+  PROFILER_START("shake256_absorb_once");
   keccak_absorb_once(state->s, SHAKE256_RATE, in, inlen, 0x1F);
   state->pos = SHAKE256_RATE;
+  PROFILER_STOP("shake256_absorb_once");
 }
 
 /*************************************************
@@ -684,7 +693,9 @@ void shake256_absorb_once(keccak_state *state, const uint8_t *in, size_t inlen)
 **************************************************/
 void shake256_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
 {
+  PROFILER_START("shake256_squeezeblocks");
   keccak_squeezeblocks(out, nblocks, state->s, SHAKE256_RATE);
+  PROFILER_STOP("shake256_squeezeblocks");
 }
 
 /*************************************************

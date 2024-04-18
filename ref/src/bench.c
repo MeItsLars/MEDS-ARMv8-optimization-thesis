@@ -5,18 +5,12 @@
 #include <sys/random.h>
 #include <sys/time.h>
 
+#include "cyclecounter.h"
 #include "params.h"
 #include "api.h"
 #include "meds.h"
 
-#include <x86intrin.h>
-
 double osfreq(void);
-
-long long cpucycles(void)
-{
-  return __rdtsc();
-}
 
 int main(int argc, char *argv[])
 {
@@ -53,23 +47,24 @@ int main(int argc, char *argv[])
 
   printf("sig:  %i bytes\n", MEDS_SIG_BYTES);
 
+  enable_cyclecounter();
 
   for (int round = 0; round < rounds; round++)
   {
-    keygen_time = -cpucycles();
+    keygen_time = -get_cyclecounter();
     crypto_sign_keypair(pk, sk);
-    keygen_time += cpucycles();
+    keygen_time += get_cyclecounter();
 
-    sign_time = -cpucycles();
+    sign_time = -get_cyclecounter();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
-    sign_time += cpucycles();
+    sign_time += get_cyclecounter();
 
     unsigned char msg_out[17];
     unsigned long long msg_out_len = sizeof(msg_out);
 
-    verify_time = -cpucycles();
+    verify_time = -get_cyclecounter();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
-    verify_time += cpucycles();
+    verify_time += get_cyclecounter();
 
     if (ret != 0)
     {
@@ -85,6 +80,8 @@ int main(int argc, char *argv[])
     printf("%f (%llu cycles)  ", sign_time / freq, sign_time);
     printf("%f (%llu cycles)  \n", verify_time / freq, verify_time);
   }
+
+  disable_cyclecounter();
 
   return 0;
 }

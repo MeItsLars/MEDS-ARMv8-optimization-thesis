@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "log.h"
-
+#include "profiler.h"
 #include "params.h"
 #include "matrixmod.h"
 
@@ -44,6 +44,7 @@ void pmod_mat_fprint(FILE *stream, pmod_mat_t *M, int M_r, int M_c)
 
 void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
+  PROFILER_START("pmod_mat_mul");
   GFq_t tmp[C_r*C_c];
 
   for (int c = 0; c < C_c; c++)
@@ -60,25 +61,36 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
       pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r*C_c + c]);
+  PROFILER_STOP("pmod_mat_mul");
 }
 
 int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  PROFILER_START("pmod_mat_syst_ct");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  PROFILER_STOP("pmod_mat_syst_ct");
+  return result;
 }
 
 int pmod_mat_syst_ct_partial(pmod_mat_t *M, int M_r, int M_c, int max_r)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  PROFILER_START("pmod_mat_syst_ct_partial");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  PROFILER_STOP("pmod_mat_syst_ct_partial");
+  return result;
 }
 
 int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
 {
-  return pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  PROFILER_START("pmod_mat_rref");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  PROFILER_STOP("pmod_mat_rref");
+  return result;
 }
 
 int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
+  PROFILER_START("pmod_mat_syst_ct_partial_swap_backsub");
   int ret = M_r * swap;
 
   for (int r = 0; r < max_r; r++)
@@ -135,7 +147,10 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
     uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
 
     if (val == 0)
+    {
+      PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
       return -1;
+    }
 
     val = GF_inv(val);
 
@@ -166,7 +181,10 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
   }
 
   if (!backsub)
+  {
+    PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
     return ret;
+  }
 
   // back substitution
   for (int r = max_r - 1; r >= 0; r--)
@@ -196,11 +214,13 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
       }
     }
 
+  PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
   return ret;
 }
 
 GFq_t GF_inv(GFq_t val)
 {
+  PROFILER_START("GF_inv");
 //  if (MEDS_p == 8191)
 //  {
 //    // Use an optimal addition chain...
@@ -263,12 +283,14 @@ GFq_t GF_inv(GFq_t val)
       exponent >>= 1;
     }
 
+    PROFILER_STOP("GF_inv");
     return t;
   }
 }
 
 int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
 {
+  PROFILER_START("pmod_mat_inv");
   pmod_mat_t M[A_r * A_c*2];
 
   for (int r = 0; r < A_r; r++)
@@ -285,6 +307,7 @@ int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
     for (int r = 0; r < A_r; r++)
       memcpy(&B[r * A_c], &M[r * A_c*2 + A_c], A_c * sizeof(GFq_t));
 
+  PROFILER_STOP("pmod_mat_inv");
   return ret;
 }
 

@@ -1,1 +1,1 @@
-NIST/rng.c
+./NIST/rng.c

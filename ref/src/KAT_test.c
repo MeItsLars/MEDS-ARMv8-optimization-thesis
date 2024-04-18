@@ -1,1 +1,1 @@
-NIST/PQCgenKAT_sign.c
+./NIST/PQCgenKAT_sign.c
