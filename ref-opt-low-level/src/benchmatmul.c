@@ -884,22 +884,24 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
 
 float min_cycle_bound(int m, int o, int n)
 {
-  // return 0.25 * m * o * (n + 13) + 0.25 * (m * n + n * o + m * o);
-  return (m * 0.25) * (n * 0.25) * (                          // r-c loop
-                                       (o * 0.25) * (         // k loop
-                                                        4 +   // Load A
-                                                        4 +   // Load B
-                                                        4 * 4 // Compute C
-                                                        ) +
-                                       9 * 4 + // Reduce C
-                                       4       // Store C
-                                   );
+  float r_loops = m * 0.25;
+  float c_loops = n * 0.25;
+  float k_loops = o * 0.25;
+
+  float result = 0;
+  result += r_loops * c_loops * k_loops * 4;     // Load A
+  result += r_loops * c_loops * k_loops * 4;     // Load B
+  result += r_loops * c_loops * k_loops * 4 * 4; // Compute C
+  result += r_loops * c_loops * 4 * 9;           // Reduce C
+  result += r_loops * c_loops * 4;               // Store C
+
+  return result;
 }
 
-#define A_ROWS 55
-#define A_COLS 55
+#define A_ROWS 30
+#define A_COLS 30
 #define B_ROWS A_COLS
-#define B_COLS 55
+#define B_COLS 30
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
@@ -945,19 +947,19 @@ int main(int argc, char *argv[])
   for (int round = 0; round < MATMUL_ROUNDS - 1; round++)
   {
     old_matmul_cycles[round] = get_cyclecounter();
-    pmod_mat_mul_simd_1_pad(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
+    pmod_mat_mul_1(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
   }
   old_matmul_cycles[MATMUL_ROUNDS - 1] = get_cyclecounter();
 
   for (int round = 0; round < MATMUL_ROUNDS - 1; round++)
   {
     new_matmul_cycles[round] = get_cyclecounter();
-    pmod_mat_mul_asm_55_55_55(C2, A2, B2);
+    pmod_mat_mul_asm_30_30_30(C2, A2, B2);
   }
   new_matmul_cycles[MATMUL_ROUNDS - 1] = get_cyclecounter();
 
   double old_matmul_median_cc = median_2(old_matmul_cycles, MATMUL_ROUNDS, 0);
-  double new_matmul_median_cc = median_2(new_matmul_cycles, MATMUL_ROUNDS, 1);
+  double new_matmul_median_cc = median_2(new_matmul_cycles, MATMUL_ROUNDS, 0);
 
   printf("Addresses of the matrices:\n");
   printf("A2: %p\n", A2);
