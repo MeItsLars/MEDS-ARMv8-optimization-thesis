@@ -1,9 +1,6 @@
 \appendix
-\chapter{MEDS Operations}
-Epic operations.
-
-\newpage
-\section{Key Generation}
+\chapter{MEDS Algorithms}
+\label{app:medsalgs}
 \begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
@@ -30,6 +27,7 @@ Epic operations.
         \State \textbf{goto} line 5
     \EndIf
     % Get A_i, A_i^-1, B_i, and B_i^-1 from the solution
+    % Theoretically we don't need to rename these variables, but it is done for notation
     \State $\textbf{A}_i, \textbf{A}_i^{-1} \in \text{GL}_m(q) \gets \check{\textbf{A}}_i, \check{\textbf{A}}_i^{-1}$
     \State $\textbf{B}_i, \textbf{B}_i^{-1} \in \text{GL}_n(q) \gets \check{\textbf{B}}_i, \check{\textbf{B}}_i^{-1}$
     % Compute Gi
@@ -56,7 +54,6 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
 
 \newpage
 
-\section{Signing}
 \begin{algorithm}[H]
 \caption{MEDS.Sign()}\label{alg:medssign}
 \hspace*{\algorithmicindent} \textbf{Input:} secret key $\textbf{sk} \in \mathcal{B}^{\ell_\textbf{sk}}$, message $m \in \mathcal{B}^{\ell_m}$\\
@@ -104,7 +101,7 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
     % Generate seeds based on the current commitment seed
     \State $\sigma_{\tilde{\textbf{M}}_i} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma_i \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{XOF}(\sigma'_i, \ell_\text{pub\_seed}, \ell_\text{tree\_seed})$
     % Generate matrix ~M_i <- c0 and c1 represent the linear combination of codewords
-    \State $\tilde{\textbf{M}}_i \in \mathds{F}_q^{2 \times k} \gets \text{ExpandSysMat}(\sigma_{\tilde{\textbf{M}}_i})$
+    \State $\tilde{\textbf{M}}_i \in \mathds{F}_q^{2 \times k} \gets \text{ExpandRndMat}(\sigma_{\tilde{\textbf{M}}_i})$
     % Compute C = ~M_i * G_0 <- C contains the two codewords C0 and C1
     \State $\textbf{C} \in \mathds{F}_q^{2 \times mn} \gets \tilde{\textbf{M}}_i \textbf{G}_0$
     % Solve the system of equations to obtain A and B
@@ -140,5 +137,99 @@ $\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\tilde{\textbf{G}}_{t-1}[;k,m
 % Return the signature
 \State \textbf{return} $m_s \in \mathcal{B}^{w \cdot \ell_{\mathds{F}_q^{2 \times k}} + \ell_\text{path} + \ell_\text{digest} + \ell_\text{salt} + \ell_\text{m} = \ell_\text{sig} + \ell_\text{m}}$\\
 $\quad\quad\quad\quad= (\kappa_0~|~\ldots~|~\kappa_{t-1}~|~p~|~d~|~\alpha~|~m)$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{MEDS.Verify()}\label{alg:medsverify}
+\hspace*{\algorithmicindent} \textbf{Input:} public key $\textbf{pk} \in \mathcal{B}^{\ell_\textbf{pk}}$, signed message $m_s \in \mathcal{B}^{\ell_\text{sig} + \ell_m}$\\
+\hspace*{\algorithmicindent} \textbf{Output:} message $m \in \mathcal{B}^{\ell_m}$ or $\bot$
+\begin{algorithmic}[1]
+% Initialize parsing index
+\State $\sigma_{\textbf{G}_0} \gets \text{pk}[0, \ell_\text{pub\_seed} - 1]$
+% Construct G0
+\State $\textbf{G}_0 \in \mathds{F}_q^{k \times mn} \gets \text{ExpandSysMat}(\sigma_{\textbf{G}_0})$
+% Initialize parsing index
+\State $f_\text{pk} \gets \ell_\text{pub\_seed}$
+% Parse all G_i from the public key
+\ForAll{$i \in \{1, \ldots, s - 1\}$}
+    % Parse G_i from the public key
+    \State $\textbf{G}_i \in \mathds{F}_q^{k \times mn} \gets \text{DecompressG}(\text{pk}[f_\text{pk}, f_\text{pk} + \ell_{\mathds{F}_q^{k \times mn}}])$
+    % Update the parsing index
+    \State $f_\text{pk} \gets f_\text{pk} + \ell_{G_i}$
+\EndFor
+
+% % Parse the path
+% \State $p \in \mathcal{B}^{\ell_\text{path}} \gets m_s[\ell_\text{sig} - \ell_\text{digest} - \ell_\text{salt} - \ell_\text{path}, \ell_\text{sig} - \ell_\text{digest} - \ell_\text{salt} - 1]$
+% % Parse the salt
+% \State $\alpha \in \mathcal{B}^{\ell_\text{salt}} \gets m_s[\ell_\text{sig} - \ell_\text{digest} - \ell_\text{salt}, \ell_\text{sig} - \ell_\text{digest} - 1]$
+% % Parse the digest
+% \State $d \in \mathcal{B}^{\ell_\text{digest}} \gets m_s[\ell_\text{sig} - \ell_\text{digest}, \ell_\text{sig} - 1]$
+% % Parse the message
+% \State $m \in \mathcal{B}^{\ell_m} \gets m_s[\ell_\text{sig},]$
+% % Compute the hash
+% \State $h_0, \ldots, h_{t-1} \in \{0, \ldots, s-1\} \gets \text{ParseHash}_{s,t,w}(d)$
+
+% Parse m_s
+\State $p \in \mathcal{B}^{\ell_\text{path}}, \alpha \in \mathcal{B}^{\ell_\text{salt}}, d \in \mathcal{B}^{\ell_\text{digest}}, m \in \mathcal{B}^{\ell_m} \gets \text{ParseSig}(m_s)$
+% Convert the path to seed tree seeds
+\State $\sigma_0, \ldots, \sigma_{t-1} \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{PathToSeedTree}_t(h_0, \ldots, h_{t-1}, p, \alpha)$
+% Loop through all t challenges
+\ForAll{$i \in \{0, \ldots, t - 1\}$}
+    \If{$h_i > 0$}
+        % Non-zero challenges
+        % Get kappa_i from the signature
+        \State $\kappa_i \in \mathds{F}_q^{2 \times k} \gets m_s[i \cdot \ell_{\mathds{F}_q^{2 \times k}}, (i + 1) \cdot \ell_{\mathds{F}_q^{2 \times k}} - 1]$
+        % Compute G0' = kappa * G[h_i]
+        \State $\textbf{G}_0' \in \mathds{F}_q^{2 \times mn} \gets \kappa_i \textbf{G}_{h_i}$
+        % Solve the system of equations to obtain A_hat and B_hat
+        \State $\hat{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \hat{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\textbf{G}_0')$
+        % Abort if there was no solution
+        \If{$(\hat{\textbf{A}}_i = \bot \textbf{ and } \hat{\textbf{B}}_i = \bot) \textbf{or } \hat{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \hat{\textbf{B}}_i \notin \text{GL}_n(q)$}
+            \State \textbf{return} $\bot$
+        \EndIf
+        % Compute G_hat_i with pi
+        \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\hat{\textbf{A}}_i, \hat{\textbf{B}}_i}(\textbf{G}_{h_i})$
+        % Convert G_hat_i to systematic form
+        \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\hat{\textbf{G}}_i)$
+        % Abort if the matrix is not in systematic form
+        \If{$\hat{\textbf{G}}_i = \bot$}
+            \State \textbf{return} $\bot$
+        \EndIf
+    \Else
+        % Zero challenges; we need to re-compute the G_i completely
+        % Compute seed for the commitment
+        \State $\sigma_i' \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i, 4}))$
+        % Generate seeds based on the current commitment seed
+        \State $\sigma_{\hat{M}_i} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma_i \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{XOF}(\sigma_i', \ell_\text{pub\_seed}, \ell_\text{tree\_seed})$
+        % Generate matrix M_hat_i <- c0 and c1 represent the linear combination of codewords
+        \State $\hat{\textbf{M}}_i \in \mathds{F}_q^{2 \times k} \gets \text{ExpandRndMat}(\sigma_{\hat{\textbf{M}}_i})$
+        % Compute C_hat_i = M_hat_i * G_0
+        \State $\hat{\textbf{C}}_i \in \mathds{F}_q^{2 \times mn} \gets \hat{\textbf{M}}_i \textbf{G}_0$
+        % Solve the system of equations to obtain A_hat and B_hat
+        \State $\hat{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \hat{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\hat{\textbf{C}}_i)$
+        % Retry if there was no solution
+        \If{$(\hat{\textbf{A}}_i = \bot \textbf{ and } \hat{\textbf{B}}_i = \bot) \textbf{or } \hat{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \hat{\text{B}}_i \notin \text{GL}_n(q)$}
+            \State \textbf{goto} line 25
+        \EndIf
+        % Compute G_hat_i
+        \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\hat{\textbf{A}}_i, \hat{\textbf{B}}_i}(\textbf{G}_0)$
+        % Convert G_hat_i to systematic form
+        \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\hat{\textbf{G}}_i)$
+        % Retry if the matrix is not in systematic form
+        \If{$\hat{\textbf{G}}_i = \bot$}
+            \State \textbf{goto} line 25
+        \EndIf
+    \EndIf
+\EndFor
+% Compute the hash
+\State $d' \in \mathcal{B}^{\ell_\text{digest}} \gets \text{H}(\text{Compress}(\hat{\textbf{G}}_0[;k,mn-1])~|~\ldots$\\
+$\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\hat{\textbf{G}}_{t-1}[;k,mn-1])~|~m)$
+% Verify the hash
+\If{$d = d'$}
+    \State \textbf{return} $m$
+\Else
+    \State \textbf{return} $\bot$
+\EndIf
 \end{algorithmic}
 \end{algorithm}
