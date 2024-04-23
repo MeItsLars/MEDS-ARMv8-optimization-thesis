@@ -4,7 +4,7 @@ Epic operations.
 
 \newpage
 \section{Key Generation}
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
 \hspace*{\algorithmicindent} \textbf{Output:} public key $\textbf{pk} \in \mathcal{B}^{\ell_\textbf{pk}}$, secret key $\textbf{sk} \in \mathcal{B}^{\ell_\textbf{sk}}$
@@ -57,7 +57,7 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
 \newpage
 
 \section{Signing}
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{MEDS.Sign()}\label{alg:medssign}
 \hspace*{\algorithmicindent} \textbf{Input:} secret key $\textbf{sk} \in \mathcal{B}^{\ell_\textbf{sk}}$, message $m \in \mathcal{B}^{\ell_m}$\\
 \hspace*{\algorithmicindent} \textbf{Output:} signed message $m_s \in \mathcal{B}^{\ell_\text{sig} + \ell_m}$
@@ -66,24 +66,24 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
 \State $f_\text{sk} \gets \ell_\text{sec\_seed}$
 % Parse sigma_G_0 from the secret key
 \State $\sigma_{\textbf{G}_0} \gets \text{pk}[f_\text{sk}, f_\text{sk} + \ell_\text{pub\_seed} - 1]$
-% Increment index
-\State $f_\text{sk} \gets f_\text{sk} + \ell_\text{pub\_seed}$
 % Construct G0
 \State $\textbf{G}_0 \in \mathds{F}_q^{k \times mn} \gets \text{ExpandSysMat}(\sigma_{\textbf{G}_0})$
-% Obtain all A_i from the secret key
-\ForAll{$i \in \{1, \ldots, s - 1\}$}
-    % Parse A_i from the secret key
-    \State $\textbf{A}_i^{-1} \in \mathds{F}_q^{m \times m} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}])$
-    % Update the parsing index
-    \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}$
-\EndFor
-% Obtain all B_i from the secret key
-\ForAll{$i \in \{1, \ldots, s - 1\}$}
-    % Parse B_i from the secret key
-    \State $\textbf{B}_i^{-1} \in \mathds{F}_q^{n \times n} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}])$
-    % Update the parsing index
-    \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}$
-\EndFor
+% Increment index; skip public seed and A and B?
+\State $f_\text{sk} \gets f_\text{sk} + \ell_\text{pub\_seed} + (s - 1) \cdot (\ell_{\mathds{F}_q^{m \times m}} + \ell_{\mathds{F}_q^{n \times n}})$
+% % Obtain all A_i from the secret key
+% \ForAll{$i \in \{1, \ldots, s - 1\}$}
+%     % Parse A_i from the secret key
+%     \State $\textbf{A}_i^{-1} \in \mathds{F}_q^{m \times m} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}])$
+%     % Update the parsing index
+%     \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{m \times m}}$
+% \EndFor
+% % Obtain all B_i from the secret key
+% \ForAll{$i \in \{1, \ldots, s - 1\}$}
+%     % Parse B_i from the secret key
+%     \State $\textbf{B}_i^{-1} \in \mathds{F}_q^{n \times n} \gets \text{Decompress}(\text{sk}[f_\text{sk}, f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}])$
+%     % Update the parsing index
+%     \State $f_\text{sk} \gets f_\text{sk} + \ell_{\mathds{F}_q^{n \times n}}$
+% \EndFor
 % Obtain all T_i from the secret key
 \ForAll{$i \in \{1, \ldots, s - 1\}$}
     % Parse T_i from the secret key
@@ -111,7 +111,7 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
     \State $\widetilde{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \widetilde{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\textbf{C})$
     % Retry if there was no solution
     \If{$(\widetilde{\textbf{A}}_i = \bot \textbf{ and } \widetilde{\textbf{B}}_i = \bot) \textbf{ or } \widetilde{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \widetilde{\textbf{B}}_i \notin \text{GL}_n(q)$}
-        \State \textbf{goto} line 18
+        \State \textbf{goto} line 12 % 18?
     \EndIf
     % Compute G_i
     \State $\tilde{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\widetilde{\textbf{A}}_i, \widetilde{\textbf{B}}_i}(\textbf{G}_0)$
@@ -119,7 +119,7 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
     \State $\tilde{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\tilde{\textbf{G}}_i)$
     % Retry if the matrix is not in systematic form
     \If{$\tilde{\textbf{G}}_i = \bot$}
-        \State \textbf{goto} line 18
+        \State \textbf{goto} line 12 % 18?
     \EndIf
 \EndFor
 % Create hash
