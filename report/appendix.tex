@@ -1,6 +1,7 @@
 \appendix
 \chapter{MEDS Algorithms}
 \label{app:medsalgs}
+
 \begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
@@ -210,7 +211,7 @@ $\quad\quad\quad\quad= (\kappa_0~|~\ldots~|~\kappa_{t-1}~|~p~|~d~|~\alpha~|~m)$
         \State $\hat{\textbf{A}}_i \in \mathds{F}_q^{m \times m} \cup \{\bot\}, \hat{\textbf{B}}_i \in \mathds{F}_q^{n \times n} \cup \{\bot\} \gets \text{Solve}(\hat{\textbf{C}}_i)$
         % Retry if there was no solution
         \If{$(\hat{\textbf{A}}_i = \bot \textbf{ and } \hat{\textbf{B}}_i = \bot) \textbf{or } \hat{\textbf{A}}_i \notin \text{GL}_m(q) \textbf{ or } \hat{\text{B}}_i \notin \text{GL}_n(q)$}
-            \State \textbf{goto} line 25
+            \State \textbf{goto} line 21
         \EndIf
         % Compute G_hat_i
         \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \gets \pi_{\hat{\textbf{A}}_i, \hat{\textbf{B}}_i}(\textbf{G}_0)$
@@ -218,7 +219,7 @@ $\quad\quad\quad\quad= (\kappa_0~|~\ldots~|~\kappa_{t-1}~|~p~|~d~|~\alpha~|~m)$
         \State $\hat{\textbf{G}}_i \in \mathds{F}_q^{k \times mn} \cup \{\bot\} \gets \text{SF}(\hat{\textbf{G}}_i)$
         % Retry if the matrix is not in systematic form
         \If{$\hat{\textbf{G}}_i = \bot$}
-            \State \textbf{goto} line 25
+            \State \textbf{goto} line 21
         \EndIf
     \EndIf
 \EndFor

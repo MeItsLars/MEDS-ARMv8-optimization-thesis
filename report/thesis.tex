@@ -106,7 +106,7 @@ The solution to this problem lies in the development of cryptographic schemes th
 
 In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
 
-Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds. \todo[inline]{Comparison with other similar schemes? Or this go in MEDS section?}
+Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds, sometimes even seconds. \todo[inline]{In which section do we compare the performance of MEDS to the performance of other (similar) digital signature schemes?}
 
 In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of MEDS, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
 
@@ -118,17 +118,14 @@ We investigate the following research questions in this thesis (see also Chapter
   \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-The underlying background of this thesis is explained in Chapter \ref{ch:background}.
-\todo[inline]{Add more about the structure of the thesis.}
+In Chapter \ref{ch:background}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. In Chapter \ref{ch:discussion}, we will discuss the results that we have obtained. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
 
 \chapter{Background}
 \label{ch:background}
 
-\todo[inline]{Explain Nist PQC? Or introduction?}
-
 \section{Matrix Equivalence Digital Signature (MEDS)}
 \label{sec:meds}
-Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based digital signature scheme and the candidate in the NIST PQC competition that we aim to optimize in this thesis.
+Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based digital signature scheme and the candidate in the NIST PQC competition that we aim to optimize in this thesis. A series of optimizations for the key and signature sizes of MEDS have already been proposed by the authors of the scheme in \cite{chou2024reducing}, together with a new reference implementation that implements these optimizations. In this paper, we will focus our efforts on optimizing this new reference implementation.
 
 \subsection{Signature Schemes}
 \label{sec:signatureschemes}
@@ -166,19 +163,116 @@ MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) pro
 \end{center}
 where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
 
-\subsubsection{Sigma Protocol \& Fiat-Shamir Transform}
-The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem.
+\subsubsection{Sigma Protocol}
+The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in \cite{chou2024reducing}.
 
+\todo[inline]{Should I include the Sigma protocol here, or is a reference to the paper enough?}
+
+% \begin{figure}
+%   \centering
+%   \rule{\textwidth}{0.4pt}
+%   \vspace{-0.3cm}\\
+%   \begin{minipage}{1.0\textwidth}
+%     \begin{minipage}{0.5\textwidth}
+%       \textbf{Public Data}\\
+%       $q, m, n, k \in \mathbb{N}$ such that $|m-n| \leq 1$.\\
+%       $\textbf{A}_0 = \textbf{I}_m \in \text{GL}_m(q)$.\\
+%       $\textbf{B}_0 = \textbf{I}_n \in \text{GL}_n(q)$.\\
+%       $\textbf{T}_0 = \textbf{I}_k \in \text{GL}_k(q)$.\\
+%       Full-rank, linearly independent $\textbf{D}_0,\\ \textbf{D}_1 \in \mathbb{F}_q^{m \times n}$.\vspace{0.3cm}~\\
+%       \textbf{II. Commit}(pk)
+%       \begin{enumerate}
+%         \item Set $(\tilde{c_0}, \tilde{c_1}) \overset{\$}{\leftarrow} \mathbb{F}_q^{k} \times \mathbb{F}_q^{k}$. If $\tilde{c_0}$ and $\tilde{c_1}$ are linearly dependent, retry.
+%         \item For $i \in \{0, 1\}$, $\tilde{\textbf{C}_i} \leftarrow \text{matrix}(\tilde{c}_i \cdot \textbf{G}_0)$. If $\tilde{\textbf{C}_i}$ is not full-rank, go to step 1.
+%       \end{enumerate}
+%     \end{minipage}
+%     \begin{minipage}{0.5\textwidth}
+%       \textbf{I. Keygen()}
+%       \begin{enumerate}
+%         \item $\textbf{G}_0 \overset{\$}{\leftarrow} \mathds{F}_q^{k \times mn}$.
+%         \item $\textbf{A}_1, \textbf{B}_1 \overset{\$}{\leftarrow} \text{GL}_m(q) \times \text{GL}_n(q)$.
+%         \item $\textbf{G}_1, \textbf{T}_1 \leftarrow \text{SF}^{*}(\pi_{\textbf{A}_1, \textbf{B}_1}(\textbf{G}_0))$.\\
+%         If $\textbf{G}_1 = \bot$, go to step 2.
+%         \item $\text{sk} \leftarrow (\textbf{A}_1, \textbf{B}_1, \textbf{T}_1)$\\
+%         $\text{pk} \leftarrow (\textbf{G}_0, \textbf{G}_1)$.\\
+%         Return $(\text{sk}, \text{pk})$.
+%       \end{enumerate}
+%     \end{minipage}
+%   \end{minipage}\\
+%   \vspace{0.1cm}
+%   \rule{\textwidth}{0.4pt}
+%   \caption{Sigma Protocol for MEDS, see \cite{chou2024reducing}.}
+%   \label{fig:sigmaprotocol}
+% \end{figure}
+
+\subsubsection{Fiat-Shamir Transform}
 To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
 
-The security of the scheme is finally achieved using the following two techniques:
+In the Fiat-Shamir transform, various techniques and optimizations can be used to increase the security or lower the size of the public key and the signature. The following techniques are considered in the MEDS scheme:
 \begin{itemize}
-  \item \textbf{Multiple Challenges}: An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme uses $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
-  \item \textbf{Multiple Public Keys}: As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme uses multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, where $s$ is the number of public keys.
+  \item \textbf{Multiple Challenges}: An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme can use $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
+  \item \textbf{Multiple Public Keys}: As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme can use multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, where $s$ is the number of public keys.
+  \item \textbf{Fixed-Weight Challenge Strings}: If a challenge is 0, the response consists of matrices that are generated uniformly at random. In this case, it is sufficient to set the response to the seed that was used to generate the matrices, greatly reducing the size of the signature. By fixing a certain number $w$ of challenges to 0, the average size of a response can be reduced. This technique has a slightly negative impact on the security of the scheme, but this can be compensated by increasing the number of challenges.
+  \item \textbf{Seed Tree}: If a scheme requires sending multiple seeds for the generation of matrices (or other objects), a seed tree can be used to reduce the size of the public key and the signature. This is a structure that allows the prover to transmit a smaller amount of bits than the size of the seeds, at the cost of an increased computational complexity.
 \end{itemize}
-By selecting $t$ and $s$ appropriately, the security of the scheme can be increased to the desired level. Multiple combinations of $t$ and $s$ can be used to achieve various security levels. The selection of these parameters also has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
 
-To reduce the size of the public key and the signature, the MEDS scheme utilizes a few smart techniques, such as the use of seed trees, fixed-weight challenge strings, and the compression of public keys \cite{chou2023meds}. Further optimizations to reduce the size of the public key and the signature are actively being researched.
+By selecting $t$, $s$ and $w$ carefully and combining them with other parameters of the scheme, the security of the scheme can be increased to the desired level. Multiple combinations of parameters are used in MEDS to achieve various security levels \cite{chou2023meds}. The selection of these parameters has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
+
+\subsection{Parameter Sets}
+The security of MEDS depends on the choice of a set of parameters. The parameters that are used in the MEDS scheme are the following:
+\begin{itemize}
+  \item $q$: The size of the finite field $\mathbb{F}_q$ over which all computations are done.
+  \item $n$: The width and height of the private matrices $A_i \in \mathbb{F}_q^{n \times n}$ that are used to generate the key pair.
+  \item $m$: The width and height of the private matrices $B_i \in \mathbb{F}_q^{m \times m}$ that are used to generate the key pair.
+  \item $k$: The width and height of the private matrices $T_i \in \mathbb{F}_q^{k \times k}$ that are used to generate the key pair.
+  \item $s$: The number of different public keys that are used in the scheme.
+  \item $t$: The number of challenges that are used in the Fiat-Shamir transform.
+  \item $w$: The number of challenges in the Fiat-Shamir transform that are fixed to be 0.
+\end{itemize}
+
+The team behind MEDS has proposed three parameter sets for the new optimized version of the scheme. These parameter sets are optimized for the three different security levels that are required in the NIST PQC competition. The parameter sets are shown in Table \ref{tab:medsparametersets}. The security level for each parameter set is shown in Table \ref{tab:medssecuritylevels}.
+
+\begin{table}
+  \centering
+  \begin{tabular}{lccccccccc}
+    \toprule
+    \textbf{Parameter Set} & \textbf{$q$} & \textbf{$n$} & \textbf{$m$} & \textbf{$k$} & \textbf{$s$} & \textbf{$t$} & \textbf{$w$} & \textbf{pk} & \textbf{sig} \\
+    \midrule
+    MEDS-21595 & 4093 & 26 & 25 & 25 & 2 & 144 & 48 & 21595 & 5200 \\
+    MEDS-55520 & 4093 & 35 & 34 & 34 & 2 & 208 & 75 & 55520 & 10906 \\
+    MEDS-122000 & 4093 & 45 & 44 & 44 & 2 & 272 & 103 & 122000 & 19068 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS Parameter Sets. \textbf{pk} and \textbf{sig} represent the size in bytes of the public key and the signature, respectively.}
+  \label{tab:medsparametersets}
+\end{table}
+
+\begin{table}
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Parameter Set} & \textbf{NIST Category} & \textbf{FS} \\
+    \midrule
+    MEDS-21595 & Level 1 & -128.406 \\
+    MEDS-55520 & Level 3 & -192.058 \\
+    MEDS-122000 & Level 5 & -256.005 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MEDS Security Levels. \textbf{FS} denotes the security of the Fiat-Shamir construction.}
+  \label{tab:medssecuritylevels}
+\end{table}
+
+We can see that all parameter sets use the same finite field size $q = 4093$. The dimensions of the matrices that are used increase with each security level, as well as the number of challenges $t$ (and the number of fixed challenges $w$). The number of public keys $s$ is always set to 2, meaning the scheme does not use the multiple public keys technique, which would have greatly increased the size of the public key and the signature. Note that this differs from the original MEDS scheme, which used multiple public keys \cite{chou2023meds}.
+
+% A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
+\subsection{MEDS Algorithms}
+\label{sec:medsalgorithms}
+The pseudocode for the three MEDS algorithms is shown in Appendix \ref{app:medsalgs}:
+\begin{enumerate}
+  \item Key generation (Algorithm \ref{alg:medskeygen}).
+  \item Signature generation (Algorithm \ref{alg:medssign}).
+  \item Signature verification (Algorithm \ref{alg:medsverify}).
+\end{enumerate}
 
 \section{ARMv8 and NEON}
 \label{sec:armv8}
@@ -193,8 +287,11 @@ Single Instruction, Multiple Data (SIMD) is a type of instruction that operates 
 
 In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
 
-\subsection{Related Work}
-\todo[inline]{Related Work}
+\section{Related Work}
+\todo[inline]{Give Related Work}
+\begin{itemize}
+  \item The two GitHub repositories for the low-level and high-level optimizations of tradidional MEDS.
+\end{itemize}
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
@@ -203,13 +300,14 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
 \todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
 
 \chapter{Profiling}
+\label{ch:profiling}
 \section{Profiling Techniques}
 In order to obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program, these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage, and that this part can be optimized to improve the overall performance.
 
-Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or a specific functions. There exist a wide variety of profilers for LANG, such as gprof CITE, perf CITE, and Valgrind CITE. In our case however, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function.
+Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or a specific functions. There exist a wide variety of profilers for C, such as GProf \cite{graham1982gprof}, Valgrind \cite{nethercote2007valgrind}, and Linux-Perf \cite{de2010new}. In our case, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function, which can be done with Linux-Perf.
 
 \subsection{Cycle Counting}
-Cycle counting is a technique that is used to measure the number of CPU cycles that it takes to execute a certain program or function. This is usually done by accessing the performance monitoring unit (PMU) of the CPU, which is a CPU component that measures the performance of the processor. Typically, these PMUs contain a register that can be read to obtain the number of cycles executed since a certain point in time. On Linux, it is very easy to access this data using the perf tool CITE, which can be used to measure the number of instructions executed, number of cache misses, etc.
+Cycle counting is a technique that is used to measure the number of CPU cycles that it takes to execute a certain program or function. This is usually done by accessing the performance monitoring unit (PMU) of the CPU, which is a CPU component that measures the performance of the processor. Typically, these PMUs contain a register that can be read to obtain the number of cycles executed since a certain point in time. On Linux, it is very easy to access this data using the Linux-Perf tool \cite{de2010new}, which can be used to measure the number of instructions executed, number of cache misses, etc.
 
 \subsubsection{Advantages}
 The advantages of profiling the code using a cycle counter are:
@@ -222,7 +320,7 @@ The advantages of profiling the code using a cycle counter are:
 \subsubsection{Disadvantages}
 The disadvantages of profiling the code using a cycle counter are:
 \begin{itemize}
-  \item \textbf{Interference}: The program to be measured shares the CPU (core) with other programs, which can interfere with measurements. If another program is switched in by the operating system, the cycle counter will also count the cycles that were used by this program. Although this usually doesn't have a big impact on profiling results, this is very problematic for obtaining accurate benchmarks.
+  \item \textbf{Interference}: The program to be measured shares the CPU (core) with other programs, which can interfere with measurements. If another program is switched in by the operating system, the cycle counter will also count the cycles that were used by this program. Although this usually doesn't have a big impact on profiling results, this can be problematic for obtaining accurate benchmarks.
   \item \textbf{Architecture}: The way in which the cycle counter is accessed is different for each architecture. However, since we use the perf tool, this is abstracted away for us.
 \end{itemize}
 
@@ -233,6 +331,8 @@ Another problem is the problem of program interference (see above). Unfortunatel
 
 \section{MEDS Profiling Results}
 \subsection{Measurement Setup}
+\todo[inline]{Explain which version(s) of MEDS we profile.}
+\todo[inline]{Change the profiling results to reflect the results for the new parameter sets.}
 We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three operations of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenoperations} and \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningoperations} and \ref{tab:medssigningfunctions} (signing), \ref{tab:medsverificationoperations} and \ref{tab:medsverificationfunctions} (verification). For each of the three operations, we provide one table for functions and one table for MEDS operations that make use of one or more functions. We only list the functions and operations that take up more than 1\% of the total number of cycles. For each function or operation, we provide the number of megacycles (MCycles) that were used in that function/operation, the percentage of the total number of cycles that were used by that function/operation, and the number of times that function/operation was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation depend on the input.
 
 \begin{table}[]
@@ -329,21 +429,22 @@ The \texttt{pmod\_mat\_syst\_ct} function (\texttt{pmod\_mat\_syst\_ct\_partial\
 \todo[inline]{Perform complexity analysis?}
 
 \subsubsection{Shake256}
-A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family CITE and is based on the Keccak sponge construction CITE. MEDS uses Shake256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
+A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family \cite{dworkin2015sha} and is based on the Keccak sponge construction \cite{bertoni2013keccak}. MEDS uses Shake256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
 
 \chapter{Methodology}
 \label{ch:methodology}
 
-\section{Optimization Techniques}
+\section{Low-Level Optimization}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
 
 \subsection{Matrix Multiplication}
 
+\section{High-Level Optimization}
+\todo[inline]{Explain how we perform the optimization on a high level, i.e. parallelize over the challenges}
+
 \chapter{Results}
 \label{ch:results}
-
-\section{Optimization Results}
-\todo[inline]{Check; should I include the performance results in this section or in the results section? What about intermediate results?}
+\todo[inline]{Contains the results of the benchmarking of the non-optimized and optimized MEDS implementations.}
 
 \chapter{Discussion}
 \label{ch:discussion}
@@ -352,11 +453,11 @@ A small percentage of the total number of cycles in each of the three operations
 \chapter{Future work}
 \label{ch:futurework}
 \todo[inline]{Discuss future work.}
-- Check if ALTEQ optimization can be applied to MEDS.
 - Create a non-constant time implementation for gaussian elimination (can be used in verification).
 - Create a parallel implementation for gaussian elimination.
-- Check if it is possible to parallelize over the entire challenge \& response loop.
 - Optimize shake256? See \url{https://eprint.iacr.org/2022/1243} and \url{https://github.com/cothan/NEON-SHA3\_2x}
+- Check if it is possible to parallelize over the entire challenge \& response loop.
+- Perform high-level optimizations
 
 \chapter{Conclusion}
 \label{ch:conclusion}
