@@ -31,5 +31,18 @@
 https://github.com/IIS-summer-2023/meds-simd-lowlevel
 https://github.com/IIS-summer-2023/meds-simd-highlevel
 
-==== NEW ====
-> Compare vector instruction? cmhs
+=============
+Add more references
+- Schnorr, Grover (references)
+- Sigma protocol
+- Use definitions (e.g. for a signature scheme or the MCE problem)
+- Move appendix to main body
+- Related Work: add other post-quantum schemes that have been optimized on the same platform (ARMv8). Mostly signature schemes, but possibly also other ones. Definitely Keccak (with extended Keccak package).
+- Cite NEON reference manual maybe?
+- For NEON; add pipeline information and latency for used assembly instructions
+- FS > 'claimed security for MEDS level ...'
+- Consider pie charts for the profilnig comparison
+- Shake should be all capital (not function calls)
+
+- simplify and reconstruct systemizer
+- analyze remainder of signing and verification
