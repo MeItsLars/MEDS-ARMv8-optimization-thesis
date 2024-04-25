@@ -26,12 +26,14 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
     ${PROJECT_SOURCE_DIR}/fips202.c
+    ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
     ${PROJECT_SOURCE_DIR}/matrixmod.c
     ${PROJECT_SOURCE_DIR}/meds.c
     ${PROJECT_SOURCE_DIR}/osfreq.c
     ${PROJECT_SOURCE_DIR}/randombytes.c
     ${PROJECT_SOURCE_DIR}/seed.c
     ${PROJECT_SOURCE_DIR}/util.c
+    ${PROJECT_SOURCE_DIR}/vec_16x4.c
 )
 
 ##########################################################
@@ -124,3 +126,11 @@ add_executable(profile ${PROJECT_SOURCE_DIR}/profile.c)
 target_include_directories(profile PRIVATE ${INCLUDE_DIRECTORIES})
 target_link_libraries(profile PRIVATE common_sources_with_profiler ${OPENSSL_LIBRARIES})
 target_compile_definitions(profile PRIVATE PROFILER)
+
+##########################################################
+# Build target: test_vec
+##########################################################
+message("Adding target: test_vec")
+add_executable(test_vec ${PROJECT_SOURCE_DIR}/test_vec.c)
+target_include_directories(test_vec PRIVATE ${INCLUDE_DIRECTORIES})
+target_link_libraries(test_vec PRIVATE common_sources ${OPENSSL_LIBRARIES})
