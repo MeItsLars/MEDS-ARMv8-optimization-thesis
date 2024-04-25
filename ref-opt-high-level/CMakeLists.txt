@@ -26,13 +26,14 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
     ${PROJECT_SOURCE_DIR}/fips202.c
-    ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
     ${PROJECT_SOURCE_DIR}/matrixmod.c
+    ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
     ${PROJECT_SOURCE_DIR}/meds.c
     ${PROJECT_SOURCE_DIR}/osfreq.c
     ${PROJECT_SOURCE_DIR}/randombytes.c
     ${PROJECT_SOURCE_DIR}/seed.c
     ${PROJECT_SOURCE_DIR}/util.c
+    ${PROJECT_SOURCE_DIR}/util_vec.c
     ${PROJECT_SOURCE_DIR}/vec_16x4.c
 )
 

@@ -1,5 +1,6 @@
 #include "vec_16x4.h"
 
+// Reduces a to a value in the range [0, 2^12)
 uint16x4_t reduce_vec(uint32x4_t a)
 {
     uint32x4_t t;
@@ -12,6 +13,7 @@ uint16x4_t reduce_vec(uint32x4_t a)
     return vqmovn_u32(a);
 }
 
+// Freezes a to a value in the range [0, MEDS_p)
 uint16x4_t freeze_vec(uint16x4_t a)
 {
     uint16x4_t t;

@@ -159,7 +159,7 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 }
 
 // For testing only! NOT CONSTANT TIME!
-int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
+/*int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
 {
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_symb requires MEDS_n == MEDS_m+1");
 
@@ -237,7 +237,7 @@ int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
   LOG_MAT(B_inv, MEDS_n, MEDS_n);
 
   return 0;
-}
+}*/
 
 int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 {
