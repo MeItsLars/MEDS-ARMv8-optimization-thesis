@@ -14,12 +14,26 @@
 #include "matrixmod.h"
 #include "matrixmod_vec.h"
 
+#define ROUNDS 100
+
 #define A_ROWS 24
 #define A_COLS 24 * 24
 #define B_ROWS A_COLS
 #define B_COLS 24
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
+
+float median_2(long long arr[], int n)
+{
+  long long differences[n - 1];
+  for (int i = 0; i < n - 1; i++)
+    differences[i] = arr[i + 1] - arr[i];
+  qsort(differences, n - 1, sizeof(long long), compare);
+  if (n % 2 == 0)
+    return (differences[n / 2 - 1] + differences[n / 2]) / 2.0;
+  else
+    return differences[n / 2];
+}
 
 void create_keccak_seed(keccak_state *shake, uint8_t input_seed)
 {
@@ -60,6 +74,35 @@ void generate_non_invertible_matrix(pmod_mat_t *A, int rows, int cols, keccak_st
     pmod_mat_set_entry(A, rows, cols, 0, c, 0);
     pmod_mat_set_entry(A, rows, cols, rows - 1, c, 0);
   }
+}
+
+int compare_matrices(pmod_mat_t *A1, pmod_mat_vec_t *A2, int cols, int rows)
+{
+  int equalities = 0;
+  int inequalities = 0;
+  for (int r = 0; r < rows; r++)
+    for (int c = 0; c < cols; c++)
+    {
+      uint16_t correct_val = pmod_mat_entry(A1, rows, cols, r, c);
+      uint16x4_t test_val = pmod_mat_entry(A2, rows, cols, r, c);
+
+      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
+        equalities++;
+      else
+        inequalities++;
+    }
+
+  printf("Equalities: %d\n", equalities);
+  printf("Inequalities: %d\n", inequalities);
+  if (inequalities == 0)
+  {
+    printf("EQUAL!\n");
+  }
+  else
+  {
+    printf("NOT EQUAL!\n");
+  }
+  return inequalities == 0;
 }
 
 int test_cmov()
@@ -127,41 +170,35 @@ int test_matmul()
   generate_random_matrices(A, A2, A_ROWS, A_COLS, &shake);
   generate_random_matrices(B, B2, B_ROWS, B_COLS, &shake);
 
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
   // Perform the normal matmul
   printf("Performing normal matrix multiplication\n");
-  pmod_mat_mul(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    pmod_mat_mul(C1, C_ROWS, C_COLS, A, A_ROWS, A_COLS, B, B_ROWS, B_COLS);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
 
   // Perform the vectorized matmul
   printf("Performing vectorized matrix multiplication\n");
-  pmod_mat_mul_vec(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    pmod_mat_mul_vec(C2, C_ROWS, C_COLS, A2, A_ROWS, A_COLS, B2, B_ROWS, B_COLS);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
 
   // Compare the results
   printf("Comparing the results\n");
-  int equalities = 0;
-  int inequalities = 0;
-  for (int r = 0; r < C_ROWS; r++)
-    for (int c = 0; c < C_COLS; c++)
-    {
-      uint16_t correct_val = pmod_mat_entry(C1, C_ROWS, C_COLS, r, c);
-      uint16x4_t test_val = pmod_mat_entry(C2, C_ROWS, C_COLS, r, c);
-
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val && test_val[3] == correct_val)
-        equalities++;
-      else
-        inequalities++;
-    }
-
-  printf("Equalities: %d\n", equalities);
-  printf("Inequalities: %d\n", inequalities);
-  if (inequalities == 0)
-  {
-    printf("EQUAL!\n");
-  }
-  else
-  {
-    printf("NOT EQUAL!\n");
-  }
-  return inequalities == 0;
+  return compare_matrices(C1, C2, C_COLS, C_ROWS);
 }
 
 int test_GF_inv()
@@ -174,17 +211,39 @@ int test_GF_inv()
   int inequalities = 0;
   keccak_state state;
   create_keccak_seed(&state, 20);
-  for (int i = 0; i < 100; i++)
+
+  GFq_t val = rnd_GF(&state);
+  GFq_vec_t val_vec = {val, val, val, val};
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
+  GFq_t inv_val;
+  GFq_vec_t inv_val_vec;
+
+  for (int i = 0; i < ROUNDS - 1; i++)
   {
-    GFq_t val = rnd_GF(&state);
-    GFq_vec_t val_vec = {val, val, val, val};
-    GFq_t inv_val = GF_inv(val);
-    GFq_vec_t inv_val_vec = GF_inv_vec(val_vec);
-    if (inv_val == inv_val_vec[0] && inv_val == inv_val_vec[1] && inv_val == inv_val_vec[2] && inv_val == inv_val_vec[3])
-      equalities++;
-    else
-      inequalities++;
+    old_cycles[i] = get_cyclecounter();
+    inv_val = GF_inv(val);
   }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
+
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    inv_val_vec = GF_inv_vec(val_vec);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
+
+  if (inv_val == inv_val_vec[0] && inv_val == inv_val_vec[1] && inv_val == inv_val_vec[2] && inv_val == inv_val_vec[3])
+    equalities++;
+  else
+    inequalities++;
 
   printf("Equalities: %d\n", equalities);
   printf("Inequalities: %d\n", inequalities);
@@ -226,12 +285,33 @@ int test_pmod_mat_syst_ct(int maxr_change, int swap, int backsub)
       pmod_mat_set_entry(A2, A_ROWS, A_COLS, r, c, val);
     }
 
+  int res;
+  pmod_mat_s_vec_t res_vec;
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
   // Perform the normal pmod_mat_syst_ct
-  int res = pmod_mat_syst_ct_partial_swap_backsub(A, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
   int res_wrong = pmod_mat_syst_ct_partial_swap_backsub(A_wrong, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    res = pmod_mat_syst_ct_partial_swap_backsub(A, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
 
   // Perform the vectorized pmod_mat_syst_ct
-  pmod_mat_s_vec_t res_vec = pmod_mat_syst_ct_partial_swap_backsub_vec(A2, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    res_vec = pmod_mat_syst_ct_partial_swap_backsub_vec(A2, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
 
   printf("Normal result: %d\n", res);
   printf("Vectorized result: %d, %d, %d\n", res_vec[0], res_vec[1], res_vec[2]);
@@ -257,31 +337,7 @@ int test_pmod_mat_syst_ct(int maxr_change, int swap, int backsub)
 
   // Compare the results
   printf("Comparing the results\n");
-  int equalities = 0;
-  int inequalities = 0;
-  for (int r = 0; r < A_ROWS; r++)
-    for (int c = 0; c < A_COLS; c++)
-    {
-      uint16_t correct_val = pmod_mat_entry(A, A_ROWS, A_COLS, r, c);
-      uint16x4_t test_val = pmod_mat_entry(A2, A_ROWS, A_COLS, r, c);
-
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
-        equalities++;
-      else
-        inequalities++;
-    }
-
-  printf("Equalities: %d\n", equalities);
-  printf("Inequalities: %d\n", inequalities);
-  if (inequalities == 0)
-  {
-    printf("EQUAL!\n");
-  }
-  else
-  {
-    printf("NOT EQUAL!\n");
-  }
-  return inequalities == 0;
+  return compare_matrices(A, A2, A_COLS, A_ROWS);
 }
 
 int test_solve()
@@ -318,14 +374,35 @@ int test_solve()
       pmod_mat_set_entry(C_vec, 2 * MEDS_m, MEDS_n, r, c, val);
     }
 
+  int res;
+  pmod_mat_s_vec_t res_vec;
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
   // Perform the normal solve
   printf("Performing normal solve\n");
-  int res = solve_opt(A, B_inv, C);
   int res_wrong = solve_opt(A_wrong, B_inv_wrong, C_wrong);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    res = solve_opt(A, B_inv, C);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
 
   // Perform the vectorized solve
   printf("Performing vectorized solve\n");
-  pmod_mat_s_vec_t res_vec = solve_vec(A_vec, B_inv_vec, C_vec);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    res_vec = solve_vec(A_vec, B_inv_vec, C_vec);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
 
   printf("Normal result: %d\n", res);
   printf("Vectorized result: %d, %d, %d\n", res_vec[0], res_vec[1], res_vec[2]);
@@ -351,56 +428,243 @@ int test_solve()
 
   // Compare the results
   printf("Comparing the results (matrix A)\n");
-  int equalities_A = 0;
-  int inequalities_A = 0;
+  int equal_A = compare_matrices(A, A_vec, MEDS_m, MEDS_m);
+
+  printf("Comparing the results (matrix B_inv)\n");
+  int equal_B_inv = compare_matrices(B_inv, B_inv_vec, MEDS_n, MEDS_n);
+
+  return equal_A && equal_B_inv;
+}
+
+int test_pmod_mat_inv()
+{
+  printf("----------------------------------------\n");
+  printf("Testing pmod_mat_inv\n");
+  printf("----------------------------------------\n");
+
+  keccak_state shake;
+  create_keccak_seed(&shake, 50);
+
+  pmod_mat_t A[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_vec_t A_vec[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_t A_inv[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_vec_t A_inv_vec[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_t A_wrong[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_t A_inv_wrong[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+
+  // Fill A with random values
+  printf("Filling A with random values\n");
+  generate_random_matrices(A, A_vec, MEDS_m, MEDS_m, &shake);
+  generate_non_invertible_matrix(A_wrong, MEDS_m, MEDS_m, &shake);
+
+  // Insert A_wrong into the last lane of A_vec
   for (int r = 0; r < MEDS_m; r++)
     for (int c = 0; c < MEDS_m; c++)
     {
-      uint16_t correct_val = pmod_mat_entry(A, MEDS_m, MEDS_m, r, c);
-      uint16x4_t test_val = pmod_mat_entry(A_vec, MEDS_m, MEDS_m, r, c);
-
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
-        equalities_A++;
-      else
-        inequalities_A++;
+      pmod_mat_vec_t val = pmod_mat_entry(A_vec, MEDS_m, MEDS_m, r, c);
+      val[3] = pmod_mat_entry(A_wrong, MEDS_m, MEDS_m, r, c);
+      pmod_mat_set_entry(A_vec, MEDS_m, MEDS_m, r, c, val);
     }
 
-  printf("Equalities: %d\n", equalities_A);
-  printf("Inequalities: %d\n", inequalities_A);
+  int res;
+  pmod_mat_s_vec_t res_vec;
 
-  printf("Comparing the results (matrix B_inv)\n");
-  int equalities_B_inv = 0;
-  int inequalities_B_inv = 0;
-  for (int r = 0; r < MEDS_n; r++)
-    for (int c = 0; c < MEDS_n; c++)
-    {
-      uint16_t correct_val = pmod_mat_entry(B_inv, MEDS_n, MEDS_n, r, c);
-      uint16x4_t test_val = pmod_mat_entry(B_inv_vec, MEDS_n, MEDS_n, r, c);
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
 
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
-        equalities_B_inv++;
-      else
-        inequalities_B_inv++;
-    }
-
-  printf("Equalities: %d\n", equalities_B_inv);
-  printf("Inequalities: %d\n", inequalities_B_inv);
-
-  if (inequalities_A == 0 && inequalities_B_inv == 0)
+  // Perform the normal inversion
+  printf("Performing normal inversion\n");
+  int res_wrong = pmod_mat_inv(A_inv_wrong, A_wrong, MEDS_m, MEDS_m);
+  for (int i = 0; i < ROUNDS - 1; i++)
   {
-    printf("EQUAL!\n");
+    old_cycles[i] = get_cyclecounter();
+    res = pmod_mat_inv(A_inv, A, MEDS_m, MEDS_m);
   }
-  else
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
+
+  // Perform the vectorized inversion
+  printf("Performing vectorized inversion\n");
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    res_vec = pmod_mat_inv_vec(A_inv_vec, A_vec, MEDS_m, MEDS_m);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
+
+  printf("Normal result: %d\n", res);
+  printf("Vectorized result: %d, %d, %d\n", res_vec[0], res_vec[1], res_vec[2]);
+  if (res != res_vec[0] || res != res_vec[1] || res != res_vec[2])
   {
     printf("NOT EQUAL!\n");
+    return 0;
   }
 
-  return inequalities_A == 0 && inequalities_B_inv == 0;
+  if (res == -1)
+  {
+    printf("NOT INVERTIBLE!\n");
+    return 1;
+  }
+
+  printf("Normal result (wrong): %d\n", res_wrong);
+  printf("Vectorized result (wrong): %d\n", res_vec[3]);
+  if (res_wrong != res_vec[3])
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
+
+  // Compare the results
+  printf("Comparing the results\n");
+  return compare_matrices(A_inv, A_inv_vec, MEDS_m, MEDS_m);
+}
+
+int test_pi()
+{
+  printf("----------------------------------------\n");
+  printf("Testing pi\n");
+  printf("----------------------------------------\n");
+
+  keccak_state shake;
+  create_keccak_seed(&shake, 60);
+
+  pmod_mat_t A[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_vec_t A_vec[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_t B[MEDS_n * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_vec_t B_vec[MEDS_n * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_t G[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_t Gout[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_vec_t Gout_vec[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+
+  // Fill A, B and G with random values
+  printf("Filling A, B and G with random values\n");
+  generate_random_matrices(A, A_vec, MEDS_m, MEDS_m, &shake);
+  generate_random_matrices(B, B_vec, MEDS_n, MEDS_n, &shake);
+  generate_random_matrices(G, G_vec, MEDS_k * MEDS_m, MEDS_n, &shake);
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
+  // Perform the normal pi
+  printf("Performing normal pi\n");
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    pi(Gout, A, B, G);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
+
+  // Perform the vectorized pi
+  printf("Performing vectorized pi\n");
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    pi_vec(Gout_vec, A_vec, B_vec, G_vec);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
+
+  // Compare the results
+  return compare_matrices(Gout, Gout_vec, MEDS_m * MEDS_n, MEDS_k);
+}
+
+int test_SF()
+{
+  printf("----------------------------------------\n");
+  printf("Testing SF\n");
+  printf("----------------------------------------\n");
+
+  keccak_state shake;
+  create_keccak_seed(&shake, 70);
+
+  pmod_mat_t G[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_t G_wrong[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+
+  // Fill G with random values
+  printf("Filling G with random values\n");
+  generate_random_matrices(G, G_vec, MEDS_k * MEDS_m, MEDS_n, &shake);
+  generate_non_invertible_matrix(G_wrong, MEDS_k * MEDS_m, MEDS_n, &shake);
+
+  // Insert G_wrong into the last lane of G_vec
+  for (int r = 0; r < MEDS_k * MEDS_m; r++)
+    for (int c = 0; c < MEDS_n; c++)
+    {
+      pmod_mat_vec_t val = pmod_mat_entry(G_vec, MEDS_k * MEDS_m, MEDS_n, r, c);
+      val[3] = pmod_mat_entry(G_wrong, MEDS_k * MEDS_m, MEDS_n, r, c);
+      pmod_mat_set_entry(G_vec, MEDS_k * MEDS_m, MEDS_n, r, c, val);
+    }
+  
+  int res;
+  pmod_mat_s_vec_t res_vec;
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
+  // Perform the normal SF
+  printf("Performing normal SF\n");
+  int res_wrong = SF(G_wrong, G_wrong);
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    res = SF(G, G);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
+
+  // Perform the vectorized SF
+  printf("Performing vectorized SF\n");
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    res_vec = SF_vec(G_vec, G_vec);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
+
+  printf("Normal result: %d\n", res);
+  printf("Vectorized result: %d, %d, %d\n", res_vec[0], res_vec[1], res_vec[2]);
+  if (res != res_vec[0] || res != res_vec[1] || res != res_vec[2])
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
+
+  if (res == -1)
+  {
+    printf("NOT INVERTIBLE!\n");
+    return 1;
+  }
+
+  printf("Normal result (wrong): %d\n", res_wrong);
+  printf("Vectorized result (wrong): %d\n", res_vec[3]);
+  if (res_wrong != res_vec[3])
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
+
+  // Compare the results
+  return compare_matrices(G, G_vec, MEDS_m * MEDS_n, MEDS_k);
 }
 
 int main(int argc, char *argv[])
 {
-  int test_count = 10;
+  enable_cyclecounter();
+
+  int test_count = 13;
   int passed = 0;
   passed += test_cmov();
   passed += test_cswap();
@@ -412,6 +676,9 @@ int main(int argc, char *argv[])
   passed += test_pmod_mat_syst_ct(-1, 0, 0);
   passed += test_pmod_mat_syst_ct(0, 0, 0);
   passed += test_solve();
+  passed += test_pmod_mat_inv();
+  passed += test_pi();
+  passed += test_SF();
 
   printf("----------------------------------------\n\n");
   printf("Passed %d out of %d tests\n", passed, test_count);
@@ -420,5 +687,6 @@ int main(int argc, char *argv[])
   else
     printf("FAILED!\n");
 
+  disable_cyclecounter();
   return 0;
 }

@@ -1,6 +1,8 @@
 #ifndef MATRIXMOD_VEC_H
 #define MATRIXMOD_VEC_H
 
+#include <string.h>
+
 #include "vec_16x4.h"
 #include "matrixmod.h"
 #include "profiler.h"
@@ -40,5 +42,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_vec(pmod_mat_vec_t *M, int M_r, int M_
 pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, int M_r, int M_c, int max_r, int swap, int backsub);
 
 GFq_vec_t GF_inv_vec(GFq_vec_t val);
+
+pmod_mat_s_vec_t pmod_mat_inv_vec(pmod_mat_vec_t *B, pmod_mat_vec_t *A, int A_r, int A_c);
 
 #endif

@@ -80,8 +80,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         for (int i = 0; i < M_r; i++)
         {
           pmod_mat_vec_cswap_s_cond(&pmod_mat_entry(M, M_r, M_c, i, r),
-                             &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
-                             do_swap);
+                                    &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
+                                    do_swap);
         }
       }
     }
@@ -188,4 +188,52 @@ GFq_vec_t GF_inv_vec(GFq_vec_t val)
   GFq_vec_t tmp_15 = reduce_vec(MUL_VEC(tmp_14, tmp_14)); // 4090
   GFq_vec_t tmp_16 = reduce_vec(MUL_VEC(tmp_15, tmp_0));  // 4091
   return freeze_vec(tmp_16);
+}
+
+// int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
+// {
+//   PROFILER_START("pmod_mat_inv");
+//   pmod_mat_t M[A_r * A_c * 2];
+
+//   for (int r = 0; r < A_r; r++)
+//   {
+//     memcpy(&M[r * A_c * 2], &A[r * A_c], A_c * sizeof(GFq_t));
+
+//     for (int c = 0; c < A_c; c++)
+//       pmod_mat_set_entry(M, A_r, A_c * 2, r, A_c + c, r == c ? 1 : 0);
+//   }
+
+//   int ret = pmod_mat_syst_ct(M, A_r, A_c * 2);
+
+//   if ((ret == 0) && B)
+//     for (int r = 0; r < A_r; r++)
+//       memcpy(&B[r * A_c], &M[r * A_c * 2 + A_c], A_c * sizeof(GFq_t));
+
+//   PROFILER_STOP("pmod_mat_inv");
+//   return ret;
+// }
+
+pmod_mat_s_vec_t pmod_mat_inv_vec(pmod_mat_vec_t *B, pmod_mat_vec_t *A, int A_r, int A_c)
+{
+  PROFILER_START("pmod_mat_inv");
+  pmod_mat_vec_t M[A_r * A_c * 2];
+
+  for (int r = 0; r < A_r; r++)
+  {
+    memcpy(&M[r * A_c * 2], &A[r * A_c], A_c * sizeof(pmod_mat_vec_t));
+
+    for (int c = 0; c < A_c; c++)
+      pmod_mat_set_entry(M, A_r, A_c * 2, r, A_c + c, r == c ? SET_VEC(1) : ZERO_VEC);
+  }
+
+  pmod_mat_s_vec_t ret = pmod_mat_syst_ct_vec(M, A_r, A_c * 2);
+
+  // Originally, this 'if' statement contained a 'ret == 0' check.
+  // However, this is unnecessary since we can modify B even if ret != 0.
+  if (B)
+    for (int r = 0; r < A_r; r++)
+      memcpy(&B[r * A_c], &M[r * A_c * 2 + A_c], A_c * sizeof(pmod_mat_vec_t));
+
+  PROFILER_STOP("pmod_mat_inv");
+  return ret;
 }
