@@ -54,9 +54,12 @@ void generate_non_invertible_matrix(pmod_mat_t *A, int rows, int cols, keccak_st
       pmod_mat_set_entry(A, rows, cols, r, c, val);
     }
 
-  // Make the first row all zeros
+  // Make the first and last row all zeros
   for (int c = 0; c < cols; c++)
+  {
     pmod_mat_set_entry(A, rows, cols, 0, c, 0);
+    pmod_mat_set_entry(A, rows, cols, rows - 1, c, 0);
+  }
 }
 
 int test_cmov()
@@ -292,23 +295,59 @@ int test_solve()
 
   pmod_mat_t C[2 * MEDS_m * MEDS_n] __attribute__((aligned(16)));
   pmod_mat_vec_t C_vec[2 * MEDS_m * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_t C_wrong[2 * MEDS_m * MEDS_n] __attribute__((aligned(16)));
 
   pmod_mat_t A[MEDS_m * MEDS_m] __attribute__((aligned(16)));
   pmod_mat_vec_t A_vec[MEDS_m * MEDS_m] __attribute__((aligned(16)));
   pmod_mat_t B_inv[MEDS_n * MEDS_n] __attribute__((aligned(16)));
   pmod_mat_vec_t B_inv_vec[MEDS_n * MEDS_n] __attribute__((aligned(16)));
+  pmod_mat_t A_wrong[MEDS_m * MEDS_m] __attribute__((aligned(16)));
+  pmod_mat_t B_inv_wrong[MEDS_n * MEDS_n] __attribute__((aligned(16)));
 
   // Fill C with random values
   printf("Filling C with random values\n");
   generate_random_matrices(C, C_vec, 2 * MEDS_m, MEDS_n, &shake);
+  generate_non_invertible_matrix(C_wrong, 2 * MEDS_m, MEDS_n, &shake);
+
+  // Insert C_wrong into the last lane of C_vec
+  for (int r = 0; r < 2 * MEDS_m; r++)
+    for (int c = 0; c < MEDS_n; c++)
+    {
+      pmod_mat_vec_t val = pmod_mat_entry(C_vec, 2 * MEDS_m, MEDS_n, r, c);
+      val[3] = pmod_mat_entry(C_wrong, 2 * MEDS_m, MEDS_n, r, c);
+      pmod_mat_set_entry(C_vec, 2 * MEDS_m, MEDS_n, r, c, val);
+    }
 
   // Perform the normal solve
   printf("Performing normal solve\n");
-  solve_opt(A, B_inv, C);
+  int res = solve_opt(A, B_inv, C);
+  int res_wrong = solve_opt(A_wrong, B_inv_wrong, C_wrong);
 
   // Perform the vectorized solve
   printf("Performing vectorized solve\n");
-  solve_vec(A_vec, B_inv_vec, C_vec);
+  pmod_mat_s_vec_t res_vec = solve_vec(A_vec, B_inv_vec, C_vec);
+
+  printf("Normal result: %d\n", res);
+  printf("Vectorized result: %d, %d, %d\n", res_vec[0], res_vec[1], res_vec[2]);
+  if (res != res_vec[0] || res != res_vec[1] || res != res_vec[2])
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
+
+  if (res == -1)
+  {
+    printf("NOT INVERTIBLE!\n");
+    return 1;
+  }
+
+  printf("Normal result (wrong): %d\n", res_wrong);
+  printf("Vectorized result (wrong): %d\n", res_vec[3]);
+  if (res_wrong != res_vec[3])
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
 
   // Compare the results
   printf("Comparing the results (matrix A)\n");
@@ -320,7 +359,7 @@ int test_solve()
       uint16_t correct_val = pmod_mat_entry(A, MEDS_m, MEDS_m, r, c);
       uint16x4_t test_val = pmod_mat_entry(A_vec, MEDS_m, MEDS_m, r, c);
 
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val && test_val[3] == correct_val)
+      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
         equalities_A++;
       else
         inequalities_A++;
@@ -338,7 +377,7 @@ int test_solve()
       uint16_t correct_val = pmod_mat_entry(B_inv, MEDS_n, MEDS_n, r, c);
       uint16x4_t test_val = pmod_mat_entry(B_inv_vec, MEDS_n, MEDS_n, r, c);
 
-      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val && test_val[3] == correct_val)
+      if (test_val[0] == correct_val && test_val[1] == correct_val && test_val[2] == correct_val)
         equalities_B_inv++;
       else
         inequalities_B_inv++;

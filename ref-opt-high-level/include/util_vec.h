@@ -5,7 +5,7 @@
 #include "matrixmod.h"
 #include "matrixmod_vec.h"
 
-int solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime);
+pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime);
 
 #endif
 

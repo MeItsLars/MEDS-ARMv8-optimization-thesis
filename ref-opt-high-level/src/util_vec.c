@@ -290,7 +290,7 @@ solve_old(...) {
   }
   */
 
-int solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime)
+pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime)
 {
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
@@ -513,5 +513,5 @@ int solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec
     B_tilde_inv[i] = sol[i];
 
   PROFILER_STOP("solve_vec");
-  return 0;
+  return ret;
 }
