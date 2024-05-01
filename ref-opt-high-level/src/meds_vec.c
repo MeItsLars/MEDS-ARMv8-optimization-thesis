@@ -313,23 +313,26 @@ int crypto_sign_vec(
     LOG_HEX_FMT((&sigma[i * MEDS_st_seed_bytes]), MEDS_st_seed_bytes, "sigma[%i]", i);
   }
 
-  // Initialize matrices
-  pmod_mat_t A_tilde_data[MEDS_t][MEDS_m * MEDS_m];
-  pmod_mat_t B_tilde_data[MEDS_t][MEDS_n * MEDS_n];
-  pmod_mat_t M_tilde_data[MEDS_t][2 * MEDS_k];
+  // Initialize matrices that will be filled during the commitment phase
+  // These matrices are still needed for the hash computation
+  pmod_mat_t M_tilde_data[MEDS_t << 1][2 * MEDS_k];
+  pmod_mat_t *M_tilde[MEDS_t << 1];
+  static pmod_mat_t G_tilde_ti_data[MEDS_t << 1][MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t *G_tilde_ti[MEDS_t << 1];
 
-  pmod_mat_t *A_tilde[MEDS_t];
-  pmod_mat_t *B_tilde[MEDS_t];
-  pmod_mat_t *M_tilde[MEDS_t];
-
-  for (int i = 0; i < MEDS_t; i++)
+  for (int i = 0; i < MEDS_t << 1; i++)
   {
-    A_tilde[i] = A_tilde_data[i];
-    B_tilde[i] = B_tilde_data[i];
     M_tilde[i] = M_tilde_data[i];
+    G_tilde_ti[i] = G_tilde_ti_data[i];
   }
 
-  static pmod_mat_t G_tilde_ti[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
+  // Define temporary arrays that will be used during a single commitment computation
+  pmod_mat_t A_tilde[MEDS_m * MEDS_m];
+  pmod_mat_t B_tilde[MEDS_n * MEDS_n];
+  pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
+  pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
+  pmod_mat_t C[2 * MEDS_m * MEDS_n];
+  uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
 
   // Initialize hash function
   keccak_state h_shake;
@@ -357,8 +360,6 @@ int crypto_sign_vec(
     int index = indexes[num_tried];
     int valid = 1;
 
-    uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
-
     for (int j = 0; j < 4; j++)
       addr_pos[j] = (index >> (j * 8)) & 0xff;
 
@@ -369,51 +370,20 @@ int crypto_sign_vec(
         seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
         2);
 
-    LOG_HEX_FMT(sigma_M_tilde_i, MEDS_pub_seed_bytes, "sigma_M_tilde[%i]", index);
+    rnd_matrix(M_tilde[index], 2, MEDS_k, sigma_M_tilde_i, MEDS_pub_seed_bytes);
 
-    {
-      keccak_state shake;
-      shake256_absorb_once(&shake, sigma_M_tilde_i, MEDS_pub_seed_bytes);
-
-      for (int r = 0; r < 2; r++)
-        for (int c = 0; c < MEDS_k; c++)
-          pmod_mat_set_entry(M_tilde[index], 2, MEDS_k, r, c, rnd_GF(&shake));
-    }
-
-    LOG_MAT_FMT(M_tilde[index], 2, MEDS_k, "M_tilde[%i]", index);
-
-    pmod_mat_t C[2 * MEDS_m * MEDS_n];
     pmod_mat_mul(C, 2, MEDS_m * MEDS_n, M_tilde[index], 2, MEDS_k, G_0, MEDS_k, MEDS_m * MEDS_n);
 
-    LOG_MAT(C, 2, MEDS_m * MEDS_n);
-
-    pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
-    pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
-
-    if (solve(A_tilde[index], B_tilde_inv, C) < 0)
-    {
-      LOG("no sol");
+    if (solve(A_tilde, B_tilde_inv, C) < 0)
       valid = 0;
-    }
 
-    if (pmod_mat_inv(B_tilde[index], B_tilde_inv, MEDS_n, MEDS_n) < 0)
-    {
-      LOG("no B_tilde");
+    if (pmod_mat_inv(B_tilde, B_tilde_inv, MEDS_n, MEDS_n) < 0)
       valid = 0;
-    }
 
-    if (pmod_mat_inv(A_tilde_inv, A_tilde[index], MEDS_m, MEDS_m) < 0)
-    {
-      LOG("no A_tilde_inv");
+    if (pmod_mat_inv(A_tilde_inv, A_tilde, MEDS_m, MEDS_m) < 0)
       valid = 0;
-    }
 
-    LOG_MAT_FMT(A_tilde[index], MEDS_m, MEDS_m, "A_tilde[%i]", index);
-    LOG_MAT_FMT(B_tilde[index], MEDS_n, MEDS_n, "B_tilde[%i]", index);
-
-    pi(G_tilde_ti[index], A_tilde[index], B_tilde[index], G_0);
-
-    LOG_MAT_FMT(G_tilde_ti[index], MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", index);
+    pi(G_tilde_ti[index], A_tilde, B_tilde, G_0);
 
     if (SF(G_tilde_ti[index], G_tilde_ti[index]) != 0)
       valid = 0;

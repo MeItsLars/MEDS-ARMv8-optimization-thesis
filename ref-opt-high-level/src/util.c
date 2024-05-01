@@ -83,6 +83,18 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
   }
 }
 
+void rnd_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_len)
+{
+  PROFILER_START("rnd_matrix");
+  keccak_state shake;
+  shake256_absorb_once(&shake, seed, seed_len);
+
+  for (int r = 0; r < M_r; r++)
+    for (int c = 0; c < M_c; c++)
+      pmod_mat_set_entry(M, M_r, M_c, r, c, rnd_GF(&shake));
+  PROFILER_STOP("rnd_matrix");
+}
+
 int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 {
   PROFILER_START("parse_hash");
