@@ -4,23 +4,22 @@
 #include <string.h>
 
 #include "log.h"
+#include "profiler.h"
 
 #include "fips202.h"
-
 #include "params.h"
-
 #include "api.h"
 #include "randombytes.h"
-
-#include "meds_vec.h"
-
-#define solve solve_opt
-
 #include "seed.h"
 #include "util.h"
-#include "bitstream.h"
-
+#include "util_vec.h"
 #include "matrixmod.h"
+#include "matrixmod_vec.h"
+#include "bitstream.h"
+#include "meds_vec.h"
+#include "vec_16x4.h"
+
+#define solve solve_opt
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
 
@@ -327,12 +326,19 @@ int crypto_sign_vec(
   }
 
   // Define temporary arrays that will be used during a single commitment computation
-  pmod_mat_t A_tilde[MEDS_m * MEDS_m];
-  pmod_mat_t B_tilde[MEDS_n * MEDS_n];
-  pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
-  pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
-  pmod_mat_t C[2 * MEDS_m * MEDS_n];
+  pmod_mat_vec_t A_tilde[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_tilde[MEDS_n * MEDS_n];
+  pmod_mat_vec_t A_tilde_inv[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_tilde_inv[MEDS_n * MEDS_n];
+  pmod_mat_vec_t C[2 * MEDS_m * MEDS_n];
   uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
+  pmod_mat_vec_t M_tilde_vec[2 * MEDS_k];
+  static pmod_mat_vec_t G_tilde_ti_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_vec_t G_0_vec[MEDS_k * MEDS_m * MEDS_n];
+
+  // Initialize G_0_vec from G_0 (all lanes are the same)
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++)
+    G_0_vec[i] = SET_VEC(G_0[i]);
 
   // Initialize hash function
   keccak_state h_shake;
@@ -355,53 +361,82 @@ int crypto_sign_vec(
   for (int i = MEDS_t; i < (MEDS_t << 1); i++)
     indexes[i] = 0;
 
+  PROFILER_START("SEC_COMMIT");
   while (num_valid < MEDS_t)
   {
-    int index = indexes[num_tried];
-    int valid = 1;
-
-    for (int j = 0; j < 4; j++)
-      addr_pos[j] = (index >> (j * 8)) & 0xff;
-
-    memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[index * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
-
-    XOF((uint8_t *[]){sigma_M_tilde_i, &sigma[index * MEDS_st_seed_bytes]},
-        (size_t[]){MEDS_pub_seed_bytes, MEDS_st_seed_bytes},
-        seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
-        2);
-
-    rnd_matrix(M_tilde[index], 2, MEDS_k, sigma_M_tilde_i, MEDS_pub_seed_bytes);
-
-    pmod_mat_mul(C, 2, MEDS_m * MEDS_n, M_tilde[index], 2, MEDS_k, G_0, MEDS_k, MEDS_m * MEDS_n);
-
-    if (solve(A_tilde, B_tilde_inv, C) < 0)
-      valid = 0;
-
-    if (pmod_mat_inv(B_tilde, B_tilde_inv, MEDS_n, MEDS_n) < 0)
-      valid = 0;
-
-    if (pmod_mat_inv(A_tilde_inv, A_tilde, MEDS_m, MEDS_m) < 0)
-      valid = 0;
-
-    pi(G_tilde_ti[index], A_tilde, B_tilde, G_0);
-
-    if (SF(G_tilde_ti[index], G_tilde_ti[index]) != 0)
-      valid = 0;
-
-    if (valid)
+    int index = num_tried;
+    for (int t = 0; t < BATCH_SIZE; t++)
     {
-      num_valid++;
+      int index_netto = indexes[num_tried + t];
+
+      for (int j = 0; j < 4; j++)
+        addr_pos[j] = (index_netto >> (j * 8)) & 0xff;
+
+      memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[index_netto * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
+
+      XOF((uint8_t *[]){sigma_M_tilde_i, &sigma[index_netto * MEDS_st_seed_bytes]},
+          (size_t[]){MEDS_pub_seed_bytes, MEDS_st_seed_bytes},
+          seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
+          2);
+
+      rnd_matrix(M_tilde[index_netto], 2, MEDS_k, sigma_M_tilde_i, MEDS_pub_seed_bytes);
     }
-    else
+
+    pmod_mat_s_vec_t valid = SET_S_VEC(1);
+
+    // Load M_tilde_vec from M_tilde[index]
+    for (int r = 0; r < 2; r++)
+      for (int c = 0; c < MEDS_k; c++)
+        M_tilde_vec[r * MEDS_k + c] = load_vec(M_tilde + index, 2, MEDS_k, r, c);
+
+    // Compute C
+    pmod_mat_mul_vec(C, 2, MEDS_m * MEDS_n, M_tilde_vec, 2, MEDS_k, G_0_vec, MEDS_k, MEDS_m * MEDS_n);
+    
+    // Solve for A_tilde and B_tilde
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_tilde_inv, A_tilde, MEDS_m, MEDS_m), ZERO_S_VEC)));
+
+    // Apply pi function
+    pi_vec(G_tilde_ti_vec, A_tilde, B_tilde, G_0_vec);
+
+    // Convert to systematic form
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec))));
+    
+    // TODO: Store G_tilde_ti_vec into G_tilde_ti[index]
+    for (int r = 0; r < MEDS_k; r++)
+      for (int c = 0; c < MEDS_m * MEDS_n; c++)
+          store_vec(G_tilde_ti + index, MEDS_k, MEDS_m * MEDS_n, r, c, G_tilde_ti_vec[r * MEDS_m * MEDS_n + c]);
+
+    int current_batch_invalids = 0;
+    for (int t = 0; t < BATCH_SIZE; t++)
     {
-      int idx = MEDS_t + num_invalid;
-      indexes[idx] = index;
-      num_invalid++;
+      if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
+      {
+        // Compute indices
+        int idx_source = num_tried + t;
+        int idx_target = MEDS_t + num_invalid + current_batch_invalids;
+
+        // Change pointers for the next iteration of the failed commitment
+        indexes[idx_target] = indexes[idx_source];
+        G_tilde_ti[idx_target] = G_tilde_ti_data[idx_source];
+        M_tilde[idx_target] = M_tilde_data[idx_source];
+
+        // Update counters
+        num_invalid++;
+        current_batch_invalids++;
+      }
+      else
+      {
+        num_valid++;
+      }
     }
-    num_tried++;
+    num_tried += BATCH_SIZE;
   }
+  PROFILER_STOP("SEC_COMMIT");
 
   // Hash all commitments
+  PROFILER_START("SEC_HASH_COMMIT");
   for (int i = 0; i < MEDS_t; i++)
   {
     bitstream_t bs;
@@ -417,6 +452,7 @@ int crypto_sign_vec(
 
     shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
   }
+  PROFILER_STOP("SEC_HASH_COMMIT");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 

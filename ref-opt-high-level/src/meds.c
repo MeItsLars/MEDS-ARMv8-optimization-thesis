@@ -4,23 +4,19 @@
 #include <string.h>
 
 #include "log.h"
+#include "profiler.h"
 
 #include "fips202.h"
-
 #include "params.h"
-
 #include "api.h"
 #include "randombytes.h"
-
 #include "meds.h"
-
-#define solve solve_opt
-
 #include "seed.h"
 #include "util.h"
 #include "bitstream.h"
-
 #include "matrixmod.h"
+
+#define solve solve_opt
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
 
@@ -342,6 +338,7 @@ int crypto_sign(
 
   for (int i = 0; i < MEDS_t; i++)
   {
+    PROFILER_START("SEC_COMMIT");
     pmod_mat_t G_tilde_ti[MEDS_k * MEDS_m * MEDS_n];
 
     while (1 == 1)
@@ -411,8 +408,11 @@ int crypto_sign(
       if (SF(G_tilde_ti, G_tilde_ti) == 0)
         break;
     }
+    PROFILER_STOP("SEC_COMMIT");
 
     LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
+
+    PROFILER_START("SEC_HASH_COMMIT");
 
     bitstream_t bs;
     uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
@@ -428,6 +428,8 @@ int crypto_sign(
     LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
     shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+    PROFILER_STOP("SEC_HASH_COMMIT");
   }
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);

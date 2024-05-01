@@ -45,15 +45,27 @@
 
 #define EQ0_S_VEC(a) vceqz_s16(a)
 #define EQ_S_VEC(a, b) vceq_s16(a, b)
+#define GEQ_S_VEC(a, b) vcge_s16(a, b)
 
 #define SET_S_VEC(a) vdup_n_s16(a)
 #define TO_S_VEC(a) vreinterpret_s16_u16(a)
 
 #define ZERO_S_VEC vdup_n_s16(0)
 
+#define GET_LANE_S_VEC(a, i) vget_lane_s16(a, i)
+
 #define pmod_mat_s_vec_t int16x4_t
 
+// DEFINITIONS
+#define BATCH_SIZE 4
+#define VEC_TRUE 0xffff
+#define VEC_FALSE 0x0000
+
+// FUNCTIONS
 uint16x4_t reduce_vec(uint32x4_t a);
 uint16x4_t freeze_vec(uint16x4_t a);
+
+pmod_mat_vec_t load_vec(uint16_t *M[], int M_r, int M_c, int r, int c);
+void store_vec(uint16_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val);
 
 #endif

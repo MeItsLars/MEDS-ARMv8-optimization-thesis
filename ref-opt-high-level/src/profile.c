@@ -9,6 +9,7 @@
 #include "params.h"
 #include "api.h"
 #include "meds.h"
+#include "meds_vec.h"
 #include "profiler.h"
 
 profileresult profileresults[1000];
@@ -88,7 +89,7 @@ int main(int argc, char *argv[])
     case 2:
     {
       long long sign_time = -get_cyclecounter();
-      crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+      crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
       sign_time += get_cyclecounter();
       results[round] = sign_time;
       break;
