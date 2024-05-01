@@ -29,6 +29,7 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/matrixmod.c
     ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
     ${PROJECT_SOURCE_DIR}/meds.c
+    ${PROJECT_SOURCE_DIR}/meds_vec.c
     ${PROJECT_SOURCE_DIR}/osfreq.c
     ${PROJECT_SOURCE_DIR}/randombytes.c
     ${PROJECT_SOURCE_DIR}/seed.c

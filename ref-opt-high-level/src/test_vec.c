@@ -17,7 +17,7 @@
 #define ROUNDS 100
 
 #define A_ROWS 24
-#define A_COLS 24 * 24
+#define A_COLS 24*2
 #define B_ROWS A_COLS
 #define B_COLS 24
 #define C_ROWS A_ROWS

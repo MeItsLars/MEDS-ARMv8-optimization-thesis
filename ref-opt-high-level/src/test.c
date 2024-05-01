@@ -8,6 +8,12 @@
 #include "params.h"
 #include "api.h"
 #include "meds.h"
+#include "meds_vec.h"
+#include "profiler.h"
+
+profileresult profileresults[1000];
+int number_of_profileresults = 0;
+int profiler_enabled = 0;
 
 double osfreq(void);
 
@@ -22,8 +28,8 @@ int main(int argc, char *argv[])
 
   int rounds = 1;
 
-  //unsigned char entropy_input[48] = {0xB5, 0x11,  0};
-  //unsigned char entropy_input[48] = {0x82, 0x9F, 0};
+  // unsigned char entropy_input[48] = {0xB5, 0x11,  0};
+  // unsigned char entropy_input[48] = {0x82, 0x9F, 0};
   unsigned char entropy_input[48] = {10, 0};
 
   if (argc > 1)
@@ -31,14 +37,13 @@ int main(int argc, char *argv[])
     uint64_t val = atol(argv[1]);
 
     for (int i = 0; i < 8; i++)
-      entropy_input[i] = (val >> (i*8)) & 0xff;
+      entropy_input[i] = (val >> (i * 8)) & 0xff;
   }
 
   printf("seed: ");
-  for (int i = sizeof(entropy_input)-1; i >= 0; i--)
+  for (int i = sizeof(entropy_input) - 1; i >= 0; i--)
     printf("%X", entropy_input[i]);
   printf("\n");
-
 
   randombytes_init(entropy_input, NULL, 256);
 
@@ -60,26 +65,28 @@ int main(int argc, char *argv[])
     crypto_sign_keypair(pk, sk);
     time += get_cyclecounter();
 
-    if (time < keygen_time) keygen_time = time;
+    if (time < keygen_time)
+      keygen_time = time;
 
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
 
     time = -get_cyclecounter();
-    crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+    crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += get_cyclecounter();
 
-    if (time < sign_time) sign_time = time;
+    if (time < sign_time)
+      sign_time = time;
 
     unsigned char msg_out[4];
     unsigned long long msg_out_len = sizeof(msg_out);
-
 
     time = -get_cyclecounter();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += get_cyclecounter();
 
-    if (time < verify_time) verify_time = time;
+    if (time < verify_time)
+      verify_time = time;
 
     if (ret == 0)
       printf("success\n");
@@ -102,4 +109,3 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-
