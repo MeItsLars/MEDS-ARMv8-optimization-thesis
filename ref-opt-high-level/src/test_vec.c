@@ -17,7 +17,7 @@
 #define ROUNDS 100
 
 #define A_ROWS 24
-#define A_COLS 24*2
+#define A_COLS 24*24
 #define B_ROWS A_COLS
 #define B_COLS 24
 #define C_ROWS A_ROWS
@@ -665,6 +665,7 @@ int main(int argc, char *argv[])
   enable_cyclecounter();
 
   int test_count = 13;
+  // int test_count = 1;
   int passed = 0;
   passed += test_cmov();
   passed += test_cswap();

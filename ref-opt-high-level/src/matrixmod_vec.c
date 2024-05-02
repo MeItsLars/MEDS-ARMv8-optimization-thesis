@@ -13,7 +13,7 @@ void pmod_mat_mul_vec(pmod_mat_vec_t *C, int C_r, int C_c, pmod_mat_vec_t *A, in
       for (int i = 0; i < A_c; i++)
         val = MUL_ACC_VEC(val, pmod_mat_entry(A, A_r, A_c, r, i), pmod_mat_entry(B, B_r, B_c, i, c));
 
-      tmp[r * C_c + c] = freeze_vec(reduce_vec(val));
+      tmp[r * C_c + c] = FREEZE_REDUCE_VEC(val);
     }
 
   for (int c = 0; c < C_c; c++)
@@ -95,8 +95,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         pmod_mat_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
         pmod_mat_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-        uint16x4_t abc = freeze_vec(reduce_vec(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr)))));
-        pmod_mat_set_entry(M, M_r, M_c, r, c, abc);
+        uint16x4_t tmp = FREEZE_REDUCE_VEC(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
+        pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
       }
     }
 
@@ -110,7 +110,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
     // normalize
     for (int c = r; c < M_c; c++)
     {
-      pmod_mat_vec_t tmp = freeze_vec(reduce_vec(MUL_VEC(val, pmod_mat_entry(M, M_r, M_c, r, c))));
+      pmod_mat_vec_t tmp = FREEZE_REDUCE_VEC(MUL_VEC(val, pmod_mat_entry(M, M_r, M_c, r, c)));
       pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
     }
 
@@ -124,8 +124,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-        pmod_mat_vec_t val = freeze_vec(reduce_vec(MUL_VEC(tmp0, factor)));
-        val = freeze_vec(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+        pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
+        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
     }
@@ -146,8 +146,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
       pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
       pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-      pmod_mat_vec_t val = freeze_vec(reduce_vec(MUL_VEC(tmp0, factor)));
-      val = freeze_vec(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+      pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
+      val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
 
       pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
 
@@ -156,8 +156,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-        pmod_mat_vec_t val = freeze_vec(reduce_vec(MUL_VEC(tmp0, factor)));
-        val = freeze_vec(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+        pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
+        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
 
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
@@ -171,23 +171,23 @@ GFq_vec_t GF_inv_vec(GFq_vec_t val)
 {
   // Use an optimal addition chain for MEDS_p = 4093
   GFq_vec_t tmp_0 = val;                                  // 1
-  GFq_vec_t tmp_1 = reduce_vec(MUL_VEC(tmp_0, tmp_0));    // 2
-  GFq_vec_t tmp_2 = reduce_vec(MUL_VEC(tmp_1, tmp_1));    // 4
-  GFq_vec_t tmp_3 = reduce_vec(MUL_VEC(tmp_2, tmp_0));    // 5
-  GFq_vec_t tmp_4 = reduce_vec(MUL_VEC(tmp_3, tmp_3));    // 10
-  GFq_vec_t tmp_5 = reduce_vec(MUL_VEC(tmp_4, tmp_3));    // 15
-  GFq_vec_t tmp_6 = reduce_vec(MUL_VEC(tmp_5, tmp_5));    // 30
-  GFq_vec_t tmp_7 = reduce_vec(MUL_VEC(tmp_6, tmp_6));    // 60
-  GFq_vec_t tmp_8 = reduce_vec(MUL_VEC(tmp_7, tmp_7));    // 120
-  GFq_vec_t tmp_9 = reduce_vec(MUL_VEC(tmp_8, tmp_8));    // 240
-  GFq_vec_t tmp_10 = reduce_vec(MUL_VEC(tmp_9, tmp_5));   // 255
-  GFq_vec_t tmp_11 = reduce_vec(MUL_VEC(tmp_10, tmp_10)); // 510
-  GFq_vec_t tmp_12 = reduce_vec(MUL_VEC(tmp_11, tmp_11)); // 1020
-  GFq_vec_t tmp_13 = reduce_vec(MUL_VEC(tmp_12, tmp_12)); // 2040
-  GFq_vec_t tmp_14 = reduce_vec(MUL_VEC(tmp_13, tmp_3));  // 2045
-  GFq_vec_t tmp_15 = reduce_vec(MUL_VEC(tmp_14, tmp_14)); // 4090
-  GFq_vec_t tmp_16 = reduce_vec(MUL_VEC(tmp_15, tmp_0));  // 4091
-  return freeze_vec(tmp_16);
+  GFq_vec_t tmp_1 = REDUCE_VEC(MUL_VEC(tmp_0, tmp_0));    // 2
+  GFq_vec_t tmp_2 = REDUCE_VEC(MUL_VEC(tmp_1, tmp_1));    // 4
+  GFq_vec_t tmp_3 = REDUCE_VEC(MUL_VEC(tmp_2, tmp_0));    // 5
+  GFq_vec_t tmp_4 = REDUCE_VEC(MUL_VEC(tmp_3, tmp_3));    // 10
+  GFq_vec_t tmp_5 = REDUCE_VEC(MUL_VEC(tmp_4, tmp_3));    // 15
+  GFq_vec_t tmp_6 = REDUCE_VEC(MUL_VEC(tmp_5, tmp_5));    // 30
+  GFq_vec_t tmp_7 = REDUCE_VEC(MUL_VEC(tmp_6, tmp_6));    // 60
+  GFq_vec_t tmp_8 = REDUCE_VEC(MUL_VEC(tmp_7, tmp_7));    // 120
+  GFq_vec_t tmp_9 = REDUCE_VEC(MUL_VEC(tmp_8, tmp_8));    // 240
+  GFq_vec_t tmp_10 = REDUCE_VEC(MUL_VEC(tmp_9, tmp_5));   // 255
+  GFq_vec_t tmp_11 = REDUCE_VEC(MUL_VEC(tmp_10, tmp_10)); // 510
+  GFq_vec_t tmp_12 = REDUCE_VEC(MUL_VEC(tmp_11, tmp_11)); // 1020
+  GFq_vec_t tmp_13 = REDUCE_VEC(MUL_VEC(tmp_12, tmp_12)); // 2040
+  GFq_vec_t tmp_14 = REDUCE_VEC(MUL_VEC(tmp_13, tmp_3));  // 2045
+  GFq_vec_t tmp_15 = REDUCE_VEC(MUL_VEC(tmp_14, tmp_14)); // 4090
+  GFq_vec_t tmp_16 = REDUCE_VEC(MUL_VEC(tmp_15, tmp_0));  // 4091
+  return FREEZE_VEC(tmp_16);
 }
 
 // int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)

@@ -62,8 +62,35 @@
 #define VEC_FALSE 0x0000
 
 // FUNCTIONS
-uint16x4_t reduce_vec(uint32x4_t a);
-uint16x4_t freeze_vec(uint16x4_t a);
+// uint16x4_t reduce_vec(uint32x4_t a);
+// uint16x4_t freeze_vec(uint16x4_t a);
+
+#define REDUCE_VEC(v1)                \
+  ({                                  \
+    uint32x4_t _t1;                   \
+    uint32x4_t _v1 = v1;              \
+    _t1 = vshrq_n_u32(_v1, GFq_bits); \
+    _t1 = vmulq_n_u32(_t1, MEDS_p);   \
+    _v1 = vsubq_u32(_v1, _t1);        \
+    _t1 = vshrq_n_u32(_v1, GFq_bits); \
+    _t1 = vmulq_n_u32(_t1, MEDS_p);   \
+    _v1 = vsubq_u32(_v1, _t1);        \
+    vqmovn_u32(_v1);                  \
+  })
+
+#define FREEZE_VEC(_v2)              \
+  ({                                 \
+    uint16x4_t _t2;                  \
+    _t2 = vcge_u16(_v2, MEDS_p_VEC); \
+    _t2 = vand_u16(_t2, MEDS_p_VEC); \
+    vsub_u16(_v2, _t2);              \
+  })
+
+#define FREEZE_REDUCE_VEC(_v3)        \
+  ({                                  \
+    uint16x4_t _t3 = REDUCE_VEC(_v3); \
+    FREEZE_VEC(_t3);                  \
+  })
 
 pmod_mat_vec_t load_vec(uint16_t *M[], int M_r, int M_c, int r, int c);
 void store_vec(uint16_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val);
