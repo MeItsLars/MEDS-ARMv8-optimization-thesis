@@ -65,6 +65,8 @@
 // uint16x4_t reduce_vec(uint32x4_t a);
 // uint16x4_t freeze_vec(uint16x4_t a);
 
+#define REDUCE(val) val % MEDS_p;
+
 #define REDUCE_VEC(v1)                \
   ({                                  \
     uint32x4_t _t1;                   \
@@ -85,6 +87,7 @@
     _t2 = vand_u16(_t2, MEDS_p_VEC); \
     vsub_u16(_v2, _t2);              \
   })
+
 
 #define FREEZE_REDUCE_VEC(_v3)        \
   ({                                  \

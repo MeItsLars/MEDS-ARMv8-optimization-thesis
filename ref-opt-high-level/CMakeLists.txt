@@ -80,6 +80,11 @@ add_library(common_sources_with_profiler STATIC ${COMMON_SOURCES})
 target_include_directories(common_sources_with_profiler PUBLIC ${INCLUDE_DIRECTORIES})
 target_compile_definitions(common_sources_with_profiler PRIVATE PROFILER)
 
+enable_language(C ASM)
+set(ASM_DIR ${PROJECT_SOURCE_DIR}/asm)
+file(GLOB_RECURSE COMMON_SOURCES_ASM ${ASM_DIR}/*.s)
+add_library(common_sources_asm STATIC ${COMMON_SOURCES_ASM})
+
 ##########################################################
 # Build settings
 ##########################################################
@@ -135,4 +140,4 @@ target_compile_definitions(profile PRIVATE PROFILER)
 message("Adding target: test_vec")
 add_executable(test_vec ${PROJECT_SOURCE_DIR}/test_vec.c)
 target_include_directories(test_vec PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(test_vec PRIVATE common_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(test_vec PRIVATE common_sources common_sources_asm ${OPENSSL_LIBRARIES})

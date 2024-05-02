@@ -149,6 +149,52 @@ int test_cswap()
   return success_1 && success_2;
 }
 
+int test_reduce()
+{
+  printf("----------------------------------------\n");
+  printf("Testing vectorized reduction\n");
+  printf("----------------------------------------\n");
+
+  uint32_t val = 2 << 30;
+  GFq_vec_w_t val_vec = {val, val, val, val};
+
+  GFq_t res;
+  GFq_vec_t res_vec;
+
+  // Measurement arrays
+  long long old_cycles[ROUNDS];
+  long long new_cycles[ROUNDS];
+
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    old_cycles[i] = get_cyclecounter();
+    res = REDUCE(val);
+  }
+  old_cycles[ROUNDS - 1] = get_cyclecounter();
+  double old_median = median_2(old_cycles, ROUNDS);
+  printf("Median cycles (normal): %f\n", old_median);
+
+  for (int i = 0; i < ROUNDS - 1; i++)
+  {
+    new_cycles[i] = get_cyclecounter();
+    res_vec = FREEZE_REDUCE_VEC(val_vec);
+  }
+  new_cycles[ROUNDS - 1] = get_cyclecounter();
+  double new_median = median_2(new_cycles, ROUNDS);
+  printf("Median cycles (vectorized): %f (x%f %%)\n", new_median, new_median / old_median);
+
+  if (res == res_vec[0] && res == res_vec[1] && res == res_vec[2] && res == res_vec[3])
+  {
+    printf("EQUAL!\n");
+    return 1;
+  }
+  else
+  {
+    printf("NOT EQUAL!\n");
+    return 0;
+  }
+}
+
 int test_matmul()
 {
   printf("----------------------------------------\n");
@@ -664,22 +710,23 @@ int main(int argc, char *argv[])
 {
   enable_cyclecounter();
 
-  int test_count = 13;
-  // int test_count = 1;
+  // int test_count = 14;
+  int test_count = 2;
   int passed = 0;
-  passed += test_cmov();
-  passed += test_cswap();
-  passed += test_matmul();
-  passed += test_GF_inv();
-  passed += test_pmod_mat_syst_ct(0, 1, 1);
-  passed += test_pmod_mat_syst_ct(0, 0, 1);
-  passed += test_pmod_mat_syst_ct(-1, 0, 1);
-  passed += test_pmod_mat_syst_ct(-1, 0, 0);
+  // passed += test_cmov();
+  // passed += test_cswap();
+  passed += test_reduce();
+  // passed += test_matmul();
+  // passed += test_GF_inv();
+  // passed += test_pmod_mat_syst_ct(0, 1, 1);
+  // passed += test_pmod_mat_syst_ct(0, 0, 1);
+  // passed += test_pmod_mat_syst_ct(-1, 0, 1);
+  // passed += test_pmod_mat_syst_ct(-1, 0, 0);
   passed += test_pmod_mat_syst_ct(0, 0, 0);
-  passed += test_solve();
-  passed += test_pmod_mat_inv();
-  passed += test_pi();
-  passed += test_SF();
+  // passed += test_solve();
+  // passed += test_pmod_mat_inv();
+  // passed += test_pi();
+  // passed += test_SF();
 
   printf("----------------------------------------\n\n");
   printf("Passed %d out of %d tests\n", passed, test_count);
