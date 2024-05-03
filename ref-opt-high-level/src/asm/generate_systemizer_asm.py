@@ -15,22 +15,36 @@ R_Mr2c_i = "x8"
 R_T1 = "x11"
 R_T1h = "w11"
 
+# Preserve v8-v15
 RN_ret = "v0.4h"
 RN_MEDSp = "v1.4h"
-RN_MEDSpw = "v1.4s"
+RN_MEDSpw = "v13.4s"
 RN_zero = "v2.4h"
-RN_Mrr = "v3.4h"
-RN_Mrr_d = "d3"
-RN_Mrr0 = "v4.4h"
-RN_Mrc = "v5.4h"
-RN_Mrc_d = "d5"
-RN_Mr2c = "v6.4h"
-RN_Mr2c_d = "d6"
-RN_T1 = "v7.4h"
-RN_T1w = "v7.4s"
-RN_T2_d = "d8"
-RN_T2 = "v8.4h"
-RN_T2w = "v8.4s"
+RN_minus_one = "v3.4h"
+RN_Mrr = "v4.4h"
+RN_Mrr_d = "d4"
+RN_Mrr0 = "v5.4h"
+RN_Mrc = "v6.4h"
+RN_Mrc_d = "d6"
+RN_Mr2c = "v7.4h"
+RN_Mr2c_d = "d7"
+RN_T1 = "v16.4h"
+RN_T1w = "v16.4s"
+RN_T2_d = "d17"
+RN_T2 = "v17.4h"
+RN_T2w = "v17.4s"
+RN_T3 = "v18.4h"
+RN_T4 = "v19.4h"
+RN_T4w = "v19.4s"
+RN_T5w = "v20.4s"
+
+RN_inv_curr = RN_T1
+RN_inv_tmp0 = RN_Mrr
+RN_inv_tmp3 = RN_T2
+RN_inv_tmp5 = RN_T3
+RN_inv_temp = RN_T4
+RN_inv_tempw = RN_T4w
+RN_inv_temp2w = RN_T5w
 
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
@@ -68,44 +82,86 @@ def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits):
     add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
     add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSpw}")
     add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
-    # Remove one final MEDS_p if the value in the lane is at least MEDS_p
-    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSpw}")
-    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSpw[:-3]}.16b")
-    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # Shrink to 16 bits
     add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
+
+def add_freeze(asm, rn_src, rn_tmp, rn_dst):
+    # Remove one final MEDS_p if the value in the lane is at least MEDS_p
+    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
+    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
+    add(asm, 1, f"sub {rn_dst}, {rn_src}, {rn_tmp}")
+
+def add_freeze_reduce(asm, rn_src, rn_tmp, rn_tmph, rn_dst, GFq_bits):
+    add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits)
+    add_freeze(asm, rn_dst, rn_tmph, rn_dst)
 
 def add_swap(context, asm):
     return
 
 def add_elimination_row_zero_fix_loop2(context, asm):
     # Load Mrc = M[r][c] and Mr2c = M[r2][c]
-    add(asm, 1, f"ldr {RN_Mrc_d}, [{R_Mrc_i}], #8") # + #8 is done at the store in the end of this loop
+    add(asm, 1, f"ldr {RN_Mrc_d}, [{R_Mrc_i}]") # + #8 is done at the store in the end of this loop
     add(asm, 1, f"ldr {RN_Mr2c_d}, [{R_Mr2c_i}], #8")
     # Compute RN_T1 = Mr2c if Mrr is zero, else zero
     add(asm, 1, f"and {RN_T1[:-3]}.16b, {RN_Mrr0[:-3]}.16b, {RN_Mr2c[:-3]}.16b")
     # Compute RN_T2w = RN_T1 + Mrc
     add(asm, 1, f"uaddl {RN_T2w}, {RN_T1}, {RN_Mrc}")
     # Reduce RN_T2w
-    add_reduce(asm, RN_T2w, RN_T1w, RN_T2, context.GFq_bits)
+    add_freeze_reduce(asm, RN_T2w, RN_T1w, RN_T1, RN_T2, context.GFq_bits)
     # Store the result into M[r][c]
     add(asm, 1, f"str {RN_T2_d}, [{R_Mrc_i}], #8")
+    return
 
 def add_elimination_row_zero_fix_loop1(context, asm):
-    # Load R_Mcr2 = 8 * M_c * r2 + 8 * r
+    # Load R_Mcr2_i = M[r2][r] = M + 8 * M_c * r2 + 8 * r
     add(asm, 1, f"madd {R_Mr2c_i}, {R_Mc}, {R_loop2}, {R_loop1}")
-    add(asm, 1, f"mov {R_Mr2c_i}, {R_Mr2c_i}, lsl #3")
+    add(asm, 1, f"add {R_Mr2c_i}, {R_M}, {R_Mr2c_i}, lsl #3")
     # Loop
     add_loop(asm, "elimination_row_zero_fix_inner_loop", R_loop3, R_loop1, R_Mc, 0, lambda: add_elimination_row_zero_fix_loop2(context, asm))
 
 def add_return_if_zero(context, asm):
-    return
+    # If the current value of lane i of RN_Mrr is zero, set lane i of RN_ret to -1. Otherwise, leave lane i of RN_ret as it is.
+    add(asm, 1, f"cmeq {RN_T1}, {RN_Mrr}, #0")
+    add(asm, 1, f"and {RN_T2[:-3]}.16b, {RN_T1[:-3]}.16b, {RN_minus_one[:-3]}.16b")
+    add(asm, 1, f"mvn {RN_T1[:-3]}.16b, {RN_T1[:-3]}.16b")
+    add(asm, 1, f"and {RN_T1[:-3]}.16b, {RN_T1[:-3]}.16b, {RN_ret[:-3]}.16b")
+    add(asm, 1, f"orr {RN_ret[:-3]}.16b, {RN_T1[:-3]}.16b, {RN_T2[:-3]}.16b")
+
+def add_compute_inverse_line(context, asm, rn_dst, rn_src1, rn_src2):
+    # Compute RN_dst = RN_src1 * RN_src2
+    add(asm, 1, f"umull {RN_inv_tempw}, {rn_src1}, {rn_src2}")
+    # Reduce RN_dst
+    add_reduce(asm, RN_inv_tempw, RN_inv_temp2w, rn_dst, context.GFq_bits)
 
 def add_compute_inverse(context, asm):
-    return
+    # Compute the multiplicative inverse of RN_Mrr and store it in RN_Mrr
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_tmp0, RN_inv_tmp0) # 2
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 4
+    add_compute_inverse_line(context, asm, RN_inv_tmp3, RN_inv_curr, RN_inv_tmp0) # 5
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_tmp3, RN_inv_tmp3) # 10
+    add_compute_inverse_line(context, asm, RN_inv_tmp5, RN_inv_curr, RN_inv_tmp3) # 15
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_tmp5, RN_inv_tmp5) # 30
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 60
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 120
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 240
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_tmp5) # 255
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 510
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 1020
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 2040
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_tmp3) # 2045
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_curr) # 4090
+    add_compute_inverse_line(context, asm, RN_inv_curr, RN_inv_curr, RN_inv_tmp0) # 4091
+    add_freeze(asm, RN_inv_curr, RN_inv_temp, RN_Mrr)
 
 def add_normalize_row(context, asm):
-    return
+    # Load M[r][c] into RN_Mrc
+    add(asm, 1, f"ldr {RN_Mrc_d}, [{R_Mrc_i}]") # + #8 is done at the store in the end of this loop
+    # Compute RN_T1 = Mrc * Mrr
+    add(asm, 1, f"umull {RN_T1w}, {RN_Mrc}, {RN_Mrr}")
+    # Reduce RN_T1
+    add_freeze_reduce(asm, RN_T1w, RN_T2w, RN_T2, RN_Mrc, context.GFq_bits)
+    # Store the result into M[r][c]
+    add(asm, 1, f"str {RN_Mrc_d}, [{R_Mrc_i}], #8")
 
 def add_eliminate_rows(context, asm):
     return
@@ -119,9 +175,9 @@ def add_elimination_loop(context, asm):
     # First, load M[r][r], indexed by M_c * r + r
     add(asm, 1, f"madd {R_T1}, {R_Mc}, {R_loop1}, {R_loop1}")
     add(asm, 1, f"ldr {RN_Mrr_d}, [{R_M}, {R_T1}, lsl #3]")
-    # Next, load R_Mcr = 8 * M_c * r + 8 * r
+    # Next, load R_Mcr_i = M[r][r] = M + 8 * M_c * r + 8 * r
     add(asm, 1, f"madd {R_Mrc_i}, {R_Mc}, {R_loop1}, {R_loop1}")
-    add(asm, 1, f"mov {R_Mrc_i}, {R_Mrc_i}, lsl #3")
+    add(asm, 1, f"add {R_Mrc_i}, {R_M}, {R_Mrc_i}, lsl #3")
     # Next, check if M[r][r] is zero
     add(asm, 1, f"cmeq {RN_Mrr0}, {RN_Mrr}, {RN_zero}")
     # Add the loop
@@ -134,6 +190,9 @@ def add_elimination_loop(context, asm):
     add_compute_inverse(context, asm)
 
     # Normalize the current row of M by multiplying it by the inverse of M[r][r] (causing M[r][r] to become 1)
+    # First, load R_Mcr_i = M[r][r] = M + 8 * M_c * r + 8 * r
+    add(asm, 1, f"madd {R_Mrc_i}, {R_Mc}, {R_loop1}, {R_loop1}")
+    add(asm, 1, f"add {R_Mrc_i}, {R_M}, {R_Mrc_i}, lsl #3")
     add_loop(asm, "elimination_normalize_row_loop", R_loop2, R_loop1, R_Mc, 0, lambda: add_normalize_row(context, asm))
 
     # Eliminate the rows below the current one (so that M[r + x][c] becomes 0)
@@ -155,8 +214,13 @@ def generate_systemizer_asm(context, fun_id):
     # Initialize MEDS_p into RN_MEDSp
     add(asm, 1, f"mov {R_T1h}, #{context.MEDS_p}")
     add(asm, 1, f"dup {RN_MEDSp}, {R_T1h}")
+    # Initialize MEDS_p into RN_MEDSpw
+    add(asm, 1, f"dup {RN_MEDSpw}, {R_T1h}")
     # Initialize zero into RN_zero
     add(asm, 1, f"dup {RN_zero}, wzr")
+    # Initialize minus one into RN_minus_one
+    add(asm, 1, f"mov {R_T1h}, #-1")
+    add(asm, 1, f"dup {RN_minus_one}, {R_T1h}")
     # Initialize the return value
     if context.swap:
         add(asm, 1, f"dup {RN_ret}, {R_Mr}")

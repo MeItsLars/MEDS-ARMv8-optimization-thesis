@@ -46,6 +46,8 @@ pmod_mat_s_vec_t pmod_mat_rref_vec(pmod_mat_vec_t *M, int M_r, int M_c)
   return result;
 }
 
+extern void pmod_mat_sys_part(pmod_mat_vec_t *M, int M_r, int M_c, int max_r);
+
 // Possible calls:
 // pmod_mat_syst_ct_partial_swap_backsub(m-1, m, m, 1, 1)     (solve_opt)
 // pmod_mat_syst_ct_partial_swap_backsub(n, n, n, 0, 1)       (pmod_mat_inv)
@@ -86,6 +88,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
       }
     }
 
+    // pmod_mat_sys_part(M, M_r, M_c, r); (much slower *sad*)
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
       pmod_mat_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);

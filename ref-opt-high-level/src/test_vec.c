@@ -304,6 +304,20 @@ int test_GF_inv()
   return inequalities == 0;
 }
 
+extern pmod_mat_s_vec_t pmod_mat_syst_test(pmod_mat_vec_t *M, int M_r, int M_c);
+
+void pmod_mat_vec_t_print(pmod_mat_vec_t *M, int M_r, int M_c)
+{
+  for (int r = 0; r < M_r; r++)
+  {
+    for (int c = 0; c < M_c; c++)
+    {
+      printf("%d ", M[r * M_c + c][0]);
+    }
+    printf("\n");
+  }
+}
+
 int test_pmod_mat_syst_ct(int maxr_change, int swap, int backsub)
 {
   printf("----------------------------------------\n");
@@ -354,6 +368,7 @@ int test_pmod_mat_syst_ct(int maxr_change, int swap, int backsub)
   {
     new_cycles[i] = get_cyclecounter();
     res_vec = pmod_mat_syst_ct_partial_swap_backsub_vec(A2, A_ROWS, A_COLS, A_ROWS + maxr_change, swap, backsub);
+    // res_vec = pmod_mat_syst_test(A2, A_ROWS, A_COLS);
   }
   new_cycles[ROUNDS - 1] = get_cyclecounter();
   double new_median = median_2(new_cycles, ROUNDS);
