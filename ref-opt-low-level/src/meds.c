@@ -415,6 +415,7 @@ int crypto_sign(
 
     LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
 
+    PROFILER_START("bs_fill");
     bitstream_t bs;
     uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
 
@@ -425,6 +426,7 @@ int crypto_sign(
         bs_write(&bs, G_tilde_ti[r * MEDS_m * MEDS_n + j], GFq_bits);
 
     bs_finalize(&bs);
+    PROFILER_STOP("bs_fill");
 
     LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 

@@ -88,7 +88,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
       }
     }
 
-    // pmod_mat_sys_part(M, M_r, M_c, r); (much slower *sad*)
+    // pmod_mat_sys_part(M, M_r, M_c, r); // (much slower *sad*)
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
       pmod_mat_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);

@@ -725,23 +725,22 @@ int main(int argc, char *argv[])
 {
   enable_cyclecounter();
 
-  // int test_count = 14;
-  int test_count = 2;
+  int test_count = 14;
   int passed = 0;
-  // passed += test_cmov();
-  // passed += test_cswap();
+  passed += test_cmov();
+  passed += test_cswap();
   passed += test_reduce();
-  // passed += test_matmul();
-  // passed += test_GF_inv();
-  // passed += test_pmod_mat_syst_ct(0, 1, 1);
-  // passed += test_pmod_mat_syst_ct(0, 0, 1);
-  // passed += test_pmod_mat_syst_ct(-1, 0, 1);
-  // passed += test_pmod_mat_syst_ct(-1, 0, 0);
+  passed += test_matmul();
+  passed += test_GF_inv();
+  passed += test_pmod_mat_syst_ct(0, 1, 1);
+  passed += test_pmod_mat_syst_ct(0, 0, 1);
+  passed += test_pmod_mat_syst_ct(-1, 0, 1);
+  passed += test_pmod_mat_syst_ct(-1, 0, 0);
   passed += test_pmod_mat_syst_ct(0, 0, 0);
-  // passed += test_solve();
-  // passed += test_pmod_mat_inv();
-  // passed += test_pi();
-  // passed += test_SF();
+  passed += test_solve();
+  passed += test_pmod_mat_inv();
+  passed += test_pi();
+  passed += test_SF();
 
   printf("----------------------------------------\n\n");
   printf("Passed %d out of %d tests\n", passed, test_count);

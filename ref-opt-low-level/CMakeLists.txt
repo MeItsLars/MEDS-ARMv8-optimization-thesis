@@ -67,9 +67,9 @@ endif()
 set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PARAM_INCLUDE_DIR} ${NIST_INCLUDE_DIR})
 
 ##########################################################
-# Generate and build matmul assembly files
+# Generate and build assembly files
 ##########################################################
-message("Generating matmul assembly")
+message("Generating and adding matmul assembly")
 execute_process(
     COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/matmul/generate_matmul_asm.py ${PARAM_INCLUDE_DIR}/params.h"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -83,6 +83,11 @@ enable_language(C ASM)
 set(ASM_MATMUL_DIR ${PROJECT_SOURCE_DIR}/asm/matmul/${PARAM})
 file(GLOB_RECURSE ASM_MATMUL_SOURCES ${ASM_MATMUL_DIR}/*.s)
 add_library(asm_matmul_sources STATIC ${ASM_MATMUL_SOURCES})
+
+message("Generating and adding systemizer assembly")
+set(ASM_SYSTEMIZER_DIR ${PROJECT_SOURCE_DIR}/asm/systemizer)
+file(GLOB_RECURSE ASM_SYSTEMIZER_SOURCES ${ASM_SYSTEMIZER_DIR}/*.s)
+add_library(asm_systemizer_sources STATIC ${ASM_SYSTEMIZER_SOURCES})
 
 ##########################################################
 # Build common source files
@@ -150,3 +155,11 @@ message("Adding target: benchmatmul")
 add_executable(benchmatmul ${PROJECT_SOURCE_DIR}/benchmatmul.c)
 target_include_directories(benchmatmul PRIVATE ${INCLUDE_DIRECTORIES})
 target_link_libraries(benchmatmul PRIVATE common_sources asm_matmul_sources ${OPENSSL_LIBRARIES})
+
+##########################################################
+# Build target: benchsystemizer
+##########################################################
+message("Adding target: benchsystemizer")
+add_executable(benchsystemizer ${PROJECT_SOURCE_DIR}/benchsystemizer.c)
+target_include_directories(benchsystemizer PRIVATE ${INCLUDE_DIRECTORIES})
+target_link_libraries(benchsystemizer PRIVATE common_sources asm_matmul_sources asm_systemizer_sources ${OPENSSL_LIBRARIES})
