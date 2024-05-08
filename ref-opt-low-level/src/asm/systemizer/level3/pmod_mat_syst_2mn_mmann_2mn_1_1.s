@@ -1,25 +1,27 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_test
-pmod_mat_syst_test:
-    mov x1, #48
+.global pmod_mat_syst_2mn_mmann_2mn_1_1
+pmod_mat_syst_2mn_mmann_2mn_1_1:
+    mov x1, #2381
     mov x3, #4093
     dup v16.4h, w3
     dup v17.8h, w3
     dup v18.4s, w3
-    mov x2, #24
+    mov x2, #2380
     mov x4, #0
 elimination_loop:
-    cmp x4, #24
+    cmp x4, #2380
     b.eq elimination_loop_end
     madd x7, x1, x4, x4
+    mov x10, #4762
     add x5, x0, x7, lsl #1
     mov x14, #0
     mov x6, x4
 elimination_swap_or_loop:
-    cmp x6, #24
+    cmp x6, #2380
     b.ge elimination_swap_or_loop_end
-    ldrh w13, [x5], #96
+    ldrh w13, [x5]
+    add x5, x5, x10
     orr x14, x14, x13
     add x6, x6, #1
     b elimination_swap_or_loop
@@ -32,10 +34,11 @@ elimination_swap_or_loop_end:
     and x15, x4, x15
     orr x2, x2, x15
     add x8, x0, x4, lsl #1
-    add x9, x0, 94
+    add x9, x0, x10
+    sub x9, x9, #2
     mov x5, #0
 elimination_swap_loop:
-    cmp x5, 24
+    cmp x5, #2380
     b.ge elimination_swap_loop_end
     ldrh w11, [x8]
     ldrh w12, [x9]
@@ -43,14 +46,16 @@ elimination_swap_loop:
     csel x15, x11, x12, ne
     csel w12, w12, w11, ne
     mov x11, x15
-    strh w11, [x8], #96
-    strh w12, [x9], #96
+    strh w11, [x8]
+    strh w12, [x9]
+    add x8, x8, x10
+    add x9, x9, x10
     add x5, x5, #1
     b elimination_swap_loop
 elimination_swap_loop_end:
     add x5, x4, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x5, 24
+    cmp x5, 2380
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -266,7 +271,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x5, x4, #1
 elimination_eliminate_rows_loop:
-    cmp x5, 24
+    cmp x5, 2380
     b.eq elimination_eliminate_rows_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -330,7 +335,7 @@ elimination_eliminate_rows_loop_end:
     add x4, x4, #1
     b elimination_loop
 elimination_loop_end:
-    mov x4, #23
+    mov x4, #2379
 backsub_outer_loop:
     cmp x4, #0
     b.lt backsub_outer_loop_end
@@ -361,7 +366,7 @@ backsub_inner_loop:
     csel x14, x3, xzr, ge
     sub x12, x15, x14
     strh w12, [x0, x9, lsl #1]
-    mov x6, #24
+    mov x6, #2380
     madd x8, x1, x4, x6
     add x8, x0, x8, lsl #1
     madd x9, x1, x5, x6

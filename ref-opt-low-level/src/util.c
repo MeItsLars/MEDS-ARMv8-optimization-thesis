@@ -204,7 +204,7 @@ int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
 
   LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
 
-  int N1_r = pmod_mat_rref(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
+  int N1_r = pmod_mat_syst_2mn_mmann_2mn_1_1(rsys);
 
   LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
 
@@ -264,7 +264,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   // Systemize core sub-system while pivoting all but the last row.
   PROFILER_STOP("solve_opt_raw");
   int piv;
-  if ((piv = pmod_mat_syst_ct_partial(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1)) != 0)
+  if ((piv = pmod_mat_syst_n_2m_nr1_0_1(N)) != 0)
   {
     LOG("no sol %i", __LINE__);
     PROFILER_STOP("solve_opt");

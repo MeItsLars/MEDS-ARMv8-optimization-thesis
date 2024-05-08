@@ -69,6 +69,8 @@ set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PARAM_INCLUDE_DIR} ${NIST_INCLU
 ##########################################################
 # Generate and build assembly files
 ##########################################################
+enable_language(C ASM)
+
 message("Generating and adding matmul assembly")
 execute_process(
     COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/matmul/generate_matmul_asm.py ${PARAM_INCLUDE_DIR}/params.h"
@@ -76,18 +78,27 @@ execute_process(
     RESULT_VARIABLE ASM_MATMUL_GEN_RESULT
 )
 if (NOT ${ASM_MATMUL_GEN_RESULT} EQUAL 0)
-    message(FATAL_ERROR "Failed to generate assembly files")
+    message(FATAL_ERROR "Failed to generate matmul assembly files")
 endif()
 
-enable_language(C ASM)
 set(ASM_MATMUL_DIR ${PROJECT_SOURCE_DIR}/asm/matmul/${PARAM})
 file(GLOB_RECURSE ASM_MATMUL_SOURCES ${ASM_MATMUL_DIR}/*.s)
-add_library(asm_matmul_sources STATIC ${ASM_MATMUL_SOURCES})
 
-message("Generating and adding systemizer assembly")
-set(ASM_SYSTEMIZER_DIR ${PROJECT_SOURCE_DIR}/asm/systemizer)
+message("Generating and adding matrix systemizer assembly")
+execute_process(
+    COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/systemizer/generate_systemizer_asm.py ${PARAM_INCLUDE_DIR}/params.h"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    RESULT_VARIABLE ASM_SYSTEMIZER_GEN_RESULT
+)
+if (NOT ${ASM_SYSTEMIZER_GEN_RESULT} EQUAL 0)
+    message(FATAL_ERROR "Failed to generate systemizer assembly files")
+endif()
+
+set(ASM_SYSTEMIZER_DIR ${PROJECT_SOURCE_DIR}/asm/systemizer/${PARAM})
 file(GLOB_RECURSE ASM_SYSTEMIZER_SOURCES ${ASM_SYSTEMIZER_DIR}/*.s)
-add_library(asm_systemizer_sources STATIC ${ASM_SYSTEMIZER_SOURCES})
+
+# Create 'asm_sources' library based on generated assembly files
+add_library(asm_sources STATIC ${ASM_MATMUL_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
 
 ##########################################################
 # Build common source files
@@ -121,7 +132,7 @@ execute_process(
 message("Adding target: test")
 add_executable(test ${PROJECT_SOURCE_DIR}/test.c)
 target_include_directories(test PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(test PRIVATE common_sources asm_matmul_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(test PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: KAT_test
@@ -129,7 +140,7 @@ target_link_libraries(test PRIVATE common_sources asm_matmul_sources ${OPENSSL_L
 message("Adding target: KAT_test")
 add_executable(KAT_test ${PROJECT_SOURCE_DIR}/KAT_test.c)
 target_include_directories(KAT_test PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(KAT_test PRIVATE common_sources asm_matmul_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(KAT_test PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: bench
@@ -137,7 +148,7 @@ target_link_libraries(KAT_test PRIVATE common_sources asm_matmul_sources ${OPENS
 message("Adding target: bench")
 add_executable(bench ${PROJECT_SOURCE_DIR}/bench.c)
 target_include_directories(bench PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(bench PRIVATE common_sources asm_matmul_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(bench PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: profile
@@ -145,7 +156,7 @@ target_link_libraries(bench PRIVATE common_sources asm_matmul_sources ${OPENSSL_
 message("Adding target: profile")
 add_executable(profile ${PROJECT_SOURCE_DIR}/profile.c)
 target_include_directories(profile PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(profile PRIVATE common_sources_with_profiler asm_matmul_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(profile PRIVATE common_sources_with_profiler asm_sources ${OPENSSL_LIBRARIES})
 target_compile_definitions(profile PRIVATE PROFILER)
 
 ##########################################################
@@ -154,7 +165,7 @@ target_compile_definitions(profile PRIVATE PROFILER)
 message("Adding target: benchmatmul")
 add_executable(benchmatmul ${PROJECT_SOURCE_DIR}/benchmatmul.c)
 target_include_directories(benchmatmul PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(benchmatmul PRIVATE common_sources asm_matmul_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(benchmatmul PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: benchsystemizer
@@ -162,4 +173,4 @@ target_link_libraries(benchmatmul PRIVATE common_sources asm_matmul_sources ${OP
 message("Adding target: benchsystemizer")
 add_executable(benchsystemizer ${PROJECT_SOURCE_DIR}/benchsystemizer.c)
 target_include_directories(benchsystemizer PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(benchsystemizer PRIVATE common_sources asm_matmul_sources asm_systemizer_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(benchsystemizer PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})

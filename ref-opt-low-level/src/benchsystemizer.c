@@ -26,14 +26,12 @@ int profiler_enabled = 0;
 
 #define ROUNDS 1000
 
-// __attribute__((optimize("no-tree-vectorize")))
 int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
   int ret = M_r * swap;
 
   for (int r = 0; r < max_r; r++)
   {
-    /*
     if (swap)
     {
       GFq_t z = 0;
@@ -47,12 +45,13 @@ int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, 
       // conditional swap
       {
         ret = r * do_swap + ret * (1 - do_swap);
+
         for (int i = 0; i < M_r; i++)
           GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
                     &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
                     do_swap);
       }
-    }*/
+    }
 
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
@@ -71,7 +70,9 @@ int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, 
     uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
 
     if (val == 0)
+    {
       return -1;
+    }
 
     val = GF_inv(val);
 
@@ -101,9 +102,6 @@ int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, 
     }
   }
 
-  return ret;
-
-  /*
   if (!backsub)
   {
     return ret;
@@ -136,8 +134,7 @@ int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, 
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
     }
-
-  return ret;*/
+  return ret;
 }
 
 uint16x4_t reduce(uint32x4_t red, uint16x4_t MEDS_p_16x4, uint32x4_t MEDS_p_32x4)
@@ -256,7 +253,6 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
     }
   }
 
-  /*
   // back substitution;
   for (int r = M_r - 1; r >= 0; r--)
     for (int r2 = 0; r2 < r; r2++)
@@ -308,14 +304,95 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
         // Store result
         vst1_u16(&M[(M_c)*r2 + c], val_16x4);
       }
-    }*/
+    }
   return ret;
 }
 
 extern int pmod_mat_syst_test(pmod_mat_t *M);
 
-#define A_ROWS 4
-#define A_COLS 4
+float min_cycle_bound(int rows, int cols, int max_r)
+{
+  float loads = 0;
+  float stores = 0;
+  float arithmetic = 0;
+
+  int reduce_cost = 9;
+  int freeze_cost = 3;
+  int inv_cost = 400;
+
+  for (int r = 0; r < max_r; r++)
+  {
+    /*
+    if (swap)
+    {
+      GFq_t z = 0;
+
+      // compute condition for swap
+      for (int r2 = r; r2 < M_r; r2++)
+        z |= pmod_mat_entry(M, M_r, M_c, r2, r);
+
+      int do_swap = GFq_eq0(z);
+
+      // conditional swap
+      {
+        ret = r * do_swap + ret * (1 - do_swap);
+        for (int i = 0; i < M_r; i++)
+          GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
+                    &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
+                    do_swap);
+      }
+    }*/
+
+    for (int r2 = r + 1; r2 < rows; r2++)
+    {
+      loads++;
+
+      for (int c = r; c < cols; c++)
+      {
+        loads += 2;
+        arithmetic++;              // + and * (can be done in 1 instruction)
+        arithmetic++;              // eq0
+        arithmetic += reduce_cost; // % MEDS_p
+        stores++;
+      }
+    }
+
+    loads++;
+
+    // val = GF_inv(val);
+    arithmetic += inv_cost;
+
+    // normalize
+    for (int c = r; c < cols; c++)
+    {
+      loads++;
+      arithmetic++;              // *
+      arithmetic += reduce_cost; // % MEDS_p
+      stores++;
+    }
+
+    // eliminate
+    for (int r2 = r + 1; r2 < rows; r2++)
+    {
+      loads++;
+
+      for (int c = r; c < cols; c++)
+      {
+        loads += 2;
+        arithmetic++;              // *
+        arithmetic += reduce_cost; // % MEDS_p
+        arithmetic += 2;           // + -
+        arithmetic += freeze_cost; // freeze MEDS_p
+        stores++;
+      }
+    }
+  }
+
+  return loads + stores + arithmetic;
+}
+
+#define A_ROWS 24
+#define A_COLS 24 * 2
 
 int main(int argc, char *argv[])
 {
@@ -344,6 +421,9 @@ int main(int argc, char *argv[])
     for (int c = 0; c < A_COLS; c++)
     {
       GFq_t rand_el = rnd_GF(&shake);
+      // Fill the second column with zeroes to test swap
+      if (c == 1)
+        rand_el = 0;
       pmod_mat_set_entry(A1, A_ROWS, A_COLS, r, c, rand_el);
       pmod_mat_set_entry(A2, A_ROWS, A_COLS, r, c, rand_el);
       pmod_mat_set_entry(A3, A_ROWS, A_COLS, r, c, rand_el);
@@ -352,33 +432,35 @@ int main(int argc, char *argv[])
   pmod_mat_set_entry(A2, A_ROWS, A_COLS, 0, 0, 0);
   pmod_mat_set_entry(A3, A_ROWS, A_COLS, 0, 0, 0);
 
+  int res1, res2, res3;
+
   printf("A:\n");
   pmod_mat_fprint(stdout, A1, A_ROWS, A_COLS);
 
   for (int round = 0; round < ROUNDS - 1; round++)
   {
     old_systemizer_cycles[round] = get_cyclecounter();
-    test_pmod_mat_syst_ct_partial_swap_backsub(A1, A_ROWS, A_COLS, A_ROWS, 0, 0);
+    res1 = test_pmod_mat_syst_ct_partial_swap_backsub(A1, A_ROWS, A_COLS, A_ROWS, 1, 1);
   }
   old_systemizer_cycles[ROUNDS - 1] = get_cyclecounter();
 
   for (int round = 0; round < ROUNDS - 1; round++)
   {
     intrinsic_systemizer_cycles[round] = get_cyclecounter();
-    test_pmod_mat_syst_ct_partial_swap_backsub_2(A3, A_ROWS, A_COLS);
+    res3 = test_pmod_mat_syst_ct_partial_swap_backsub_2(A3, A_ROWS, A_COLS);
   }
   intrinsic_systemizer_cycles[ROUNDS - 1] = get_cyclecounter();
 
   for (int round = 0; round < ROUNDS - 1; round++)
   {
     new_systemizer_cycles[round] = get_cyclecounter();
-    pmod_mat_syst_test(A2);
+    res2 = pmod_mat_syst_test(A2);
   }
   new_systemizer_cycles[ROUNDS - 1] = get_cyclecounter();
 
-  printf("A1:\n");
+  printf("A1: (%d)\n", res1);
   pmod_mat_fprint(stdout, A1, A_ROWS, A_COLS);
-  printf("A2:\n");
+  printf("A2: (%d)\n", res2);
   pmod_mat_fprint(stdout, A2, A_ROWS, A_COLS);
 
   double old_systemizer_median_cc = median_2(old_systemizer_cycles, ROUNDS, 0);
@@ -390,7 +472,10 @@ int main(int argc, char *argv[])
   double improvement = (new_systemizer_median_cc - old_systemizer_median_cc) / old_systemizer_median_cc * 100;
   double improvement_intrinsics = (new_systemizer_median_cc - intrinsic_systemizer_median_cc) / intrinsic_systemizer_median_cc * 100;
   printf("Old median: %f\n", old_systemizer_median_cc);
+  printf("Intrinsics median: %f\n", intrinsic_systemizer_median_cc);
   printf("New median: %f\n", new_systemizer_median_cc);
+  printf("Minimum cycle bound: %f\n", min_cycle_bound(A_ROWS, A_COLS, A_ROWS));
+  printf("Minimum cycle bound (4-way parallel): %f\n", min_cycle_bound(A_ROWS, A_COLS, A_ROWS) / 4);
   printf("Percentage: %f%%\n", percentage);
   printf("Improvement: %f%%\n", improvement);
   printf("Improvement (intrinsics): %f%%\n", improvement_intrinsics);

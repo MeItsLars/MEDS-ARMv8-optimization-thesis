@@ -46,3 +46,8 @@ Add more references
 
 - simplify and reconstruct systemizer
 - analyze remainder of signing and verification
+
+TODO:
+- Check dat systemizer code CT is (ook die die de compiler genereert!) (timecop/valgrind?)
+- Implement low-level speedup voor systemization (vergelijken?)
+- 800-185 https://csrc.nist.gov/pubs/sp/800/185/final
