@@ -59,7 +59,7 @@ void rnd_sys_mat(pmod_mat_t *M, int M_r, int M_c, const uint8_t *seed, size_t se
   PROFILER_STOP("rnd_sys_mat");
 }
 
-void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_len)
+void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_len, int (*pmod_mat_syst_fun)(pmod_mat_t *))
 {
   PROFILER_START("rnd_inv_matrix");
   keccak_state shake;
@@ -75,7 +75,7 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
 
     memcpy(tmp, M, M_r * M_c * sizeof(GFq_t));
 
-    if (pmod_mat_syst_ct_partial_swap_backsub(tmp, M_r, M_c, M_r, 0, 0) == 0)
+    if (pmod_mat_syst_fun(tmp) == 0)
     {
       PROFILER_STOP("rnd_inv_matrix");
       return;
@@ -159,85 +159,85 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 }
 
 // For testing only! NOT CONSTANT TIME!
-int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
-{
-  _Static_assert(MEDS_n == MEDS_m + 1, "solve_symb requires MEDS_n == MEDS_m+1");
+// int solve_symb(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime)
+// {
+//   _Static_assert(MEDS_n == MEDS_m + 1, "solve_symb requires MEDS_n == MEDS_m+1");
 
-  pmod_mat_t Pj0[MEDS_m * MEDS_n] = {0};
-  pmod_mat_t Pj1[MEDS_m * MEDS_n] = {0};
-  pmod_mat_t *Pj[2] = {Pj0, Pj1};
+//   pmod_mat_t Pj0[MEDS_m * MEDS_n] = {0};
+//   pmod_mat_t Pj1[MEDS_m * MEDS_n] = {0};
+//   pmod_mat_t *Pj[2] = {Pj0, Pj1};
 
-  for (int i = 0; i < MEDS_m; i++)
-  {
-    Pj0[i * (MEDS_m + 1)] = 1;
-    Pj1[i * (MEDS_m + 1) + 1] = 1;
-  }
+//   for (int i = 0; i < MEDS_m; i++)
+//   {
+//     Pj0[i * (MEDS_m + 1)] = 1;
+//     Pj1[i * (MEDS_m + 1) + 1] = 1;
+//   }
 
-  pmod_mat_t rsys[(2 * MEDS_m * MEDS_n) * (MEDS_m * MEDS_m + MEDS_n * MEDS_n)] = {0};
+//   pmod_mat_t rsys[(2 * MEDS_m * MEDS_n) * (MEDS_m * MEDS_m + MEDS_n * MEDS_n)] = {0};
 
-  pmod_mat_t *tmp = rsys;
+//   pmod_mat_t *tmp = rsys;
 
-  // set up lineat eq system
-  for (int l = 0; l < MEDS_m; l++)
-    for (int j = 0; j < MEDS_n; j++)
-    {
-      for (int ii = 0; ii < MEDS_n; ii++)
-        tmp[ii * MEDS_n + j] = Pj[0][l * MEDS_m + ii];
+//   // set up lineat eq system
+//   for (int l = 0; l < MEDS_m; l++)
+//     for (int j = 0; j < MEDS_n; j++)
+//     {
+//       for (int ii = 0; ii < MEDS_n; ii++)
+//         tmp[ii * MEDS_n + j] = Pj[0][l * MEDS_m + ii];
 
-      for (int ii = 0; ii < MEDS_m; ii++)
-        tmp[MEDS_n * MEDS_n + l * MEDS_m + ii] = (MEDS_p - G0prime[ii * MEDS_n + j]) % MEDS_p;
+//       for (int ii = 0; ii < MEDS_m; ii++)
+//         tmp[MEDS_n * MEDS_n + l * MEDS_m + ii] = (MEDS_p - G0prime[ii * MEDS_n + j]) % MEDS_p;
 
-      tmp += MEDS_m * MEDS_m + MEDS_n * MEDS_n;
-    }
+//       tmp += MEDS_m * MEDS_m + MEDS_n * MEDS_n;
+//     }
 
-  for (int l = 0; l < MEDS_m; l++)
-    for (int j = 0; j < MEDS_n; j++)
-    {
-      for (int ii = 0; ii < MEDS_n; ii++)
-        tmp[ii * MEDS_n + j] = Pj[1][l * MEDS_m + ii];
+//   for (int l = 0; l < MEDS_m; l++)
+//     for (int j = 0; j < MEDS_n; j++)
+//     {
+//       for (int ii = 0; ii < MEDS_n; ii++)
+//         tmp[ii * MEDS_n + j] = Pj[1][l * MEDS_m + ii];
 
-      for (int ii = 0; ii < MEDS_m; ii++)
-        tmp[MEDS_n * MEDS_n + l * MEDS_m + ii] = (MEDS_p - G0prime[MEDS_m * MEDS_n + ii * MEDS_n + j]) % MEDS_p;
+//       for (int ii = 0; ii < MEDS_m; ii++)
+//         tmp[MEDS_n * MEDS_n + l * MEDS_m + ii] = (MEDS_p - G0prime[MEDS_m * MEDS_n + ii * MEDS_n + j]) % MEDS_p;
 
-      tmp += MEDS_m * MEDS_m + MEDS_n * MEDS_n;
-    }
+//       tmp += MEDS_m * MEDS_m + MEDS_n * MEDS_n;
+//     }
 
-  LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
+//   LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
 
-  int N1_r = pmod_mat_syst_2mn_mmann_2mn_1_1(rsys);
+//   int N1_r = pmod_mat_syst_2mn_mmann_2mn_1_1(rsys);
 
-  LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
+//   LOG_MAT(rsys, (2 * MEDS_m * MEDS_n), (MEDS_m * MEDS_m + MEDS_n * MEDS_n));
 
-  LOG("N1_r: %i", N1_r);
+//   LOG("N1_r: %i", N1_r);
 
-  GFq_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n];
+//   GFq_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n];
 
-  for (int i = 0; i < 2 * MEDS_m * MEDS_n; i++)
-    sol[i] = rsys[i * (MEDS_m * MEDS_m + MEDS_n * MEDS_n) + MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1];
+//   for (int i = 0; i < 2 * MEDS_m * MEDS_n; i++)
+//     sol[i] = rsys[i * (MEDS_m * MEDS_m + MEDS_n * MEDS_n) + MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1];
 
-  sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] = MEDS_p - 1;
+//   sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] = MEDS_p - 1;
 
-  LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
+//   LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
 
-  // Swap solution entry.
-  GFq_t diff = sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] ^ sol[N1_r]; // NOT CONSTANT TIME!
+//   // Swap solution entry.
+//   GFq_t diff = sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] ^ sol[N1_r]; // NOT CONSTANT TIME!
 
-  sol[N1_r] ^= diff; // NOT CONSTANT TIME!
-  sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] ^= diff;
+//   sol[N1_r] ^= diff; // NOT CONSTANT TIME!
+//   sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n - 1] ^= diff;
 
-  LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
+//   LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
 
-  for (int i = 0; i < MEDS_m * MEDS_m; i++)
-    A[i] = sol[i + MEDS_n * MEDS_n];
+//   for (int i = 0; i < MEDS_m * MEDS_m; i++)
+//     A[i] = sol[i + MEDS_n * MEDS_n];
 
-  for (int i = 0; i < MEDS_n * MEDS_n; i++)
-    B_inv[i] = sol[i];
+//   for (int i = 0; i < MEDS_n * MEDS_n; i++)
+//     B_inv[i] = sol[i];
 
-  LOG_MAT(A, MEDS_m, MEDS_m);
-  LOG_MAT(B_inv, MEDS_n, MEDS_n);
+//   LOG_MAT(A, MEDS_m, MEDS_m);
+//   LOG_MAT(B_inv, MEDS_n, MEDS_n);
 
-  return 0;
-}
+//   return 0;
+// }
 
 int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 {
@@ -319,7 +319,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   PROFILER_STOP("solve_opt_raw");
   // Sytemize 2nd sub-system.
-  N1_r = pmod_mat_rref(N1, MEDS_m - 1, MEDS_m);
+  N1_r = pmod_mat_syst_mr1_m_mr1_1_1(N1);
 
   if (N1_r == -1)
   {
@@ -756,7 +756,7 @@ int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
     memcpy(&Gtmp[r * MEDS_m * MEDS_n], &G[r * MEDS_m * MEDS_n], MEDS_m * MEDS_n * sizeof(GFq_t));
   }
 
-  if (pmod_mat_inv(M, M, MEDS_k, MEDS_k) == 0)
+  if (pmod_mat_inv(M, M, MEDS_k, MEDS_k, pmod_mat_syst_k_2k_k_0_1) == 0)
   {
     PROFILER_START("pmod_mat_mul");
     PROFILER_START("pmod_mat_mul_asm_k_mn_k");

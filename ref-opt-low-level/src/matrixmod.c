@@ -64,159 +64,161 @@ void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A
   PROFILER_STOP("pmod_mat_mul");
 }
 
-// int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
-// {
-//   PROFILER_START("pmod_mat_syst_ct");
-//   int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
-//   PROFILER_STOP("pmod_mat_syst_ct");
-//   return result;
-// }
+/*
+int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
+{
+  PROFILER_START("pmod_mat_syst_ct");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 0, 1);
+  PROFILER_STOP("pmod_mat_syst_ct");
+  return result;
+}
 
-// int pmod_mat_syst_ct_partial(pmod_mat_t *M, int M_r, int M_c, int max_r)
-// {
-//   PROFILER_START("pmod_mat_syst_ct_partial");
-//   int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
-//   PROFILER_STOP("pmod_mat_syst_ct_partial");
-//   return result;
-// }
+int pmod_mat_syst_ct_partial(pmod_mat_t *M, int M_r, int M_c, int max_r)
+{
+  PROFILER_START("pmod_mat_syst_ct_partial");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, max_r, 0, 1);
+  PROFILER_STOP("pmod_mat_syst_ct_partial");
+  return result;
+}
 
-// int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
-// {
-//   PROFILER_START("pmod_mat_rref");
-//   int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
-//   PROFILER_STOP("pmod_mat_rref");
-//   return result;
-// }
+int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c)
+{
+  PROFILER_START("pmod_mat_rref");
+  int result = pmod_mat_syst_ct_partial_swap_backsub(M, M_r, M_c, M_r, 1, 1);
+  PROFILER_STOP("pmod_mat_rref");
+  return result;
+}
 
-// int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
-// {
-//   PROFILER_START("pmod_mat_syst_ct_partial_swap_backsub");
-//   int ret = M_r * swap;
+int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
+{
+  PROFILER_START("pmod_mat_syst_ct_partial_swap_backsub");
+  int ret = M_r * swap;
 
-//   for (int r = 0; r < max_r; r++)
-//   {
-//     if (swap)
-//     {
-//       GFq_t z = 0;
+  for (int r = 0; r < max_r; r++)
+  {
+    if (swap)
+    {
+      GFq_t z = 0;
 
-//       // compute condition for swap
-//       for (int r2 = r; r2 < M_r; r2++)
-//         z |= pmod_mat_entry(M, M_r, M_c, r2, r);
+      // compute condition for swap
+      for (int r2 = r; r2 < M_r; r2++)
+        z |= pmod_mat_entry(M, M_r, M_c, r2, r);
 
-//       int do_swap = GFq_eq0(z);
+      int do_swap = GFq_eq0(z);
 
-//       // conditional swap
-//       {
-//         ret = r*do_swap + ret*(1-do_swap);
+      // conditional swap
+      {
+        ret = r*do_swap + ret*(1-do_swap);
 
-// #if DEBUG
-//         if (do_swap)
-//         {
-//           LOG("swapping %i", r);
+#if DEBUG
+        if (do_swap)
+        {
+          LOG("swapping %i", r);
 
-//           LOG_MAT(M, M_r, M_c);
-//         }
-// #endif
+          LOG_MAT(M, M_r, M_c);
+        }
+#endif
 
-//         for (int i = 0; i < M_r; i++)
-//           GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
-//                     &pmod_mat_entry(M, M_r, M_c, i, M_c-1),
-//                     do_swap);
+        for (int i = 0; i < M_r; i++)
+          GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
+                    &pmod_mat_entry(M, M_r, M_c, i, M_c-1),
+                    do_swap);
 
-// #if DEBUG
-//         if (do_swap)
-//           LOG_MAT(M, M_r, M_c);
-// #endif
-//       }
-//     }
+#if DEBUG
+        if (do_swap)
+          LOG_MAT(M, M_r, M_c);
+#endif
+      }
+    }
 
-//     for (int r2 = r+1; r2 < M_r; r2++)
-//     {
-//       uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
+    for (int r2 = r+1; r2 < M_r; r2++)
+    {
+      uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
 
-//       for (int c = r; c < M_c; c++)
-//       {
-//         uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
+      for (int c = r; c < M_c; c++)
+      {
+        uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-//         uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-//         pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * GFq_eq0(Mrr)) % MEDS_p);
-//       }
-//     }
+        pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * GFq_eq0(Mrr)) % MEDS_p);
+      }
+    }
 
-//     uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
+    uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
 
-//     if (val == 0)
-//     {
-//       PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
-//       return -1;
-//     }
+    if (val == 0)
+    {
+      PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
+      return -1;
+    }
 
-//     val = GF_inv(val);
+    val = GF_inv(val);
 
-//     // normalize
-//     for (int c = r; c < M_c; c++)
-//     {
-//       uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
-//       pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
-//     }
+    // normalize
+    for (int c = r; c < M_c; c++)
+    {
+      uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
+      pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
+    }
 
-//     // eliminate
-//     for (int r2 = r+1; r2 < M_r; r2++)
-//     {
-//       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+    // eliminate
+    for (int r2 = r+1; r2 < M_r; r2++)
+    {
+      uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-//       for (int c = r; c < M_c; c++)
-//       {
-//         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-//         uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+      for (int c = r; c < M_c; c++)
+      {
+        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-//         uint64_t val = (tmp0 * factor) % MEDS_p;
+        uint64_t val = (tmp0 * factor) % MEDS_p;
 
-//         val = (MEDS_p + tmp1 - val) % MEDS_p;
+        val = (MEDS_p + tmp1 - val) % MEDS_p;
 
-//         pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
-//       }
-//     }
-//   }
+        pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
+      }
+    }
+  }
 
-//   if (!backsub)
-//   {
-//     PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
-//     return ret;
-//   }
+  if (!backsub)
+  {
+    PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
+    return ret;
+  }
 
-//   // back substitution
-//   for (int r = max_r - 1; r >= 0; r--)
-//     for (int r2 = 0; r2 < r; r2++)
-//     {
-//       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+  // back substitution
+  for (int r = max_r - 1; r >= 0; r--)
+    for (int r2 = 0; r2 < r; r2++)
+    {
+      uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-//       uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
-//       uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
+      uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
+      uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-//       uint64_t val = (tmp0 * factor) % MEDS_p;
+      uint64_t val = (tmp0 * factor) % MEDS_p;
 
-//       val = (MEDS_p + tmp1 - val) % MEDS_p;
+      val = (MEDS_p + tmp1 - val) % MEDS_p;
 
-//       pmod_mat_set_entry(M, M_r, M_c,  r2, r, val);
+      pmod_mat_set_entry(M, M_r, M_c,  r2, r, val);
 
-//       for (int c = max_r; c < M_c; c++)
-//       {
-//         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-//         uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+      for (int c = max_r; c < M_c; c++)
+      {
+        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-//         uint64_t val = (tmp0 * factor) % MEDS_p;
+        uint64_t val = (tmp0 * factor) % MEDS_p;
 
-//         val = (MEDS_p + tmp1 - val) % MEDS_p;
+        val = (MEDS_p + tmp1 - val) % MEDS_p;
 
-//         pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
-//       }
-//     }
+        pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
+      }
+    }
 
-//   PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
-//   return ret;
-// }
+  PROFILER_STOP("pmod_mat_syst_ct_partial_swap_backsub");
+  return ret;
+}
+*/
 
 GFq_t GF_inv(GFq_t val)
 {
@@ -288,7 +290,7 @@ GFq_t GF_inv(GFq_t val)
   }
 }
 
-int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
+int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c, int (*pmod_mat_syst_fun)(pmod_mat_t *))
 {
   PROFILER_START("pmod_mat_inv");
   pmod_mat_t M[A_r * A_c*2];
@@ -301,7 +303,7 @@ int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
       pmod_mat_set_entry(M, A_r, A_c*2, r, A_c + c, r==c ? 1 : 0);
   }
 
-  int ret = pmod_mat_syst_ct(M, A_r, A_c*2);
+  int ret = pmod_mat_syst_fun(M);
 
   if ((ret == 0) && B)
     for (int r = 0; r < A_r; r++)

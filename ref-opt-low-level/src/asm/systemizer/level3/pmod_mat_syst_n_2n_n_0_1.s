@@ -1,8 +1,8 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_m_m_m_0_1
-pmod_mat_syst_m_m_m_0_1:
-    mov x1, #34
+.global pmod_mat_syst_n_2n_n_0_1
+pmod_mat_syst_n_2n_n_0_1:
+    mov x1, #70
     mov x3, #4093
     dup v16.4h, w3
     dup v17.8h, w3
@@ -10,12 +10,12 @@ pmod_mat_syst_m_m_m_0_1:
     mov x2, xzr
     mov x4, #0
 elimination_loop:
-    cmp x4, #34
+    cmp x4, #35
     b.eq elimination_loop_end
     madd x7, x1, x4, x4
     add x5, x4, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x5, 34
+    cmp x5, 35
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -231,7 +231,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x5, x4, #1
 elimination_eliminate_rows_loop:
-    cmp x5, 34
+    cmp x5, 35
     b.eq elimination_eliminate_rows_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -295,7 +295,7 @@ elimination_eliminate_rows_loop_end:
     add x4, x4, #1
     b elimination_loop
 elimination_loop_end:
-    mov x4, #33
+    mov x4, #34
 backsub_outer_loop:
     cmp x4, #0
     b.lt backsub_outer_loop_end
@@ -326,7 +326,7 @@ backsub_inner_loop:
     csel x14, x3, xzr, ge
     sub x12, x15, x14
     strh w12, [x0, x9, lsl #1]
-    mov x6, #34
+    mov x6, #35
     madd x8, x1, x4, x6
     add x8, x0, x8, lsl #1
     madd x9, x1, x5, x6

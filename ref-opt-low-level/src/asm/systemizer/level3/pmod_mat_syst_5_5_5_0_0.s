@@ -1,56 +1,21 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_test
-pmod_mat_syst_test:
-    mov x1, #48
+.global pmod_mat_syst_5_5_5_0_0
+pmod_mat_syst_5_5_5_0_0:
+    mov x1, #5
     mov x3, #4093
     dup v16.4h, w3
     dup v17.8h, w3
     dup v18.4s, w3
-    mov x2, #24
+    mov x2, xzr
     mov x4, #0
 elimination_loop:
-    cmp x4, #24
+    cmp x4, #5
     b.eq elimination_loop_end
     madd x7, x1, x4, x4
-    add x5, x0, x7, lsl #1
-    mov x14, #0
-    mov x6, x4
-elimination_swap_or_loop:
-    cmp x6, #24
-    b.ge elimination_swap_or_loop_end
-    ldrh w13, [x5], #96
-    orr x14, x14, x13
-    add x6, x6, #1
-    b elimination_swap_or_loop
-elimination_swap_or_loop_end:
-    mov x15, #-1
-    cmp x14, #0
-    csel x15, xzr, x15, eq
-    mvn x15, x14
-    and x2, x2, x14
-    and x15, x4, x15
-    orr x2, x2, x15
-    add x8, x0, x4, lsl #1
-    add x9, x0, 94
-    mov x5, #0
-elimination_swap_loop:
-    cmp x5, 24
-    b.ge elimination_swap_loop_end
-    ldrh w11, [x8]
-    ldrh w12, [x9]
-    cmp x14, #0
-    csel x15, x11, x12, ne
-    csel w12, w12, w11, ne
-    mov x11, x15
-    strh w11, [x8], #96
-    strh w12, [x9], #96
-    add x5, x5, #1
-    b elimination_swap_loop
-elimination_swap_loop_end:
     add x5, x4, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x5, 24
+    cmp x5, 5
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -266,7 +231,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x5, x4, #1
 elimination_eliminate_rows_loop:
-    cmp x5, 24
+    cmp x5, 5
     b.eq elimination_eliminate_rows_loop_end
     madd x9, x1, x5, x4
     add x9, x0, x9, lsl #1
@@ -330,97 +295,6 @@ elimination_eliminate_rows_loop_end:
     add x4, x4, #1
     b elimination_loop
 elimination_loop_end:
-    mov x4, #23
-backsub_outer_loop:
-    cmp x4, #0
-    b.lt backsub_outer_loop_end
-    mov x5, #0
-backsub_inner_loop:
-    cmp x5, x4
-    b.eq backsub_inner_loop_end
-    madd x14, x1, x5, x4
-    ldrh w13, [x0, x14, lsl #1]
-    dup v7.4h, w13
-    madd x14, x1, x4, x4
-    ldrh w11, [x0, x14, lsl #1]
-    madd x9, x1, x5, x4
-    ldrh w12, [x0, x9, lsl #1]
-    mul x14, x11, x13
-    lsr x15, x14, #12
-    mul x15, x15, x3
-    sub x14, x14, x15
-    lsr x15, x14, #12
-    mul x15, x15, x3
-    sub x14, x14, x15
-    cmp x14, #4093
-    csel x15, x3, xzr, ge
-    sub x14, x14, x15
-    add x15, x12, #4093
-    sub x15, x15, x14
-    cmp x15, #4093
-    csel x14, x3, xzr, ge
-    sub x12, x15, x14
-    strh w12, [x0, x9, lsl #1]
-    mov x6, #24
-    madd x8, x1, x4, x6
-    add x8, x0, x8, lsl #1
-    madd x9, x1, x5, x6
-    add x9, x0, x9, lsl #1
-backsub_column_loop_neon_16x4:
-    sub x14, x1, x6
-    cmp x14, #4
-    b.lt backsub_column_loop_scalar
-    ld1 {v3.4h}, [x8], #8
-    ld1 {v4.4h}, [x9]
-    umull v19.4s, v3.4h, v7.4h
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    sqxtn v19.4h, v19.4s
-    cmhs v20.4h, v19.4h, v16.4h
-    and v20.16b, v20.16b, v16.16b
-    sub v19.4h, v19.4h, v20.4h
-    add v20.4h, v4.4h, v16.4h
-    sub v20.4h, v20.4h, v19.4h
-    cmhs v19.4h, v20.4h, v16.4h
-    and v19.16b, v19.16b, v16.16b
-    sub v4.4h, v20.4h, v19.4h
-    st1 {v4.4h}, [x9], #8
-    add x6, x6, #4
-    b backsub_column_loop_neon_16x4
-backsub_column_loop_scalar:
-    cmp x6, x1
-    b.ge backsub_column_loop_end
-    ldrh w11, [x8], #2
-    ldrh w12, [x9]
-    mul x14, x11, x13
-    lsr x15, x14, #12
-    mul x15, x15, x3
-    sub x14, x14, x15
-    lsr x15, x14, #12
-    mul x15, x15, x3
-    sub x14, x14, x15
-    cmp x14, #4093
-    csel x15, x3, xzr, ge
-    sub x14, x14, x15
-    add x15, x12, #4093
-    sub x15, x15, x14
-    cmp x15, #4093
-    csel x14, x3, xzr, ge
-    sub x12, x15, x14
-    strh w12, [x9], #2
-    add x6, x6, #1
-    b backsub_column_loop_scalar
-backsub_column_loop_end:
-    add x5, x5, #1
-    b backsub_inner_loop
-backsub_inner_loop_end:
-    sub x4, x4, #1
-    b backsub_outer_loop
-backsub_outer_loop_end:
 ret_success:
     mov x0, x2
     ret

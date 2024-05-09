@@ -85,7 +85,7 @@ int crypto_sign_keypair(
 
       pmod_mat_t Ti[MEDS_k * MEDS_k];
 
-      rnd_inv_matrix(Ti, MEDS_k, MEDS_k, sigma_Ti, MEDS_sec_seed_bytes);
+      rnd_inv_matrix(Ti, MEDS_k, MEDS_k, sigma_Ti, MEDS_sec_seed_bytes, pmod_mat_syst_k_k_k_0_0);
 
       LOG_MAT(Ti, MEDS_k, MEDS_k);
 
@@ -105,13 +105,13 @@ int crypto_sign_keypair(
         continue;
       }
 
-      if (pmod_mat_inv(B, B_inv[i], MEDS_n, MEDS_n) < 0)
+      if (pmod_mat_inv(B, B_inv[i], MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
       {
         LOG("no inv B");
         continue;
       }
 
-      if (pmod_mat_inv(A_inv[i], A, MEDS_m, MEDS_m) < 0)
+      if (pmod_mat_inv(A_inv[i], A, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
       {
         LOG("no inv A_inv");
         continue;
@@ -390,13 +390,13 @@ int crypto_sign(
         continue;
       }
 
-      if (pmod_mat_inv(B_tilde[i], B_tilde_inv, MEDS_n, MEDS_n) < 0)
+      if (pmod_mat_inv(B_tilde[i], B_tilde_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
       {
         LOG("no B_tilde");
         continue;
       }
 
-      if (pmod_mat_inv(A_tilde_inv, A_tilde[i], MEDS_m, MEDS_m) < 0)
+      if (pmod_mat_inv(A_tilde_inv, A_tilde[i], MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
       {
         LOG("no A_tilde_inv");
         continue;
@@ -619,13 +619,13 @@ int crypto_sign_open(
         return -1;
       }
 
-      if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n) < 0)
+      if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
       {
         LOG("no B_hat");
         return -1;
       }
 
-      if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m) < 0)
+      if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
       {
         LOG("no A_hat_inv");
         return -1;
@@ -707,13 +707,13 @@ int crypto_sign_open(
           continue;
         }
 
-        if (pmod_mat_inv(B_hat_i, B_hat_inv, MEDS_n, MEDS_n) < 0)
+        if (pmod_mat_inv(B_hat_i, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
         {
           LOG("no B_hat");
           continue;
         }
 
-        if (pmod_mat_inv(A_hat_inv, A_hat_i, MEDS_m, MEDS_m) < 0)
+        if (pmod_mat_inv(A_hat_inv, A_hat_i, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
         {
           LOG("no A_hat_inv");
           continue;

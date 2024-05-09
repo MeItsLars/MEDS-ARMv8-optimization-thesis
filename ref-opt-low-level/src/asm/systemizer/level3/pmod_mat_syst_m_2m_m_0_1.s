@@ -1,8 +1,8 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_k_k_k_0_1
-pmod_mat_syst_k_k_k_0_1:
-    mov x1, #34
+.global pmod_mat_syst_m_2m_m_0_1
+pmod_mat_syst_m_2m_m_0_1:
+    mov x1, #68
     mov x3, #4093
     dup v16.4h, w3
     dup v17.8h, w3

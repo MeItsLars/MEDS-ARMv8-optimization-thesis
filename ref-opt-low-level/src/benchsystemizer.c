@@ -24,7 +24,16 @@ profileresult profileresults[1000];
 int number_of_profileresults = 0;
 int profiler_enabled = 0;
 
-#define ROUNDS 1000
+#define ROUNDS 100
+
+// extern int pmod_mat_syst_test(pmod_mat_t *M);
+extern int pmod_mat_syst_5_5_5_0_0(pmod_mat_t *M);
+extern int pmod_mat_syst_k_k_k_0_0(pmod_mat_t *M);
+extern int pmod_mat_syst_n_2n_n_0_1(pmod_mat_t *M);
+extern int pmod_mat_syst_m_2m_m_0_1(pmod_mat_t *M);
+extern int pmod_mat_syst_k_2k_k_0_1(pmod_mat_t *M);
+extern int pmod_mat_syst_n_2m_nr1_0_1(pmod_mat_t *M);
+extern int pmod_mat_syst_mr1_m_mr1_1_1(pmod_mat_t *M);
 
 int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
@@ -157,7 +166,7 @@ uint16x4_t reduce(uint32x4_t red, uint16x4_t MEDS_p_16x4, uint32x4_t MEDS_p_32x4
   return vqmovn_u32(red);
 }
 
-int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c)
+int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
   int ret = 0;
 
@@ -166,8 +175,13 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
   uint32x4_t MEDS_p_32x4 = vdupq_n_u32(MEDS_p);
   uint32x4_t one_32x4 = vdupq_n_u32(1);
 
-  for (int r = 0; r < M_r; r++)
+  for (int r = 0; r < max_r; r++)
   {
+    if (swap)
+    {
+      // TODO
+    }
+
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
       uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
@@ -230,7 +244,8 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
       GFq_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
       uint16x4_t factor_16x4 = vdup_n_u16(factor);
 
-      for (int c = r; c < M_c; c += 4)
+      int c;
+      for (c = r; c < M_c - 4; c += 4)
       {
         // First, compute val (red)
         uint16x4_t tmp0 = vld1_u16(&M[(M_c)*r + c]);
@@ -250,11 +265,27 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
         // Store result
         vst1_u16(&M[(M_c)*r2 + c], val_16x4);
       }
+      for (c = c; c < M_c; c++)
+      {
+        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        uint64_t val = (tmp0 * factor) % MEDS_p;
+
+        val = (MEDS_p + tmp1 - val) % MEDS_p;
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+      }
     }
   }
 
+  if (!backsub)
+  {
+    return ret;
+  }
+
   // back substitution;
-  for (int r = M_r - 1; r >= 0; r--)
+  for (int r = max_r - 1; r >= 0; r--)
     for (int r2 = 0; r2 < r; r2++)
     {
       // Compute the factor
@@ -262,7 +293,6 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
       uint16x4_t factor_16x4 = vdup_n_u16(factor);
 
       // Set the value in the current column
-      // >> This section seems to be unnecessary? Removing it still produces the same results
       uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
       uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
 
@@ -271,11 +301,11 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
       val = (MEDS_p + tmp1 - val) % MEDS_p;
 
       pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
-      // <<
 
       // Calculate and set the new values in columns right of the diagonal block.
       // The values in the diagonal block are already 0 so we don't need to do anything with them.
-      for (int c = M_r; c < M_c; c += 4)
+      int c;
+      for (c = max_r; c < M_c - 4; c += 4)
       {
         // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
@@ -304,95 +334,281 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
         // Store result
         vst1_u16(&M[(M_c)*r2 + c], val_16x4);
       }
+      for (c = c; c < M_c; c++)
+      {
+        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        uint64_t val = (tmp0 * factor) % MEDS_p;
+
+        val = (MEDS_p + tmp1 - val) % MEDS_p;
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+      }
     }
   return ret;
 }
 
-extern int pmod_mat_syst_test(pmod_mat_t *M);
-
-float min_cycle_bound(int rows, int cols, int max_r)
+int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
 {
-  float loads = 0;
-  float stores = 0;
-  float arithmetic = 0;
-
   int reduce_cost = 9;
   int freeze_cost = 3;
   int inv_cost = 400;
 
+  int arithmetic = 0, loads = 0, stores = 0;
+
+  // int ret = M_r * swap;
+  arithmetic++;
+
   for (int r = 0; r < max_r; r++)
   {
-    /*
     if (swap)
     {
       GFq_t z = 0;
 
       // compute condition for swap
       for (int r2 = r; r2 < M_r; r2++)
-        z |= pmod_mat_entry(M, M_r, M_c, r2, r);
+      {
+        // z |= pmod_mat_entry(M, M_r, M_c, r2, r);
+        loads++;
+        arithmetic++;
+      }
 
-      int do_swap = GFq_eq0(z);
+      // int do_swap = GFq_eq0(z);
+      arithmetic++;
 
       // conditional swap
       {
-        ret = r * do_swap + ret * (1 - do_swap);
-        for (int i = 0; i < M_r; i++)
-          GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
-                    &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
-                    do_swap);
-      }
-    }*/
+        // ret = r * do_swap + ret * (1 - do_swap);
+        arithmetic += 2;
 
-    for (int r2 = r + 1; r2 < rows; r2++)
+        for (int i = 0; i < M_r; i++)
+        {
+          // GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
+          //           &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
+          //           do_swap);
+          loads += 2;
+          arithmetic += 2;
+          stores += 2;
+        }
+      }
+    }
+
+    for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      // uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
       loads++;
 
-      for (int c = r; c < cols; c++)
+      for (int c = r; c < M_c; c++)
       {
-        loads += 2;
-        arithmetic++;              // + and * (can be done in 1 instruction)
-        arithmetic++;              // eq0
-        arithmetic += reduce_cost; // % MEDS_p
+        // uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
+        loads++;
+
+        // uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+        loads++;
+
+        // pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * GFq_eq0(Mrr)) % MEDS_p);
+        arithmetic += 2;
+        arithmetic += reduce_cost;
         stores++;
       }
     }
 
+    // uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
     loads++;
 
     // val = GF_inv(val);
     arithmetic += inv_cost;
 
     // normalize
-    for (int c = r; c < cols; c++)
+    for (int c = r; c < M_c; c++)
     {
+      // uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
+      // pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
       loads++;
-      arithmetic++;              // *
-      arithmetic += reduce_cost; // % MEDS_p
+      arithmetic += 1;
+      arithmetic += reduce_cost;
       stores++;
     }
 
     // eliminate
-    for (int r2 = r + 1; r2 < rows; r2++)
+    for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      // uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
       loads++;
 
-      for (int c = r; c < cols; c++)
+      for (int c = r; c < M_c; c++)
       {
+        // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
         loads += 2;
-        arithmetic++;              // *
-        arithmetic += reduce_cost; // % MEDS_p
-        arithmetic += 2;           // + -
-        arithmetic += freeze_cost; // freeze MEDS_p
+
+        // uint64_t val = (tmp0 * factor) % MEDS_p;
+        arithmetic += 1;
+        arithmetic += reduce_cost;
+
+        // val = (MEDS_p + tmp1 - val) % MEDS_p;
+        arithmetic += 2;
+        arithmetic += freeze_cost;
+
+        // pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
         stores++;
       }
     }
   }
 
+  if (backsub)
+  {
+    // back substitution
+    for (int r = max_r - 1; r >= 0; r--)
+      for (int r2 = 0; r2 < r; r2++)
+      {
+        // uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+        loads++;
+
+        // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
+        // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
+        loads += 2;
+
+        // uint64_t val = (tmp0 * factor) % MEDS_p;
+        arithmetic += 1;
+        arithmetic += reduce_cost;
+
+        // val = (MEDS_p + tmp1 - val) % MEDS_p;
+        arithmetic += 2;
+        arithmetic += freeze_cost;
+
+        // pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
+        stores++;
+
+        for (int c = max_r; c < M_c; c++)
+        {
+          // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+          // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+          loads += 2;
+
+          // uint64_t val = (tmp0 * factor) % MEDS_p;
+          arithmetic += 1;
+          arithmetic += reduce_cost;
+
+          // val = (MEDS_p + tmp1 - val) % MEDS_p;
+          arithmetic += 2;
+          arithmetic += freeze_cost;
+
+          // pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+          stores++;
+        }
+      }
+  }
   return loads + stores + arithmetic;
 }
 
-#define A_ROWS 24
-#define A_COLS 24 * 2
+void test_performance(char name[], int r, int c, int max_r, int swap, int backsub, int (*function)(pmod_mat_t *))
+{
+  uint8_t seed[MEDS_pub_seed_bytes];
+
+  for (int i = 0; i < MEDS_pub_seed_bytes; i++)
+  {
+    seed[i] = i;
+  }
+  keccak_state shake;
+  shake256_absorb_once(&shake, seed, MEDS_pub_seed_bytes);
+
+  __attribute__((aligned(16))) pmod_mat_t A1[r * c];
+  __attribute__((aligned(16))) pmod_mat_t A2[r * c];
+  __attribute__((aligned(16))) pmod_mat_t A3[r * c];
+
+  for (int i = 0; i < r * c; i++)
+  {
+    GFq_t rand_el = rnd_GF(&shake);
+    A1[i] = rand_el;
+    A2[i] = rand_el;
+    A3[i] = rand_el;
+  }
+
+  long long systemizer_cycles[ROUNDS + 1];
+  long long intrinsic_systemizer_cycles[ROUNDS + 1];
+  long long asm_systemizer_cycles[ROUNDS + 1];
+
+  int systemizer_res;
+  int intrinsic_res;
+  int asm_res;
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    systemizer_cycles[round] = get_cyclecounter();
+    systemizer_res = test_pmod_mat_syst_ct_partial_swap_backsub(A1, r, c, max_r, swap, backsub);
+  }
+  systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    intrinsic_systemizer_cycles[round] = get_cyclecounter();
+    intrinsic_res = test_pmod_mat_syst_ct_partial_swap_backsub_2(A2, r, c, max_r, swap, backsub);
+  }
+  intrinsic_systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    asm_systemizer_cycles[round] = get_cyclecounter();
+    asm_res = function(A3);
+  }
+  asm_systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  // Calculate results
+  double systemizer_median_cc = median_2(systemizer_cycles, ROUNDS + 1, 0);
+  double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS + 1, 0);
+  double asm_systemizer_median_cc = median_2(asm_systemizer_cycles, ROUNDS + 1, 0);
+
+  double min_cycles = (double)min_cycle_bound(r, c, max_r, swap, backsub);
+  double systemizer_cycle_multiplier = systemizer_median_cc / (min_cycles / 4);
+  double intrinsic_cycle_multiplier = intrinsic_systemizer_median_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_systemizer_median_cc / (min_cycles / 4);
+
+  double intrinsic_improvement = (intrinsic_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+  double asm_improvement = (asm_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+
+  int intrinsic_inequalities = intrinsic_res == systemizer_res ? 0 : 1;
+  int asm_inequalities = asm_res == systemizer_res ? 0 : 1;
+  for (int i = 0; i < r * c; i++)
+  {
+    if (A1[i] != A2[i])
+    {
+      intrinsic_inequalities++;
+    }
+    if (A1[i] != A3[i])
+    {
+      asm_inequalities++;
+    }
+  }
+
+  // Print results
+  printf("-----------------------------------\n");
+  printf("=== %s ===\n", name);
+  printf("-----------------------------------\n");
+  if (asm_inequalities == 0)
+    printf("> ASM EQUAL\n");
+  else
+    printf("> ASM INEQUALITIES: %d/%d\n", asm_inequalities, r * c + 1);
+  if (intrinsic_inequalities == 0)
+    printf("> INTRINSIC EQUAL\n");
+  else
+    printf("> INTRINSIC INEQUALITIES: %d/%d\n", intrinsic_inequalities, r * c + 1);
+
+  printf("Minimum cycle amount: %d\n", min_cycles);
+  printf("Minimum cycle amount (4-way) parallel: %d\n", min_cycles / 4);
+  printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
+  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
+  printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
+
+  printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
+  printf("Improvement (ASM): %f%%\n", asm_improvement);
+  printf("\n");
+}
+
+/*
+#define A_ROWS 5
+#define A_COLS 5
 
 int main(int argc, char *argv[])
 {
@@ -422,8 +638,8 @@ int main(int argc, char *argv[])
     {
       GFq_t rand_el = rnd_GF(&shake);
       // Fill the second column with zeroes to test swap
-      if (c == 1)
-        rand_el = 0;
+      // if (c == 1)
+      //   rand_el = 0;
       pmod_mat_set_entry(A1, A_ROWS, A_COLS, r, c, rand_el);
       pmod_mat_set_entry(A2, A_ROWS, A_COLS, r, c, rand_el);
       pmod_mat_set_entry(A3, A_ROWS, A_COLS, r, c, rand_el);
@@ -440,7 +656,7 @@ int main(int argc, char *argv[])
   for (int round = 0; round < ROUNDS - 1; round++)
   {
     old_systemizer_cycles[round] = get_cyclecounter();
-    res1 = test_pmod_mat_syst_ct_partial_swap_backsub(A1, A_ROWS, A_COLS, A_ROWS, 1, 1);
+    res1 = test_pmod_mat_syst_ct_partial_swap_backsub(A1, A_ROWS, A_COLS, A_ROWS, 0, 0);
   }
   old_systemizer_cycles[ROUNDS - 1] = get_cyclecounter();
 
@@ -454,7 +670,7 @@ int main(int argc, char *argv[])
   for (int round = 0; round < ROUNDS - 1; round++)
   {
     new_systemizer_cycles[round] = get_cyclecounter();
-    res2 = pmod_mat_syst_test(A2);
+    res2 = pmod_mat_syst_5_5_5_0_0(A2);
   }
   new_systemizer_cycles[ROUNDS - 1] = get_cyclecounter();
 
@@ -503,4 +719,16 @@ int main(int argc, char *argv[])
   }
 
   return 0;
+}*/
+
+int main(int argc, char *argv[])
+{
+  enable_cyclecounter();
+  test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0);
+  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
+  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
+  test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
+  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
+  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
+  disable_cyclecounter();
 }

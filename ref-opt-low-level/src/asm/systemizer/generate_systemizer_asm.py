@@ -188,15 +188,9 @@ def add_swap(context, asm):
     add(asm, 1, f"add {R_loop3}, {R_loop3}, #1")
     add(asm, 1, "b elimination_swap_or_loop")
     add(asm, 0, "elimination_swap_or_loop_end:")
-    # If z == 0, store #0xffffffff into R_T1. Otherwise, store #0
-    add(asm, 1, f"mov {R_T2}, #-1")
+    # If z == 0, ret = r. If z != 0, ret = ret
     add(asm, 1, f"cmp {R_T1}, #0")
-    add(asm, 1, f"csel {R_T2}, xzr, {R_T2}, eq")
-    add(asm, 1, f"mvn {R_T2}, {R_T1}")
-    # ret = (r AND R_T1) OR (ret AND (not R_T1))
-    add(asm, 1, f"and {R_ret}, {R_ret}, {R_T1}")
-    add(asm, 1, f"and {R_T2}, {R_loop1}, {R_T2}")
-    add(asm, 1, f"orr {R_ret}, {R_ret}, {R_T2}")
+    add(asm, 1, f"csel {R_ret}, {R_ret}, {R_loop1}, ne")
     # If T1 == TRUE, swap the current ('r') and last columns
     add(asm, 1, f"add {R_Mir_l}, {R_M}, {R_loop1}, lsl #1")
     if context.Mc * 2 < 256:
@@ -628,9 +622,11 @@ if __name__ == "__main__":
     
     name, m, n, k, MEDS_p, GFq_bits = parse_params_h(sys.argv[1])
     # Generate the 6 different systemizations required for MEDS
-    generate_systemizer_file(name, Context(n, n, n, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_n_n_n_0_1')
-    generate_systemizer_file(name, Context(m, m, m, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_m_m_m_0_1')
-    generate_systemizer_file(name, Context(k, k, k, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_k_k_k_0_1')
+    generate_systemizer_file(name, Context(5, 5, 5, False, False, MEDS_p, GFq_bits), 'pmod_mat_syst_5_5_5_0_0')
+    generate_systemizer_file(name, Context(k, k, k, False, False, MEDS_p, GFq_bits), 'pmod_mat_syst_k_k_k_0_0')
+    generate_systemizer_file(name, Context(n, 2*n, n, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_n_2n_n_0_1')
+    generate_systemizer_file(name, Context(m, 2*m, m, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_m_2m_m_0_1')
+    generate_systemizer_file(name, Context(k, 2*k, k, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_k_2k_k_0_1')
     generate_systemizer_file(name, Context(n, 2*m, n-1, False, True, MEDS_p, GFq_bits), 'pmod_mat_syst_n_2m_nr1_0_1')
     generate_systemizer_file(name, Context(m-1, m, m-1, True, True, MEDS_p, GFq_bits), 'pmod_mat_syst_mr1_m_mr1_1_1')
-    generate_systemizer_file(name, Context(2*m*n, m*m+n*n, 2*m*n, True, True, MEDS_p, GFq_bits), 'pmod_mat_syst_2mn_mmann_2mn_1_1')
+    # generate_systemizer_file(name, Context(2*m*n, m*m+n*n, 2*m*n, True, True, MEDS_p, GFq_bits), 'pmod_mat_syst_2mn_mmann_2mn_1_1')

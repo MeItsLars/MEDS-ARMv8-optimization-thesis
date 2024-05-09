@@ -25,13 +25,8 @@ elimination_swap_or_loop:
     add x6, x6, #1
     b elimination_swap_or_loop
 elimination_swap_or_loop_end:
-    mov x15, #-1
     cmp x14, #0
-    csel x15, xzr, x15, eq
-    mvn x15, x14
-    and x2, x2, x14
-    and x15, x4, x15
-    orr x2, x2, x15
+    csel x2, x2, x4, ne
     add x8, x0, x4, lsl #1
     add x9, x0, 66
     mov x5, #0
