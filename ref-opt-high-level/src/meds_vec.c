@@ -404,7 +404,7 @@ int crypto_sign_vec(
     valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec))));
 
     // Store G_tilde_ti_vec into G_tilde_ti[index]
-    // store_vec(G_tilde_ti + index, MEDS_k, MEDS_m * MEDS_n, r, c, G_tilde_ti_vec[r * MEDS_m * MEDS_n + c]);
+    // TODO: CONVERT SO THAT NO SPECIFIC ARM TYPES ARE USED
     PROFILER_START("bs_fill");
     int buf_idx = 0;
     for (int r = 0; r < MEDS_k; r++)

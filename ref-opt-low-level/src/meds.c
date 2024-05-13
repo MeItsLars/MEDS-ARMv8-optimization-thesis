@@ -23,7 +23,7 @@
 
 #include "matrixmod.h"
 
-#define CEILING(x, y) (((x) + (y)-1) / (y))
+#define CEILING(x, y) (((x) + (y) - 1) / (y))
 
 int crypto_sign_keypair(
     unsigned char *pk,
@@ -317,6 +317,7 @@ int crypto_sign(
   pmod_mat_t A_tilde_data[MEDS_t * MEDS_m * MEDS_m];
   pmod_mat_t B_tilde_data[MEDS_t * MEDS_n * MEDS_n];
   pmod_mat_t M_tilde_data[MEDS_t * 2 * MEDS_k];
+  static pmod_mat_t G_tilde_ti[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
 
   pmod_mat_t *A_tilde[MEDS_t];
   pmod_mat_t *B_tilde[MEDS_t];
@@ -337,10 +338,9 @@ int crypto_sign(
 
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
+  PROFILER_START("SEC_COMMIT");
   for (int i = 0; i < MEDS_t; i++)
   {
-    pmod_mat_t G_tilde_ti[MEDS_k * MEDS_m * MEDS_n];
-
     while (1 == 1)
     {
       uint8_t sigma_M_tilde_i[MEDS_pub_seed_bytes];
@@ -405,33 +405,49 @@ int crypto_sign(
       LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
       LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
 
-      pi(G_tilde_ti, A_tilde[i], B_tilde[i], G_0);
+      pi(G_tilde_ti[i], A_tilde[i], B_tilde[i], G_0);
 
-      LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
+      LOG_MAT_FMT(G_tilde_ti[i], MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
 
-      if (SF(G_tilde_ti, G_tilde_ti) == 0)
+      if (SF(G_tilde_ti[i], G_tilde_ti[i]) == 0)
         break;
     }
-
-    LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
-
-    PROFILER_START("bs_fill");
-    bitstream_t bs;
-    uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
-
-    bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-
-    for (int r = 0; r < MEDS_k; r++)
-      for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, G_tilde_ti[r * MEDS_m * MEDS_n + j], GFq_bits);
-
-    bs_finalize(&bs);
-    PROFILER_STOP("bs_fill");
-
-    LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-
-    shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
   }
+  PROFILER_STOP("SEC_COMMIT");
+
+  // Hash all commitments
+  PROFILER_START("SEC_HASH_COMMIT");
+  // Step 1: bitstream write
+  PROFILER_START("bs_fill");
+  static uint8_t bs_buf_data[MEDS_t][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+  static uint8_t *bs_buf[MEDS_t];
+  for (int i = 0; i < MEDS_t; i++)
+    bs_buf[i] = bs_buf_data[i];
+
+  int buf_idx = 0;
+  for (int r = 0; r < MEDS_k; r++)
+  {
+    int raw_idx = r * MEDS_m * MEDS_n;
+    for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    {
+      for (int t = 0; t < MEDS_t; t++)
+      {
+        uint16_t i0 = G_tilde_ti[t][raw_idx + c];
+        uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
+
+        bs_buf[t][buf_idx] = (i0 & 0xff);
+        bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
+        bs_buf[t][buf_idx + 2] = (i1 >> 4);
+      }
+      buf_idx += 3;
+    }
+  }
+  PROFILER_STOP("bs_fill");
+
+  // Step 2: hash
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+  PROFILER_STOP("SEC_HASH_COMMIT");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 

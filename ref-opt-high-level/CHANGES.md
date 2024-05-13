@@ -8,4 +8,4 @@ List of things that were changed as a high-level optimization compared to the or
     * pi_vec (applying the pi function)
     * SF_vec (applying the SF function)
 - Created a 4-way parallel implementation for the challenges in signing and verification
-- Created a specific and faster implementation for copying commitment data into the buffer that will be hashed (bs_fill)
+- Created a specific and faster implementation for copying commitment data into the buffer that will be hashed (bs_fill) which is now executed from the challenge loop (instead of after the challenge loop) (only works for GFq_size=12)
