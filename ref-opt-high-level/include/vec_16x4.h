@@ -88,7 +88,6 @@
     vsub_u16(_v2, _t2);              \
   })
 
-
 #define FREEZE_REDUCE_VEC(_v3)        \
   ({                                  \
     uint16x4_t _t3 = REDUCE_VEC(_v3); \

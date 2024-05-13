@@ -21,7 +21,7 @@
 
 #define solve solve_opt
 
-#define CEILING(x, y) (((x) + (y)-1) / (y))
+#define CEILING(x, y) (((x) + (y) - 1) / (y))
 
 int crypto_sign_keypair_vec(
     unsigned char *pk,
@@ -391,7 +391,7 @@ int crypto_sign_vec(
 
     // Compute C
     pmod_mat_mul_vec(C, 2, MEDS_m * MEDS_n, M_tilde_vec, 2, MEDS_k, G_0_vec, MEDS_k, MEDS_m * MEDS_n);
-    
+
     // Solve for A_tilde and B_tilde
     valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C), ZERO_S_VEC)));
     valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
@@ -402,11 +402,11 @@ int crypto_sign_vec(
 
     // Convert to systematic form
     valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec))));
-    
-    // TODO: Store G_tilde_ti_vec into G_tilde_ti[index]
+
+    // Store G_tilde_ti_vec into G_tilde_ti[index]
     for (int r = 0; r < MEDS_k; r++)
       for (int c = 0; c < MEDS_m * MEDS_n; c++)
-          store_vec(G_tilde_ti + index, MEDS_k, MEDS_m * MEDS_n, r, c, G_tilde_ti_vec[r * MEDS_m * MEDS_n + c]);
+        store_vec(G_tilde_ti + index, MEDS_k, MEDS_m * MEDS_n, r, c, G_tilde_ti_vec[r * MEDS_m * MEDS_n + c]);
 
     int current_batch_invalids = 0;
     for (int t = 0; t < BATCH_SIZE; t++)
@@ -437,21 +437,36 @@ int crypto_sign_vec(
 
   // Hash all commitments
   PROFILER_START("SEC_HASH_COMMIT");
+  // Step 1: bitstream write
+  PROFILER_START("bs_fill");
+  static uint8_t bs_buf_data[MEDS_t][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+  static uint8_t *bs_buf[MEDS_t];
   for (int i = 0; i < MEDS_t; i++)
+    bs_buf[i] = bs_buf_data[i];
+
+  int buf_idx = 0;
+  for (int r = 0; r < MEDS_k; r++)
   {
-    bitstream_t bs;
-    uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+    int raw_idx = r * MEDS_m * MEDS_n;
+    for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    {
+      for (int t = 0; t < MEDS_t; t++)
+      {
+        uint16_t i0 = G_tilde_ti[t][raw_idx + c];
+        uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
 
-    bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-
-    for (int r = 0; r < MEDS_k; r++)
-      for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, G_tilde_ti[i][r * MEDS_m * MEDS_n + j], GFq_bits);
-
-    bs_finalize(&bs);
-
-    shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+        bs_buf[t][buf_idx] = (i0 & 0xff);
+        bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
+        bs_buf[t][buf_idx + 2] = (i1 >> 4);
+      }
+      buf_idx += 3;
+    }
   }
+  PROFILER_STOP("bs_fill");
+
+  // Step 2: hash
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
   PROFILER_STOP("SEC_HASH_COMMIT");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);

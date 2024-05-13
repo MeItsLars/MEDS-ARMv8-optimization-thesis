@@ -16,6 +16,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
   pmod_mat_s_vec_t minus_one = SET_S_VEC(-1);
 
   PROFILER_START("solve_vec");
+  PROFILER_START("solve_vec_raw");
 
   // set up core sub-system
   pmod_mat_vec_t N[MEDS_n * (2 * MEDS_m)] = {0};
@@ -30,9 +31,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
                          pmod_mat_entry(G0prime, MEDS_m, MEDS_n, i, j));
     }
 
+  PROFILER_STOP("solve_vec_raw");
   // Systemize core sub-system while pivoting all but the last row.
   pmod_mat_s_vec_t piv = pmod_mat_syst_ct_partial_vec(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1);
 
+  PROFILER_START("solve_vec_raw");
   // Conditional move -1 to ret if piv is not zero
   pmod_mat_s_vec_cmov(&ret, &minus_one, NOT_S_VEC(TO_S_VEC(EQ0_S_VEC(piv))));
 
@@ -70,7 +73,9 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
 
   GFq_vec_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
 
+  PROFILER_STOP("solve_vec_raw");
   pmod_mat_s_vec_t N1_r = pmod_mat_rref_vec(N1, MEDS_m - 1, MEDS_m);
+  PROFILER_START("solve_vec_raw");
 
   // Conditionally move -1 to ret if N1_r is -1
   pmod_mat_s_vec_cmov(&ret, &minus_one, TO_S_VEC(EQ_S_VEC(N1_r, minus_one)));
@@ -230,6 +235,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
   for (int i = 0; i < MEDS_n * MEDS_n; i++)
     B_tilde_inv[i] = sol[i];
 
+  PROFILER_STOP("solve_vec_raw");
   PROFILER_STOP("solve_vec");
   return ret;
 }
@@ -261,5 +267,6 @@ pmod_mat_s_vec_t SF_vec(pmod_mat_vec_t *Gprime, pmod_mat_vec_t *G)
   // Conditionally move 0 to ret if res is 0
   pmod_mat_s_vec_cmov(&ret, &zero, TO_S_VEC(EQ0_S_VEC(res)));
 
+  PROFILER_STOP("SF");
   return ret;
 }

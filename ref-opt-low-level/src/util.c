@@ -75,8 +75,10 @@ void rnd_inv_matrix(pmod_mat_t *M, int M_r, int M_c, uint8_t *seed, size_t seed_
 
     memcpy(tmp, M, M_r * M_c * sizeof(GFq_t));
 
+    PROFILER_START("pmod_mat_syst");
     if (pmod_mat_syst_fun(tmp) == 0)
     {
+      PROFILER_STOP("pmod_mat_syst");
       PROFILER_STOP("rnd_inv_matrix");
       return;
     }
@@ -263,8 +265,11 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   // Systemize core sub-system while pivoting all but the last row.
   PROFILER_STOP("solve_opt_raw");
-  int piv;
-  if ((piv = pmod_mat_syst_n_2m_nr1_0_1(N)) != 0)
+
+  PROFILER_START("pmod_mat_syst");
+  int piv = pmod_mat_syst_n_2m_nr1_0_1(N);
+  PROFILER_STOP("pmod_mat_syst");
+  if (piv != 0)
   {
     LOG("no sol %i", __LINE__);
     PROFILER_STOP("solve_opt");
@@ -319,7 +324,9 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   PROFILER_STOP("solve_opt_raw");
   // Sytemize 2nd sub-system.
+  PROFILER_START("pmod_mat_syst");
   N1_r = pmod_mat_syst_mr1_m_mr1_1_1(N1);
+  PROFILER_STOP("pmod_mat_syst");
 
   if (N1_r == -1)
   {

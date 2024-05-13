@@ -173,7 +173,7 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
   uint16x8_t MEDS_p_16x8 = vdupq_n_u16(MEDS_p);
   uint16x4_t MEDS_p_16x4 = vdup_n_u16(MEDS_p);
   uint32x4_t MEDS_p_32x4 = vdupq_n_u32(MEDS_p);
-  uint32x4_t one_32x4 = vdupq_n_u32(1);
+  // uint32x4_t one_32x4 = vdupq_n_u32(1);
 
   for (int r = 0; r < max_r; r++)
   {
@@ -364,8 +364,6 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
   {
     if (swap)
     {
-      GFq_t z = 0;
-
       // compute condition for swap
       for (int r2 = r; r2 < M_r; r2++)
       {
@@ -595,8 +593,8 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
   else
     printf("> INTRINSIC INEQUALITIES: %d/%d\n", intrinsic_inequalities, r * c + 1);
 
-  printf("Minimum cycle amount: %d\n", min_cycles);
-  printf("Minimum cycle amount (4-way) parallel: %d\n", min_cycles / 4);
+  printf("Minimum cycle amount: %f\n", min_cycles);
+  printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
   printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
   printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
   printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
