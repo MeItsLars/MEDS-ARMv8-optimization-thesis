@@ -8,6 +8,12 @@
 #include "params.h"
 #include "api.h"
 #include "meds.h"
+#include "profiler.h"
+#include "poison.h"
+
+profileresult profileresults[1000];
+int number_of_profileresults = 0;
+int profiler_enabled = 0;
 
 double osfreq(void);
 
@@ -56,6 +62,8 @@ int main(int argc, char *argv[])
     uint8_t sk[CRYPTO_SECRETKEYBYTES] = {0};
     uint8_t pk[CRYPTO_PUBLICKEYBYTES] = {0};
 
+    // poison(sk, CRYPTO_SECRETKEYBYTES * sizeof(sk));
+
     time = -get_cyclecounter();
     crypto_sign_keypair(pk, sk);
     time += get_cyclecounter();
@@ -64,6 +72,8 @@ int main(int argc, char *argv[])
 
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
+
+    poison(sk, CRYPTO_SECRETKEYBYTES * sizeof(sk));
 
     time = -get_cyclecounter();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
@@ -74,6 +84,7 @@ int main(int argc, char *argv[])
     unsigned char msg_out[4];
     unsigned long long msg_out_len = sizeof(msg_out);
 
+    // poison(sk, CRYPTO_SECRETKEYBYTES * sizeof(sk));
 
     time = -get_cyclecounter();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
