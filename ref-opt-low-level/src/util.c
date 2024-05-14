@@ -300,6 +300,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(N, MEDS_n - 1, MEDS_m);
 
   // Fully reduce 2nd sub-system.
+  PROFILER_START("solve_opt_raw_1");
   for (int row = 1; row < MEDS_m - 1; row++)
     for (int i = 0; i < MEDS_m; i++)
       for (int j = 0; j < MEDS_m; j++)
@@ -315,6 +316,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
         pmod_mat_set_entry(N1, MEDS_m - 1, MEDS_m, row, j, diff);
       }
+  PROFILER_STOP("solve_opt_raw_1");
 
   LOG_MAT(N1, MEDS_m - 1, MEDS_m);
 
@@ -478,6 +480,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
   LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
 
+  PROFILER_START("solve_opt_raw_2");
   // Perfrom back-substution for all remaining blocks in bottom part.
   for (int b = MEDS_m - 3; b >= 0; b--)
     for (int c = MEDS_m - 1; c >= 0; c--)
@@ -494,10 +497,12 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
         sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
       }
+  PROFILER_STOP("solve_opt_raw_2");
 
   LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
 
   // Perfrom back-substution for all remaining blocks in top part.
+  PROFILER_START("solve_opt_raw_3");
   for (int b = MEDS_m - 2; b >= 0; b--)
     for (int c = MEDS_m - 1; c >= 0; c--)
       for (int r = 0; r < MEDS_n; r++)
@@ -513,6 +518,46 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
         sol[b * MEDS_n + r] = val;
       }
+  // for (int b = MEDS_m - 2; b >= 0; b--)
+  //   for (int c = MEDS_m - 1; c >= 0; c--)
+  //   {
+  //     int r;
+  //     for (r = 0; r < MEDS_n - 4; r += 4)
+  //     {
+  //       // uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+  //       uint16x4_t tmp1 = vld1_u16((uint16_t *)&pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c));
+  //       // uint64_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
+  //       uint16x4_t tmp2 = vld1_u16((uint16_t *)&sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c]);
+
+  //       // uint64_t prod = (tmp1 * tmp2) % MEDS_p;
+  //       uint32x4_t prod = vmull_u16(tmp1, tmp2);
+  //       uint16x4_t prod_red = FREEZE_REDUCE_VEC(prod);
+
+  //       // uint64_t val = sol[b * MEDS_n + r];
+  //       uint16x4_t val = vld1_u16((uint16_t *)&sol[b * MEDS_n + r]);
+
+  //       // val = ((MEDS_p + val) - prod) % MEDS_p;
+  //       val = vsub_u16(vadd_u16(val, MEDS_p_VEC), prod_red);
+  //       val = FREEZE_VEC(val);
+
+  //       // sol[b * MEDS_n + r] = val;
+  //       vst1_u16((uint16_t *)&sol[b * MEDS_n + r], val);
+  //     }
+  //     for (r = r; r < MEDS_n; r++)
+  //     {
+  //       uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+  //       uint64_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
+
+  //       uint64_t prod = (tmp1 * tmp2) % MEDS_p;
+
+  //       uint64_t val = sol[b * MEDS_n + r];
+
+  //       val = ((MEDS_p + val) - prod) % MEDS_p;
+
+  //       sol[b * MEDS_n + r] = val;
+  //     }
+  //   }
+  PROFILER_STOP("solve_opt_raw_3");
 
   LOG_VEC(sol, MEDS_m * MEDS_m + MEDS_n * MEDS_n);
 
@@ -533,8 +578,8 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(A_tilde, MEDS_m, MEDS_m);
   LOG_MAT(B_tilde_inv, MEDS_n, MEDS_n);
 
-  PROFILER_STOP("solve_opt");
   PROFILER_STOP("solve_opt_raw");
+  PROFILER_STOP("solve_opt");
   return 0;
 }
 
