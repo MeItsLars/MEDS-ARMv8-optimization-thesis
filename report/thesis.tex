@@ -453,11 +453,16 @@ A small percentage of the total number of cycles in each of the three operations
 \chapter{Future work}
 \label{ch:futurework}
 \todo[inline]{Discuss future work.}
-- Create a non-constant time implementation for gaussian elimination (can be used in verification).
-- Create a parallel implementation for gaussian elimination.
+- Use non-constant time implementations for various functions in the verification phase (both high and low level):
+  * Gaussian elimination 0 checks
+  * GF\_inv: use a lookup table
 - Optimize shake256? See \url{https://eprint.iacr.org/2022/1243} and \url{https://github.com/cothan/NEON-SHA3\_2x}
-- Check if it is possible to parallelize over the entire challenge \& response loop.
-- Perform high-level optimizations
+  * Requires a change to MEDS, but this is not a problem
+  * https://kannwischer.eu/papers/202\_armv8keccak.pdf
+  * Cite keccak extended code package as well (Armv7)
+  * https://gitlab.com/arm-research/security/pqax
+  * Better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en
+- Perform high-level optimizations for verification and keygen
 
 \chapter{Conclusion}
 \label{ch:conclusion}
