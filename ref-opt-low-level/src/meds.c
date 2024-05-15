@@ -417,7 +417,7 @@ int crypto_sign(
 
   // Hash all commitments
   PROFILER_START("SEC_HASH_COMMIT");
-  // Step 1: bitstream write
+  // Step 1: fast bitstream write
   PROFILER_START("bs_fill");
   static uint8_t bs_buf_data[MEDS_t][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
   static uint8_t *bs_buf[MEDS_t];
@@ -443,10 +443,52 @@ int crypto_sign(
     }
   }
   PROFILER_STOP("bs_fill");
-
+  PROFILER_START("hash");
   // Step 2: hash
+#ifdef MEDS_hash_opt
+  uint8_t digest_G_tilde_ti[MEDS_t][MEDS_digest_bytes];
+  // for (int i = 0; i < MEDS_t; i += 2)
+  // {
+  //   keccak_state_vec2 h_shake_G_tilde_ti;
+  //   shake256_init_vec2(&h_shake_G_tilde_ti);
+  //   shake256_absorb_vec2(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+  //   shake256_finalize_vec2(&h_shake_G_tilde_ti);
+  //   shake256_squeeze_vec2(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+  // }
+  int loop_vec5_len = 0;
+  if (MEDS_t % 5 == 0)
+    loop_vec5_len = MEDS_t;
+  else if ((MEDS_t - 4) % 5 == 0)
+    loop_vec5_len = MEDS_t - 4;
+  else
+    loop_vec5_len = MEDS_t - 8;
+
+  unsigned int i = 0;
+  for (i = i; i < loop_vec5_len; i += 5)
+  {
+    keccak_state_vec5 h_shake_G_tilde_ti;
+    shake256_init_vec5(&h_shake_G_tilde_ti);
+    shake256_absorb_vec5(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], bs_buf[i + 4], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec5(&h_shake_G_tilde_ti);
+    shake256_squeeze_vec5(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], digest_G_tilde_ti[i + 4], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+  }
+  for (i = i; i < MEDS_t; i += 4)
+  {
+    keccak_state_vec4 h_shake_G_tilde_ti;
+    shake256_init_vec4(&h_shake_G_tilde_ti);
+    shake256_absorb_vec4(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec4(&h_shake_G_tilde_ti);
+    shake256_squeeze_vec4(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+  }
+  for (int i = 0; i < MEDS_t; i++)
+  {
+    shake256_absorb(&h_shake, digest_G_tilde_ti[i], MEDS_digest_bytes);
+  }
+#else
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+#endif
+  PROFILER_STOP("hash");
   PROFILER_STOP("SEC_HASH_COMMIT");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
@@ -587,7 +629,7 @@ int crypto_sign_open(
 
   uint8_t *sigma = &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(MEDS_seed_tree_height, 0)];
 
-  pmod_mat_t G_hat_i[MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t G_hat_i[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
 
   pmod_mat_t kappa[2 * MEDS_k];
 
@@ -650,18 +692,18 @@ int crypto_sign_open(
       LOG_MAT_FMT(A_hat, MEDS_m, MEDS_m, "A_hat[%i]", i);
       LOG_MAT_FMT(B_hat, MEDS_n, MEDS_n, "B_hat[%i]", i);
 
-      pi(G_hat_i, A_hat, B_hat, G[h[i]]);
+      pi(G_hat_i[i], A_hat, B_hat, G[h[i]]);
 
-      LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+      LOG_MAT_FMT(G_hat_i[i], MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
 
-      if (SF(G_hat_i, G_hat_i) < 0)
+      if (SF(G_hat_i[i], G_hat_i[i]) < 0)
       {
         fprintf(stderr, "Signature verification failed!\n");
 
         return -1;
       }
 
-      LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+      LOG_MAT_FMT(G_hat_i[i], MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
     }
     else
     {
@@ -691,12 +733,12 @@ int crypto_sign_open(
 
         // rnd_inv_matrix(M_hat_i, 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
         {
-          keccak_state shake;
-          shake256_absorb_once(&shake, sigma_M_hat_i, MEDS_pub_seed_bytes);
+          keccak_state shake2;
+          shake256_absorb_once(&shake2, sigma_M_hat_i, MEDS_pub_seed_bytes);
 
           for (int r = 0; r < 2; r++)
             for (int c = 0; c < MEDS_k; c++)
-              pmod_mat_set_entry(M_hat_i, 2, MEDS_k, r, c, rnd_GF(&shake));
+              pmod_mat_set_entry(M_hat_i, 2, MEDS_k, r, c, rnd_GF(&shake2));
         }
 
         LOG_MAT_FMT(M_hat_i, 2, MEDS_k, "M_hat[%i]", i);
@@ -738,33 +780,73 @@ int crypto_sign_open(
         LOG_MAT_FMT(A_hat_i, MEDS_m, MEDS_m, "A_hat[%i]", i);
         LOG_MAT_FMT(B_hat_i, MEDS_n, MEDS_n, "B_hat[%i]", i);
 
-        pi(G_hat_i, A_hat_i, B_hat_i, G[0]);
+        pi(G_hat_i[i], A_hat_i, B_hat_i, G[0]);
 
-        LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+        LOG_MAT_FMT(G_hat_i[i], MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
 
-        if (SF(G_hat_i, G_hat_i) == 0)
+        if (SF(G_hat_i[i], G_hat_i[i]) == 0)
         {
-          LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+          LOG_MAT_FMT(G_hat_i[i], MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
           break;
         }
 
-        LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+        LOG_MAT_FMT(G_hat_i[i], MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
       }
     }
-
-    bitstream_t bs;
-    uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
-
-    bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-
-    for (int r = 0; r < MEDS_k; r++)
-      for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
-
-    bs_finalize(&bs);
-
-    shake256_absorb(&shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
   }
+
+  // Hash all commitments
+  PROFILER_START("SEC_HASH_COMMIT");
+  // Step 1: fast bitstream write
+  PROFILER_START("bs_fill");
+  static uint8_t bs_buf_data[MEDS_t][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+  static uint8_t *bs_buf[MEDS_t];
+  for (int i = 0; i < MEDS_t; i++)
+    bs_buf[i] = bs_buf_data[i];
+
+  int buf_idx = 0;
+  for (int r = 0; r < MEDS_k; r++)
+  {
+    int raw_idx = r * MEDS_m * MEDS_n;
+    for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    {
+      for (int t = 0; t < MEDS_t; t++)
+      {
+        uint16_t i0 = G_hat_i[t][raw_idx + c];
+        uint16_t i1 = G_hat_i[t][raw_idx + c + 1];
+
+        bs_buf[t][buf_idx] = (i0 & 0xff);
+        bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
+        bs_buf[t][buf_idx + 2] = (i1 >> 4);
+      }
+      buf_idx += 3;
+    }
+  }
+  PROFILER_STOP("bs_fill");
+  PROFILER_START("hash");
+  // Step 2: hash
+#ifdef MEDS_hash_opt
+  // TODO: implement optimized hash
+  for (int i = 0; i < MEDS_t; i++)
+  {
+    keccak_state h_shake_G_tilde_ti;
+    uint8_t digest_G_tilde_ti[MEDS_digest_bytes];
+
+    // Hash into intermediate hash
+    shake256_init(&h_shake_G_tilde_ti);
+    shake256_absorb(&h_shake_G_tilde_ti, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize(&h_shake_G_tilde_ti);
+    shake256_squeeze(digest_G_tilde_ti, MEDS_digest_bytes, &h_shake_G_tilde_ti);
+
+    // Hash intermediate hash into final hash
+    shake256_absorb(&shake, digest_G_tilde_ti, MEDS_digest_bytes);
+  }
+#else
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+#endif
+  PROFILER_STOP("hash");
+  PROFILER_STOP("SEC_HASH_COMMIT");
 
   shake256_absorb(&shake, (uint8_t *)(sm + MEDS_SIG_BYTES), smlen - MEDS_SIG_BYTES);
 

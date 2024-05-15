@@ -16,6 +16,25 @@ typedef struct {
   unsigned int pos;
 } keccak_state;
 
+typedef struct {
+  uint64_t s[50];
+  unsigned int pos;
+} keccak_state_vec2;
+
+typedef struct {
+  uint64_t s[100];
+  unsigned int pos;
+} keccak_state_vec4;
+
+typedef struct {
+  uint64_t s[125];
+  unsigned int pos;
+} keccak_state_vec5;
+
+extern void keccak_f1600_x3_hybrid_asm_v3p(uint64_t state[3*25]);
+extern void keccak_f1600_x4_hybrid_asm_v3p(uint64_t state[4*25]);
+extern void keccak_f1600_x5_hybrid_asm_v8(uint64_t state[5*25]);
+
 #define shake128_init FIPS202_NAMESPACE(shake128_init)
 void shake128_init(keccak_state *state);
 #define shake128_absorb FIPS202_NAMESPACE(shake128_absorb)
@@ -41,6 +60,21 @@ void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state);
 void shake256_absorb_once(keccak_state *state, const uint8_t *in, size_t inlen);
 #define shake256_squeezeblocks FIPS202_NAMESPACE(shake256_squeezeblocks)
 void shake256_squeezeblocks(uint8_t *out, size_t nblocks,  keccak_state *state);
+
+void shake256_init_vec2(keccak_state_vec2 *state);
+void shake256_absorb_vec2(keccak_state_vec2 *state, const uint8_t *in1, const uint8_t *in2, size_t inlen);
+void shake256_finalize_vec2(keccak_state_vec2 *state);
+void shake256_squeeze_vec2(uint8_t *out1, uint8_t *out2, size_t outlen, keccak_state_vec2 *state);
+
+void shake256_init_vec4(keccak_state_vec4 *state);
+void shake256_absorb_vec4(keccak_state_vec4 *state, const uint8_t *in1, const uint8_t *in2, const uint8_t *in3, const uint8_t *in4, size_t inlen);
+void shake256_finalize_vec4(keccak_state_vec4 *state);
+void shake256_squeeze_vec4(uint8_t *out1, uint8_t *out2, uint8_t *out3, uint8_t *out4, size_t outlen, keccak_state_vec4 *state);
+
+void shake256_init_vec5(keccak_state_vec5 *state);
+void shake256_absorb_vec5(keccak_state_vec5 *state, const uint8_t *in1, const uint8_t *in2, const uint8_t *in3, const uint8_t *in4, const uint8_t *in5, size_t inlen);
+void shake256_finalize_vec5(keccak_state_vec5 *state);
+void shake256_squeeze_vec5(uint8_t *out1, uint8_t *out2, uint8_t *out3, uint8_t *out4, uint8_t *out5, size_t outlen, keccak_state_vec5 *state);
 
 #define shake128 FIPS202_NAMESPACE(shake128)
 void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);

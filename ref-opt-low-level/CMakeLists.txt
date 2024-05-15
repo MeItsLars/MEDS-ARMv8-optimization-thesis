@@ -10,11 +10,11 @@ message("Building for parameter set: ${PARAM}")
 set(DEUG OFF CACHE BOOL "Build in debug mode")
 if (DEBUG)
     message("Building with debug flags")
-    set(CMAKE_C_FLAGS "-g -Wall -Wno-unused-function")
+    set(CMAKE_C_FLAGS "-march=native -g -Wall -Wno-unused-function")
     add_compile_definitions(DEBUG)
 else()
     message("Building with release flags")
-    set(CMAKE_C_FLAGS "-O3 -Wall -Wno-unused-function")
+    set(CMAKE_C_FLAGS "-march=native -O3 -Wall -Wno-unused-function")
 endif()
 
 set(PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -23,6 +23,7 @@ set(NIST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/NIST)
 
 # Manually set all source files
 set(COMMON_SOURCES
+    ${PROJECT_SOURCE_DIR}/keccak/keccakx2_C.c
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
     ${PROJECT_SOURCE_DIR}/fips202.c
@@ -71,6 +72,10 @@ set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PARAM_INCLUDE_DIR} ${NIST_INCLU
 ##########################################################
 enable_language(C ASM)
 
+message("Adding keccak assembly")
+set(ASM_KECCAK_DIR ${PROJECT_SOURCE_DIR}/keccak)
+file(GLOB_RECURSE ASM_KECCAK_SOURCES ${ASM_KECCAK_DIR}/*.s)
+
 message("Generating and adding matmul assembly")
 execute_process(
     COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/matmul/generate_matmul_asm.py ${PARAM_INCLUDE_DIR}/params.h"
@@ -97,8 +102,27 @@ endif()
 set(ASM_SYSTEMIZER_DIR ${PROJECT_SOURCE_DIR}/asm/systemizer/${PARAM})
 file(GLOB_RECURSE ASM_SYSTEMIZER_SOURCES ${ASM_SYSTEMIZER_DIR}/*.s)
 
+# Preprocess keccak assembly files
+message("Preprocessing keccak assembly files")
+set(PREPROCESSED_ASM_KECCAK_DIR ${CMAKE_BINARY_DIR}/preprocessed_asm_keccak)
+file(MAKE_DIRECTORY ${PREPROCESSED_ASM_KECCAK_DIR})
+foreach(ASM_FILE ${ASM_KECCAK_SOURCES})
+    get_filename_component(FILENAME ${ASM_FILE} NAME)
+    set(PREPROCESSED_ASM_FILE ${PREPROCESSED_ASM_KECCAK_DIR}/${FILENAME}.s)
+    message("Preprocessing ${ASM_FILE} into ${PREPROCESSED_ASM_FILE}")
+    execute_process(
+        COMMAND bash "-c" "cpp -P -I${PROJECT_INCLUDE_DIR} ${ASM_FILE} > ${PREPROCESSED_ASM_FILE}"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE PREPROCESS_RESULT
+    )
+    if (NOT ${PREPROCESS_RESULT} EQUAL 0)
+        message(FATAL_ERROR "Failed to preprocess ${ASM_FILE}")
+    endif()
+    list(APPEND PREPROCESSED_ASM_KECCAK_SOURCES ${PREPROCESSED_ASM_FILE})
+endforeach()
+
 # Create 'asm_sources' library based on generated assembly files
-add_library(asm_sources STATIC ${ASM_MATMUL_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
+add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES} ${ASM_MATMUL_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
 
 ##########################################################
 # Build common source files

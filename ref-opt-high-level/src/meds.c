@@ -18,7 +18,7 @@
 
 #define solve solve_opt
 
-#define CEILING(x, y) (((x) + (y)-1) / (y))
+#define CEILING(x, y) (((x) + (y) - 1) / (y))
 
 int crypto_sign_keypair(
     unsigned char *pk,
@@ -427,7 +427,22 @@ int crypto_sign(
 
     LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
+    // Optionally use alternative hashing scheme that allows for parallel hashing
+#ifdef MEDS_hash_opt
+    keccak_state h_shake_G_tilde_ti;
+    uint8_t digest_G_tilde_ti[MEDS_digest_bytes];
+
+    // Hash into intermediate hash
+    shake256_init(&h_shake_G_tilde_ti);
+    shake256_absorb(&h_shake_G_tilde_ti, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize(&h_shake_G_tilde_ti);
+    shake256_squeeze(digest_G_tilde_ti, MEDS_digest_bytes, &h_shake_G_tilde_ti);
+
+    // Hash intermediate hash into final hash
+    shake256_absorb(&h_shake, digest_G_tilde_ti, MEDS_digest_bytes);
+#else
     shake256_absorb(&h_shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+#endif
 
     PROFILER_STOP("SEC_HASH_COMMIT");
   }
@@ -734,7 +749,22 @@ int crypto_sign_open(
 
     bs_finalize(&bs);
 
+    // Optionally use alternative hashing scheme that allows for parallel hashing
+#ifdef MEDS_hash_opt
+    keccak_state shake_G_hat_i;
+    uint8_t digest_G_hat_i[MEDS_digest_bytes];
+
+    // Hash into intermediate hash
+    shake256_init(&shake_G_hat_i);
+    shake256_absorb(&shake_G_hat_i, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize(&shake_G_hat_i);
+    shake256_squeeze(digest_G_hat_i, MEDS_digest_bytes, &shake_G_hat_i);
+
+    // Hash intermediate hash into final hash
+    shake256_absorb(&shake, digest_G_hat_i, MEDS_digest_bytes);
+#else
     shake256_absorb(&shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+#endif
   }
 
   shake256_absorb(&shake, (uint8_t *)(sm + MEDS_SIG_BYTES), smlen - MEDS_SIG_BYTES);

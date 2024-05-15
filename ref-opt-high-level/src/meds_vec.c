@@ -472,34 +472,6 @@ int crypto_sign_vec(
 
   // Hash all commitments
   PROFILER_START("SEC_HASH_COMMIT");
-  // Step 1: bitstream write
-  // PROFILER_START("bs_fill");
-  // static uint8_t bs_buf_data[MEDS_t][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
-  // static uint8_t *bs_buf[MEDS_t];
-  // for (int i = 0; i < MEDS_t; i++)
-  //   bs_buf[i] = bs_buf_data[i];
-
-  // int buf_idx = 0;
-  // for (int r = 0; r < MEDS_k; r++)
-  // {
-  //   int raw_idx = r * MEDS_m * MEDS_n;
-  //   for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
-  //   {
-  //     for (int t = 0; t < MEDS_t; t++)
-  //     {
-  //       uint16_t i0 = G_tilde_ti[t][raw_idx + c];
-  //       uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
-
-  //       bs_buf[t][buf_idx] = (i0 & 0xff);
-  //       bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
-  //       bs_buf[t][buf_idx + 2] = (i1 >> 4);
-  //     }
-  //     buf_idx += 3;
-  //   }
-  // }
-  // PROFILER_STOP("bs_fill");
-
-  // Step 2: hash
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
   PROFILER_STOP("SEC_HASH_COMMIT");
