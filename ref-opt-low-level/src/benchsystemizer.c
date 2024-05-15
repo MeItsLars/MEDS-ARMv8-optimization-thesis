@@ -736,10 +736,10 @@ int main(int argc, char *argv[])
 {
   enable_cyclecounter();
   test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0);
-  // test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
-  // test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
-  // test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
-  // test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
-  // test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
+  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
+  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
+  test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
+  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
+  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
   disable_cyclecounter();
 }

@@ -22,6 +22,7 @@ class Param:
   w: int
   k: int
   seed_tree: bool = True
+  hash_opt: bool = False
 
   _name: str=None
 
@@ -782,6 +783,54 @@ params = [
         seed_tree = False,
         _name = "level5"),
 
+  Param(digest_bytes = 256 >> 3,
+        pub_seed_bytes = 256 >> 3,
+        sec_seed_bytes = 256 >> 3,
+        st_seed_bytes = 128 >> 3,
+        st_salt_bytes = 256 >> 3,
+        q = 4093,
+        m = 25,
+        n = 26,
+        k = 25,
+        s = 2,
+        t = 144,
+        w = 48,
+        seed_tree = False,
+        hash_opt = True,
+        _name = "level1hopt"),
+
+  Param(digest_bytes = 256 >> 3,
+        pub_seed_bytes = 256 >> 3,
+        sec_seed_bytes = 256 >> 3,
+        st_seed_bytes = 192 >> 3,
+        st_salt_bytes = 256 >> 3,
+        q = 4093,
+        m = 34,
+        n = 35,
+        k = 34,
+        s = 2,
+        t = 208,
+        w = 75,
+        seed_tree = False,
+        hash_opt = True,
+        _name = "level3hopt"),
+
+  Param(digest_bytes = 256 >> 3,
+        pub_seed_bytes = 256 >> 3,
+        sec_seed_bytes = 256 >> 3,
+        st_seed_bytes = 256 >> 3,
+        st_salt_bytes = 256 >> 3,
+        q = 4093,
+        m = 44,
+        n = 45,
+        k = 44,
+        s = 2,
+        t = 272,
+        w = 103,
+        seed_tree = False,
+        hash_opt = True,
+        _name = "level5hopt"),
+
   Param(digest_bytes = 128 >> 3,
         pub_seed_bytes = 256 >> 3,
         sec_seed_bytes = 256 >> 3,
@@ -996,6 +1045,11 @@ def gen_param(parset):
       print(f"{ind}#define SEED_TREE_size {param.t}")
       print(f"{ind}#define MEDS_max_path_len {param.seed_max_tree_len}")
 
+    print()
+
+    if param.hash_opt:
+      print(f"{ind}#define MEDS_hash_opt")
+    
     print()
 
     print(f"{ind}#define MEDS_t_mask 0x{2**ceil(log(param.t, 2)) - 1:08X}")
