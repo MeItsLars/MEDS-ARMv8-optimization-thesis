@@ -42,11 +42,6 @@ RN_MEDSp = "v16.4s"
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
 
-def add_nop(asm, indentation, s):
-    # asm.append("    " * indentation + "# " + s)
-    # asm.append("    " * indentation + "nop")
-    add(asm, indentation, s)
-
 def load_row_with_n_cols(asm, rn, rni, rni2, rninc, overflow, camount):
     """
     Adds assembly that loads a single matrix row consisting of 0 < n <= 4 elements into a NEON register.
@@ -64,26 +59,26 @@ def load_row_with_n_cols(asm, rn, rni, rni2, rninc, overflow, camount):
     if camount > 3 or overflow:
         if rninc:
             if rni == rni2:
-                add_nop(asm, 1, f"ld1 {{{rn}}}, [{rni}], {rninc}")
+                add(asm, 1, f"ld1 {{{rn}}}, [{rni}], {rninc}")
             else:
-                add_nop(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
-                add_nop(asm, 1, f"add {rni2}, {rni}, {rninc}")
+                add(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
+                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
         else:
-            add_nop(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
+            add(asm, 1, f"ld1 {{{rn}}}, [{rni}]")
         return
 
     # Fill the register with 0 first
-    add_nop(asm, 1, f"dup {rn}, wzr")
+    add(asm, 1, f"dup {rn}, wzr")
     # Load the elements one by one
     for i in range(camount):
         # Load the i-th lane of rn
         rn_p = rn[:-3]
-        add_nop(asm, 1, f"ldrh {R_T2h}, [{rni}, #{i * 2}]")
-        add_nop(asm, 1, f"ins {rn_p}.h[{i}], {R_T2h}")
+        add(asm, 1, f"ldrh {R_T2h}, [{rni}, #{i * 2}]")
+        add(asm, 1, f"ins {rn_p}.h[{i}], {R_T2h}")
     
     # Increment the memory address
     if rninc:
-        add_nop(asm, 1, f"add {rni2}, {rni}, {rninc}")
+        add(asm, 1, f"add {rni2}, {rni}, {rninc}")
 
 def add_store_row_with_n_cols(asm, rn, rni, rni2, rninc, camount):
     """
@@ -101,24 +96,24 @@ def add_store_row_with_n_cols(asm, rn, rni, rni2, rninc, camount):
     if camount > 3:
         if rninc:
             if rni == rni2:
-                add_nop(asm, 1, f"st1 {{{rn}}}, [{rni}], {rninc}")
+                add(asm, 1, f"st1 {{{rn}}}, [{rni}], {rninc}")
             else:
-                add_nop(asm, 1, f"st1 {{{rn}}}, [{rni}]")
-                add_nop(asm, 1, f"add {rni2}, {rni}, {rninc}")
+                add(asm, 1, f"st1 {{{rn}}}, [{rni}]")
+                add(asm, 1, f"add {rni2}, {rni}, {rninc}")
         else:
-            add_nop(asm, 1, f"st1 {{{rn}}}, [{rni}]")
+            add(asm, 1, f"st1 {{{rn}}}, [{rni}]")
         return
 
     for i in range(camount):
         # Extract the i-th lane of rn   
         rn_p = rn[:-3]
-        add_nop(asm, 1, f"mov {R_T2h}, {rn_p}.s[{i}]")
+        add(asm, 1, f"mov {R_T2h}, {rn_p}.s[{i}]")
         # Store the i-th lane of rn
-        add_nop(asm, 1, f"strh {R_T2h}, [{rni}, #{i * 2}]")
+        add(asm, 1, f"strh {R_T2h}, [{rni}, #{i * 2}]")
     
     # Increment the memory address
     if rninc:
-        add_nop(asm, 1, f"add {rni}, {rni}, {rninc}")
+        add(asm, 1, f"add {rni}, {rni}, {rninc}")
 
 def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
     if ramount > 0:
@@ -132,13 +127,13 @@ def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, c
 
 def add_mult(asm, initial, rn_C, rn_A, kamount):
     ins = "umull" if initial else "umlal"
-    add_nop(asm, 1, f"{ins} {rn_C}, {RN_B0}, {rn_A}[0]")
+    add(asm, 1, f"{ins} {rn_C}, {RN_B0}, {rn_A}[0]")
     if kamount > 1:
-        add_nop(asm, 1, f"umlal {rn_C}, {RN_B1}, {rn_A}[1]")
+        add(asm, 1, f"umlal {rn_C}, {RN_B1}, {rn_A}[1]")
     if kamount > 2:
-        add_nop(asm, 1, f"umlal {rn_C}, {RN_B2}, {rn_A}[2]")
+        add(asm, 1, f"umlal {rn_C}, {RN_B2}, {rn_A}[2]")
     if kamount > 3:
-        add_nop(asm, 1, f"umlal {rn_C}, {RN_B3}, {rn_A}[3]")
+        add(asm, 1, f"umlal {rn_C}, {RN_B3}, {rn_A}[3]")
 
 def add_load_and_mult(asm, context, initial, pad_r, pad_c, pad_k):
     # Load A
@@ -171,19 +166,19 @@ def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
 
 def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     # Apply two reductions
-    add_nop(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
-    add_nop(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
-    add_nop(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
-    add_nop(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
-    add_nop(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
-    add_nop(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
+    add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
+    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    add(asm, 1, f"ushr {rn_tmp}, {rn_src}, #{GFq_bits}")
+    add(asm, 1, f"mul {rn_tmp}, {rn_tmp}, {RN_MEDSp}")
+    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # Remove one final MEDS_p if the value in the lane is at least MEDS_p
-    add_nop(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
-    add_nop(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
-    add_nop(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
+    add(asm, 1, f"cmhs {rn_tmp}, {rn_src}, {RN_MEDSp}")
+    add(asm, 1, f"and {rn_tmp[:-3]}.16b, {rn_tmp[:-3]}.16b, {RN_MEDSp[:-3]}.16b")
+    add(asm, 1, f"sub {rn_src}, {rn_src}, {rn_tmp}")
     # If neccesary, shrink to 16 bits
     if final_shrink:
-        add_nop(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
+        add(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
 
 def add_k_loop(asm, context, pad_r, pad_c):
     loop_id = f"k_loop{'_pr' if pad_r else ''}{'_pc' if pad_c else ''}"
@@ -379,5 +374,4 @@ if __name__ == "__main__":
         generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_k_k')
         generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_m')
         generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_n')
-        generate_matmul_file(name, 24, 24, 24, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_24_24_24')
     

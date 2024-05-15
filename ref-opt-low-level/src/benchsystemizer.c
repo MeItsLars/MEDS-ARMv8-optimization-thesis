@@ -351,22 +351,24 @@ int test_pmod_mat_syst_ct_partial_swap_backsub_2(pmod_mat_t *M, int M_r, int M_c
 
 int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
 {
-  int reduce_cost = 9;
+  int reduce_cost = 10;
   int freeze_cost = 3;
-  int inv_cost = 400;
+  int inv_cost = 16 * (1 + reduce_cost) + freeze_cost;
 
-  int arithmetic = 0, loads = 0, stores = 0;
+  int arithmetic = 0, loads = 0, stores = 0, loop = 0;
 
   // int ret = M_r * swap;
   arithmetic++;
 
   for (int r = 0; r < max_r; r++)
   {
+    loop++;
     if (swap)
     {
       // compute condition for swap
       for (int r2 = r; r2 < M_r; r2++)
       {
+        loop++;
         // z |= pmod_mat_entry(M, M_r, M_c, r2, r);
         loads++;
         arithmetic++;
@@ -382,6 +384,7 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
 
         for (int i = 0; i < M_r; i++)
         {
+          loop++;
           // GFq_cswap(&pmod_mat_entry(M, M_r, M_c, i, r),
           //           &pmod_mat_entry(M, M_r, M_c, i, M_c - 1),
           //           do_swap);
@@ -394,11 +397,13 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
 
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      loop++;
       // uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
       loads++;
 
       for (int c = r; c < M_c; c++)
       {
+        loop++;
         // uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
         loads++;
 
@@ -421,6 +426,7 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
     // normalize
     for (int c = r; c < M_c; c++)
     {
+      loop++;
       // uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
       // pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
       loads++;
@@ -432,11 +438,13 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
     // eliminate
     for (int r2 = r + 1; r2 < M_r; r2++)
     {
+      loop++;
       // uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
       loads++;
 
       for (int c = r; c < M_c; c++)
       {
+        loop++;
         // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
         loads += 2;
@@ -459,8 +467,11 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
   {
     // back substitution
     for (int r = max_r - 1; r >= 0; r--)
+    {
+      loop++;
       for (int r2 = 0; r2 < r; r2++)
       {
+        loop++;
         // uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
         loads++;
 
@@ -481,6 +492,7 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
 
         for (int c = max_r; c < M_c; c++)
         {
+          loop++;
           // uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
           // uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
           loads += 2;
@@ -497,8 +509,9 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
           stores++;
         }
       }
+    }
   }
-  return loads + stores + arithmetic;
+  return loads + stores + arithmetic + loop;
 }
 
 void test_performance(char name[], int r, int c, int max_r, int swap, int backsub, int (*function)(pmod_mat_t *))
@@ -723,10 +736,10 @@ int main(int argc, char *argv[])
 {
   enable_cyclecounter();
   test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0);
-  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
-  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
-  test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
-  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
-  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
+  // test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
+  // test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
+  // test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
+  // test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
+  // test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
   disable_cyclecounter();
 }

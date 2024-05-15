@@ -25,6 +25,7 @@ int number_of_profileresults = 0;
 int profiler_enabled = 0;
 
 #define MATMUL_ROUNDS 500
+#define ROUNDS 100
 
 extern void nop_test();
 
@@ -56,6 +57,12 @@ extern void pmod_mat_mul_asm_29_103_65(uint16_t *C, uint16_t *A, uint16_t *B);
 
 extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
+extern void pmod_mat_mul_asm_2_k_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_2_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_k_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_m_n_m(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_m_n_n(uint16_t *C, uint16_t *A, uint16_t *B);
+
 // Default matrix multiplication implementation
 void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
 {
@@ -75,6 +82,21 @@ void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
       pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
+}
+
+// Default matrix multiplication, but directly stored into C
+void pmod_mat_mul_1_prime(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+    {
+      uint64_t val = 0;
+
+      for (int i = 0; i < A_c; i++)
+        val = (val + (uint64_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint64_t)pmod_mat_entry(B, B_r, B_c, i, c));
+
+      pmod_mat_set_entry(C, C_r, C_c, r, c, val % MEDS_p);
+    }
 }
 
 // uint32_t montgomery_redc(uint32_t t)
@@ -889,13 +911,138 @@ float min_cycle_bound(int m, int o, int n)
   float k_loops = o * 0.25;
 
   float result = 0;
+  result += r_loops;                             // R loop add and compare
+  result += r_loops * c_loops;                   // C loop add and compare
+  result += r_loops * c_loops * k_loops;         // K loop add and compare
+  result += r_loops * c_loops * k_loops * 2;     // K loop address calculation
   result += r_loops * c_loops * k_loops * 4;     // Load A
   result += r_loops * c_loops * k_loops * 4;     // Load B
   result += r_loops * c_loops * k_loops * 4 * 4; // Compute C
   result += r_loops * c_loops * 4 * 9;           // Reduce C
   result += r_loops * c_loops * 4;               // Store C
 
-  return result;
+  return 4 * result;
+}
+// float min_cycle_bound(int m, int o, int n)
+// {
+//   int loads = 0;
+//   int stores = 0;
+//   int arithmetic = 0;
+//   int reduction_cost = 9;
+
+//   for (int c = 0; c < m; c++)
+//     for (int r = 0; r < n; r++)
+//     {
+//       for (int i = 0; i < o; i++)
+//       {
+//         // val = (val + (uint64_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint64_t)pmod_mat_entry(B, B_r, B_c, i, c));
+//         loads += 2;
+//         arithmetic += 2;
+//       }
+
+//       // pmod_mat_set_entry(C, C_r, C_c, r, c, val % MEDS_p);
+//       arithmetic += reduction_cost;
+//       stores++;
+//     }
+//   return loads + stores + arithmetic;
+// }
+
+void test_performance(char name[], int m, int n, int o, void (*function)(pmod_mat_t *, pmod_mat_t *, pmod_mat_t *))
+{
+  uint8_t seed[MEDS_pub_seed_bytes];
+
+  for (int i = 0; i < MEDS_pub_seed_bytes; i++)
+  {
+    seed[i] = i;
+  }
+  keccak_state shake;
+  shake256_absorb_once(&shake, seed, MEDS_pub_seed_bytes);
+
+  __attribute__((aligned(16))) pmod_mat_t A[m * o];
+  __attribute__((aligned(16))) pmod_mat_t B[o * n];
+  __attribute__((aligned(16))) pmod_mat_t C1[m * n];
+  __attribute__((aligned(16))) pmod_mat_t C2[m * n];
+  __attribute__((aligned(16))) pmod_mat_t C3[m * n];
+
+  for (int i = 0; i < m * o; i++)
+    A[i] = rnd_GF(&shake);
+  for (int i = 0; i < o * n; i++)
+    B[i] = rnd_GF(&shake);
+
+  long long systemizer_cycles[ROUNDS + 1];
+  long long intrinsic_systemizer_cycles[ROUNDS + 1];
+  long long asm_systemizer_cycles[ROUNDS + 1];
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    systemizer_cycles[round] = get_cyclecounter();
+    pmod_mat_mul_1_prime(C1, m, n, A, m, o, B, o, n);
+  }
+  systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    intrinsic_systemizer_cycles[round] = get_cyclecounter();
+    pmod_mat_mul_simd_1_pad(C2, m, n, A, m, o, B, o, n);
+  }
+  intrinsic_systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    asm_systemizer_cycles[round] = get_cyclecounter();
+    function(C3, A, B);
+  }
+  asm_systemizer_cycles[ROUNDS] = get_cyclecounter();
+
+  // Calculate results
+  double systemizer_median_cc = median_2(systemizer_cycles, ROUNDS + 1, 0);
+  double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS + 1, 0);
+  double asm_systemizer_median_cc = median_2(asm_systemizer_cycles, ROUNDS + 1, 0);
+
+  double min_cycles = (double)min_cycle_bound(m, o, n);
+  double systemizer_cycle_multiplier = systemizer_median_cc / (min_cycles / 4);
+  double intrinsic_cycle_multiplier = intrinsic_systemizer_median_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_systemizer_median_cc / (min_cycles / 4);
+
+  double intrinsic_improvement = (intrinsic_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+  double asm_improvement = (asm_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+
+  int intrinsic_inequalities = 0;
+  int asm_inequalities = 0;
+  for (int i = 0; i < m * n; i++)
+  {
+    if (C1[i] != C2[i])
+    {
+      intrinsic_inequalities++;
+    }
+    if (C1[i] != C3[i])
+    {
+      asm_inequalities++;
+    }
+  }
+
+  // Print results
+  printf("-----------------------------------\n");
+  printf("=== %s ===\n", name);
+  printf("-----------------------------------\n");
+  if (asm_inequalities == 0)
+    printf("> ASM EQUAL\n");
+  else
+    printf("> ASM INEQUALITIES: %d/%d\n", asm_inequalities, m * n);
+  if (intrinsic_inequalities == 0)
+    printf("> INTRINSIC EQUAL\n");
+  else
+    printf("> INTRINSIC INEQUALITIES: %d/%d\n", intrinsic_inequalities, m * n);
+
+  printf("Minimum cycle amount: %f\n", min_cycles);
+  printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
+  printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
+  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
+  printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
+
+  printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
+  printf("Improvement (ASM): %f%%\n", asm_improvement);
+  printf("\n");
 }
 
 #define A_ROWS 30
@@ -905,7 +1052,7 @@ float min_cycle_bound(int m, int o, int n)
 #define C_ROWS A_ROWS
 #define C_COLS B_COLS
 
-int main(int argc, char *argv[])
+/*int main(int argc, char *argv[])
 {
   enable_cyclecounter();
 
@@ -1025,4 +1172,16 @@ int main(int argc, char *argv[])
   }
 
   return 0;
+}*/
+
+int main(int argc, char *argv[])
+{
+  enable_cyclecounter();
+  test_performance("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k);
+  test_performance("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k);
+  test_performance("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k);
+  test_performance("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m);
+  test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n);
+  test_performance("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24);
+  disable_cyclecounter();
 }
