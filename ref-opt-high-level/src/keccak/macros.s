@@ -28,7 +28,7 @@
 // Author: Matthias Kannwischer <matthias@kannwischer.eu>
 //
 
-#include <hal_env.h>
+#include "keccak/hal_env.h"
 
 .macro load_constant_ptr
 	ASM_LOAD(const_addr, round_constants)

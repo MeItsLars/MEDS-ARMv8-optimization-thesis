@@ -23,11 +23,10 @@ set(NIST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/NIST)
 
 # Manually set all source files
 set(COMMON_SOURCES
-    ${PROJECT_SOURCE_DIR}/keccak/keccakx2_C.c
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
-    ${PROJECT_SOURCE_DIR}/fips202_vec.c
-    ${PROJECT_SOURCE_DIR}/fips202.c
+    ${PROJECT_SOURCE_DIR}/keccak/fips202_vec.c
+    ${PROJECT_SOURCE_DIR}/keccak/fips202.c
     ${PROJECT_SOURCE_DIR}/matrixmod.c
     ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
     ${PROJECT_SOURCE_DIR}/meds.c
@@ -70,7 +69,7 @@ if (NOT ${PARAM_GEN_RESULT} EQUAL 0)
     message(FATAL_ERROR "Failed to generate api.h")
 endif()
 
-set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PARAM_INCLUDE_DIR} ${NIST_INCLUDE_DIR})
+set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PROJECT_INCLUDE_DIR}/keccak ${PARAM_INCLUDE_DIR} ${NIST_INCLUDE_DIR})
 
 ##########################################################
 # Build library (common source files)

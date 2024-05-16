@@ -6,4 +6,4 @@ List of things that were changed as a low-level optimization compared to the ori
 - Matrix systemization replaced by assembly reference in all positions in the code
 - Functions using various systemization sizes altered to include a function pointer to the assembly systemization reference
 - Created a specific and faster implementation for copying commitment data into the buffer that will be hashed (bs_fill) which is now executed after the challenge loop (only works for GFq_size=12)
-- Changed fips202.c and fips202.h to allow parallel hashing. Changed meds.c to optionally use this hashing (if the flag is defined)
+- Added keccak files for parallel hashing, an optional feature that changes the signature and gives a small speedup.
