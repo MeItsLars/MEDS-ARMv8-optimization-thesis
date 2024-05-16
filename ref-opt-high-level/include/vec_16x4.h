@@ -31,6 +31,8 @@
 #define ZERO_VEC vdup_n_u16(0)
 #define ZERO_VEC_W vdupq_n_u32(0)
 
+#define SET_LANE_VEC(a, i, val) vset_lane_u16(val, a, i)
+
 #define GFq_vec_t uint16x4_t
 #define GFq_vec_w_t uint32x4_t
 #define pmod_mat_vec_t GFq_vec_t

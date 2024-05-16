@@ -630,24 +630,40 @@ int crypto_sign_open_vec(
 
   // Initialize matrices that will be filled during the commitment phase
   // These matrices are still needed for the hash computation
+  pmod_mat_t kappa_or_M_hat_i_data[MEDS_t << 1][2 * MEDS_k];
+  pmod_mat_t *kappa_or_M_hat_i[MEDS_t << 1];
+  pmod_mat_t G_hat_i_data[MEDS_t << 1][MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_t *G_hat_i[MEDS_t << 1];
   static uint8_t bs_buf_data[MEDS_t << 1][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
   static uint8_t *bs_buf[MEDS_t << 1];
 
   for (int i = 0; i < MEDS_t << 1; i++)
   {
+    kappa_or_M_hat_i[i] = kappa_or_M_hat_i_data[i];
+    G_hat_i[i] = G_hat_i_data[i];
     bs_buf[i] = bs_buf_data[i];
   }
 
-  pmod_mat_t G_hat_i[MEDS_k * MEDS_m * MEDS_n];
+  // Define temporary arrays that will be used during a single commitment computation
+  pmod_mat_vec_t A_hat[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_hat[MEDS_n * MEDS_n];
+  pmod_mat_vec_t A_hat_inv[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_hat_inv[MEDS_n * MEDS_n];
+  pmod_mat_vec_t kappa_or_M_hat_i_vec[2 * MEDS_k];
+  pmod_mat_vec_t G0_prime_or_C_hat[2 * MEDS_m * MEDS_n];
+  pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  uint8_t sigma_M_hat_i[MEDS_pub_seed_bytes];
+  static pmod_mat_vec_t G_hat_i_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  pmod_mat_t kappa_or_M_hat_i[2 * MEDS_k];
-
+  // Initialize hash function
   keccak_state shake;
   shake256_init(&shake);
 
+  // Create a seed buffer for use during the challenges. Set the start of the buffer to the salt.
   uint8_t seed_buf[MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t)] = {0};
   memcpy(seed_buf, alpha, MEDS_st_salt_bytes);
 
+  // Establish a pointer to the location of the address in the seed buffer
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
   // Loop variables
@@ -664,88 +680,102 @@ int crypto_sign_open_vec(
   PROFILER_START("SEC_COMMIT");
   while (num_valid < MEDS_t)
   {
-    int index = num_tried;
-    int index_netto = indexes[num_tried];
-
-    int valid = 1;
-
-    if (h[index_netto] > 0)
+    for (int t = 0; t < BATCH_SIZE; t++)
     {
-      for (int j = 0; j < 2 * MEDS_k; j++)
-        kappa_or_M_hat_i[j] = bs_read(&bs, GFq_bits);
+      // Load indices
+      int index_netto = indexes[num_tried + t];
 
-      bs_finalize(&bs);
-    }
-    else
-    {
-      uint8_t sigma_M_hat_i[MEDS_pub_seed_bytes];
-
-      for (int j = 0; j < 4; j++)
-        addr_pos[j] = (index_netto >> (j * 8)) & 0xff;
-
-      memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[index_netto * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
-
-      XOF((uint8_t *[]){sigma_M_hat_i, &sigma[index_netto * MEDS_st_seed_bytes]},
-          (size_t[]){MEDS_pub_seed_bytes, MEDS_st_seed_bytes},
-          seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
-          2);
-
-      rnd_matrix(kappa_or_M_hat_i, 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
-    }
-
-    pmod_mat_t G0_prime_or_C_hat[2 * MEDS_m * MEDS_n];
-
-    pmod_mat_mul(G0_prime_or_C_hat, 2, MEDS_m * MEDS_n, kappa_or_M_hat_i, 2, MEDS_k, G[h[index_netto]], MEDS_k, MEDS_m * MEDS_n);
-
-    pmod_mat_t A_hat[MEDS_m * MEDS_m];
-    pmod_mat_t B_hat[MEDS_n * MEDS_n];
-
-    pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
-    pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
-
-    if (solve(A_hat, B_hat_inv, G0_prime_or_C_hat) < 0)
-      valid = 0;
-
-    if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n) < 0)
-      valid = 0;
-
-    if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m) < 0)
-      valid = 0;
-
-    int G_index = h[index_netto] > 0 ? h[index_netto] : 0;
-    pi(G_hat_i, A_hat, B_hat, G[G_index]);
-
-    if (SF(G_hat_i, G_hat_i) < 0)
-      valid = 0;
-
-    if (!valid)
-    {
       if (h[index_netto] > 0)
       {
-        printf("Signature verification failed!\n");
-        return -1;
+        for (int j = 0; j < 2 * MEDS_k; j++)
+          kappa_or_M_hat_i[index_netto][j] = bs_read(&bs, GFq_bits);
+
+        bs_finalize(&bs);
       }
+      else
+      {
+        for (int j = 0; j < 4; j++)
+          addr_pos[j] = (index_netto >> (j * 8)) & 0xff;
 
-      int idx_source = num_tried;
-      int idx_target = MEDS_t + num_invalid;
+        memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[index_netto * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
 
-      indexes[idx_target] = indexes[idx_source];
+        XOF((uint8_t *[]){sigma_M_hat_i, &sigma[index_netto * MEDS_st_seed_bytes]},
+            (size_t[]){MEDS_pub_seed_bytes, MEDS_st_seed_bytes},
+            seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
+            2);
 
-      num_invalid++;
+        rnd_matrix(kappa_or_M_hat_i[index_netto], 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
+      }
     }
-    else
+
+    // TODO: Load kappa_or_M_hat_i into kappa_or_M_hat_i_vec
+    // TODO: Load G_vec from G somehow
+
+    pmod_mat_s_vec_t valid = SET_S_VEC(1);
+
+    pmod_mat_mul_vec(G0_prime_or_C_hat, 2, MEDS_m * MEDS_n, kappa_or_M_hat_i_vec, 2, MEDS_k, G_vec, MEDS_k, MEDS_m * MEDS_n);
+
+    // if (solve(A_hat, B_hat_inv, G0_prime_or_C_hat) < 0)
+    //   valid = 0;
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_hat, B_hat_inv, G0_prime_or_C_hat), ZERO_S_VEC)));
+
+    // if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n) < 0)
+    //   valid = 0;
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_hat, B_hat_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
+
+    // if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m) < 0)
+    //   valid = 0;
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_hat_inv, A_hat, MEDS_m, MEDS_m), ZERO_S_VEC)));
+
+    // int G_index = h[index_netto] > 0 ? h[index_netto] : 0;
+    // pi(G_hat_i, A_hat, B_hat, G[G_index]);
+    pi_vec(G_hat_i_vec, A_hat, B_hat, G_vec);
+
+    // if (SF(G_hat_i, G_hat_i) < 0)
+    //   valid = 0;
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec))));
+
+    int current_batch_invalids = 0;
+    for (int t = 0; t < BATCH_SIZE; t++)
     {
-      bitstream_t bs;
+      if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
+      {
+        // Compute indices
+        int idx_source = num_tried + t;
+        int idx_target = MEDS_t + num_invalid + current_batch_invalids;
 
-      bs_init(&bs, bs_buf[index_netto], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+        // If the commitment was invalid and the hash is a non-zero hash, return failure
+        if (h[indexes[idx_source]] > 0)
+        {
+          printf("Signature verification failed!\n");
+          return -1;
+        }
 
-      for (int r = 0; r < MEDS_k; r++)
-        for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-          bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
+        indexes[idx_target] = indexes[idx_source];
+        bs_buf[idx_target] = bs_buf_data[idx_source];
+        kappa_or_M_hat_i[idx_target] = kappa_or_M_hat_i_data[idx_source];
+        G_hat_i[idx_target] = G_hat_i_data[idx_source];
 
-      bs_finalize(&bs);
+        // Update counters
+        num_invalid++;
+        current_batch_invalids++;
+      }
+      else
+      {
+        int idx_source = num_tried + t;
 
-      num_valid++;
+        bitstream_t bs;
+
+        bs_init(&bs, bs_buf[indexes[idx_source]], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+        for (int r = 0; r < MEDS_k; r++)
+          for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+            bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
+
+        bs_finalize(&bs);
+
+        num_valid++;
+      }
     }
     num_tried++;
   }
