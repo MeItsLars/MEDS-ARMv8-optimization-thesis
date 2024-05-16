@@ -34,8 +34,8 @@ https://github.com/IIS-summer-2023/meds-simd-highlevel
 =============
 Add more references
 - Schnorr, Grover (references)
-- Sigma protocol
-- Use definitions (e.g. for a signature scheme or the MCE problem)
+- Sigma protocol reference
+- Use latex definitions (e.g. for a signature scheme or the MCE problem)
 - Move appendix to main body
 - Related Work: add other post-quantum schemes that have been optimized on the same platform (ARMv8). Mostly signature schemes, but possibly also other ones. Definitely Keccak (with extended Keccak package).
 - Cite NEON reference manual maybe?
