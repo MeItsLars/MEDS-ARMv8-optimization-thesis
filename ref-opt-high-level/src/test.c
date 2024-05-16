@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     unsigned long long sig_len = sizeof(sig);
 
     time = -get_cyclecounter();
-    crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+    crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += get_cyclecounter();
 
     if (time < sign_time)
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     unsigned long long msg_out_len = sizeof(msg_out);
 
     time = -get_cyclecounter();
-    int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
+    int ret = crypto_sign_open_vec(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += get_cyclecounter();
 
     if (time < verify_time)
