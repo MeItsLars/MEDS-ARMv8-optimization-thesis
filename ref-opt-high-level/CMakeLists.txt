@@ -23,8 +23,10 @@ set(NIST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/NIST)
 
 # Manually set all source files
 set(COMMON_SOURCES
+    ${PROJECT_SOURCE_DIR}/keccak/keccakx2_C.c
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
+    ${PROJECT_SOURCE_DIR}/fips202_vec.c
     ${PROJECT_SOURCE_DIR}/fips202.c
     ${PROJECT_SOURCE_DIR}/matrixmod.c
     ${PROJECT_SOURCE_DIR}/matrixmod_vec.c
@@ -81,9 +83,32 @@ target_include_directories(common_sources_with_profiler PUBLIC ${INCLUDE_DIRECTO
 target_compile_definitions(common_sources_with_profiler PRIVATE PROFILER)
 
 enable_language(C ASM)
-set(ASM_DIR ${PROJECT_SOURCE_DIR}/asm)
-file(GLOB_RECURSE COMMON_SOURCES_ASM ${ASM_DIR}/*.s)
-add_library(common_sources_asm STATIC ${COMMON_SOURCES_ASM})
+
+message("Adding keccak assembly")
+set(ASM_KECCAK_DIR ${PROJECT_SOURCE_DIR}/keccak)
+file(GLOB_RECURSE ASM_KECCAK_SOURCES ${ASM_KECCAK_DIR}/*.s)
+
+# Preprocess keccak assembly files
+message("Preprocessing keccak assembly files")
+set(PREPROCESSED_ASM_KECCAK_DIR ${CMAKE_BINARY_DIR}/preprocessed_asm_keccak)
+file(MAKE_DIRECTORY ${PREPROCESSED_ASM_KECCAK_DIR})
+foreach(ASM_FILE ${ASM_KECCAK_SOURCES})
+    get_filename_component(FILENAME ${ASM_FILE} NAME)
+    set(PREPROCESSED_ASM_FILE ${PREPROCESSED_ASM_KECCAK_DIR}/${FILENAME}.s)
+    message("Preprocessing ${ASM_FILE} into ${PREPROCESSED_ASM_FILE}")
+    execute_process(
+        COMMAND bash "-c" "cpp -P -I${PROJECT_INCLUDE_DIR} ${ASM_FILE} > ${PREPROCESSED_ASM_FILE}"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE PREPROCESS_RESULT
+    )
+    if (NOT ${PREPROCESS_RESULT} EQUAL 0)
+        message(FATAL_ERROR "Failed to preprocess ${ASM_FILE}")
+    endif()
+    list(APPEND PREPROCESSED_ASM_KECCAK_SOURCES ${PREPROCESSED_ASM_FILE})
+endforeach()
+
+# Create 'asm_sources' library based on generated assembly files
+add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES})
 
 ##########################################################
 # Build settings
@@ -107,7 +132,7 @@ execute_process(
 message("Adding target: test")
 add_executable(test ${PROJECT_SOURCE_DIR}/test.c)
 target_include_directories(test PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(test PRIVATE common_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(test PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: KAT_test
@@ -115,7 +140,7 @@ target_link_libraries(test PRIVATE common_sources ${OPENSSL_LIBRARIES})
 message("Adding target: KAT_test")
 add_executable(KAT_test ${PROJECT_SOURCE_DIR}/KAT_test.c)
 target_include_directories(KAT_test PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(KAT_test PRIVATE common_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(KAT_test PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: bench
@@ -123,7 +148,7 @@ target_link_libraries(KAT_test PRIVATE common_sources ${OPENSSL_LIBRARIES})
 message("Adding target: bench")
 add_executable(bench ${PROJECT_SOURCE_DIR}/bench.c)
 target_include_directories(bench PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(bench PRIVATE common_sources ${OPENSSL_LIBRARIES})
+target_link_libraries(bench PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
 
 ##########################################################
 # Build target: profile
@@ -131,7 +156,7 @@ target_link_libraries(bench PRIVATE common_sources ${OPENSSL_LIBRARIES})
 message("Adding target: profile")
 add_executable(profile ${PROJECT_SOURCE_DIR}/profile.c)
 target_include_directories(profile PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(profile PRIVATE common_sources_with_profiler ${OPENSSL_LIBRARIES})
+target_link_libraries(profile PRIVATE common_sources_with_profiler asm_sources ${OPENSSL_LIBRARIES})
 target_compile_definitions(profile PRIVATE PROFILER)
 
 ##########################################################
@@ -140,4 +165,4 @@ target_compile_definitions(profile PRIVATE PROFILER)
 message("Adding target: test_vec")
 add_executable(test_vec ${PROJECT_SOURCE_DIR}/test_vec.c)
 target_include_directories(test_vec PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(test_vec PRIVATE common_sources common_sources_asm ${OPENSSL_LIBRARIES})
+target_link_libraries(test_vec PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})

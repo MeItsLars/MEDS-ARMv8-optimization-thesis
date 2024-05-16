@@ -26,6 +26,7 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/keccak/keccakx2_C.c
     ${PROJECT_SOURCE_DIR}/bitstream.c
     ${PROJECT_SOURCE_DIR}/cyclecounter.c
+    ${PROJECT_SOURCE_DIR}/fips202_vec.c
     ${PROJECT_SOURCE_DIR}/fips202.c
     ${PROJECT_SOURCE_DIR}/matrixmod.c
     ${PROJECT_SOURCE_DIR}/meds.c

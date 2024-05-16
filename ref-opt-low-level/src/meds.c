@@ -7,6 +7,7 @@
 #include "profiler.h"
 
 #include "fips202.h"
+#include "fips202_vec.h"
 
 #include "params.h"
 
@@ -446,33 +447,9 @@ int crypto_sign(
   PROFILER_START("hash");
   // Step 2: hash
 #ifdef MEDS_hash_opt
+  // Use parallel hashing to compute 4 digests at once
   uint8_t digest_G_tilde_ti[MEDS_t][MEDS_digest_bytes];
-  // for (int i = 0; i < MEDS_t; i += 2)
-  // {
-  //   keccak_state_vec2 h_shake_G_tilde_ti;
-  //   shake256_init_vec2(&h_shake_G_tilde_ti);
-  //   shake256_absorb_vec2(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-  //   shake256_finalize_vec2(&h_shake_G_tilde_ti);
-  //   shake256_squeeze_vec2(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], MEDS_digest_bytes, &h_shake_G_tilde_ti);
-  // }
-  int loop_vec5_len = 0;
-  if (MEDS_t % 5 == 0)
-    loop_vec5_len = MEDS_t;
-  else if ((MEDS_t - 4) % 5 == 0)
-    loop_vec5_len = MEDS_t - 4;
-  else
-    loop_vec5_len = MEDS_t - 8;
-
-  unsigned int i = 0;
-  for (i = i; i < loop_vec5_len; i += 5)
-  {
-    keccak_state_vec5 h_shake_G_tilde_ti;
-    shake256_init_vec5(&h_shake_G_tilde_ti);
-    shake256_absorb_vec5(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], bs_buf[i + 4], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-    shake256_finalize_vec5(&h_shake_G_tilde_ti);
-    shake256_squeeze_vec5(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], digest_G_tilde_ti[i + 4], MEDS_digest_bytes, &h_shake_G_tilde_ti);
-  }
-  for (i = i; i < MEDS_t; i += 4)
+  for (int i = 0; i < MEDS_t; i += 4)
   {
     keccak_state_vec4 h_shake_G_tilde_ti;
     shake256_init_vec4(&h_shake_G_tilde_ti);
@@ -480,10 +457,9 @@ int crypto_sign(
     shake256_finalize_vec4(&h_shake_G_tilde_ti);
     shake256_squeeze_vec4(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
   }
+  // Hash the digests into a single digest
   for (int i = 0; i < MEDS_t; i++)
-  {
     shake256_absorb(&h_shake, digest_G_tilde_ti[i], MEDS_digest_bytes);
-  }
 #else
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
@@ -826,21 +802,19 @@ int crypto_sign_open(
   PROFILER_START("hash");
   // Step 2: hash
 #ifdef MEDS_hash_opt
-  // TODO: implement optimized hash
-  for (int i = 0; i < MEDS_t; i++)
+  // Use parallel hashing to compute 4 digests at once
+  uint8_t digest_G_hat[MEDS_t][MEDS_digest_bytes];
+  for (int i = 0; i < MEDS_t; i += 4)
   {
-    keccak_state h_shake_G_tilde_ti;
-    uint8_t digest_G_tilde_ti[MEDS_digest_bytes];
-
-    // Hash into intermediate hash
-    shake256_init(&h_shake_G_tilde_ti);
-    shake256_absorb(&h_shake_G_tilde_ti, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-    shake256_finalize(&h_shake_G_tilde_ti);
-    shake256_squeeze(digest_G_tilde_ti, MEDS_digest_bytes, &h_shake_G_tilde_ti);
-
-    // Hash intermediate hash into final hash
-    shake256_absorb(&shake, digest_G_tilde_ti, MEDS_digest_bytes);
+    keccak_state_vec4 h_shake_G_tilde_ti;
+    shake256_init_vec4(&h_shake_G_tilde_ti);
+    shake256_absorb_vec4(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec4(&h_shake_G_tilde_ti);
+    shake256_squeeze_vec4(digest_G_hat[i], digest_G_hat[i + 1], digest_G_hat[i + 2], digest_G_hat[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
   }
+  // Hash the digests into a single digest
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&shake, digest_G_hat[i], MEDS_digest_bytes);
 #else
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
