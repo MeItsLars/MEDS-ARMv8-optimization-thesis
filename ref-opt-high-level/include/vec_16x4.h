@@ -96,7 +96,7 @@
     FREEZE_VEC(_t3);                  \
   })
 
-pmod_mat_vec_t load_vec(uint16_t *M[], int M_r, int M_c, int r, int c);
-void store_vec(uint16_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val);
+pmod_mat_vec_t load_vec(GFq_t *M[], int M_r, int M_c, int r, int c);
+void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, int amount);
 
 #endif

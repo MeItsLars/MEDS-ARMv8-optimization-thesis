@@ -367,7 +367,13 @@ int crypto_sign_vec(
   while (num_valid < MEDS_t)
   {
     int index = num_tried;
-    for (int t = 0; t < BATCH_SIZE; t++)
+
+    // Determine the batch size for the current iteration
+    int loop_batch_size = MEDS_t + num_invalid - num_tried;
+    if (loop_batch_size > BATCH_SIZE)
+      loop_batch_size = BATCH_SIZE;
+
+    for (int t = 0; t < loop_batch_size; t++)
     {
       int index_netto = indexes[num_tried + t];
 
@@ -408,45 +414,63 @@ int crypto_sign_vec(
     // Store G_tilde_ti_vec into G_tilde_ti[index]
     // TODO: CONVERT SO THAT NO SPECIFIC ARM TYPES ARE USED
     PROFILER_START("bs_fill");
-    int buf_idx = 0;
-    for (int r = 0; r < MEDS_k; r++)
-      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
-      {
-        // Extract two 12-bit values. Combine them into three 8-bit values. Store these values into bs_buf.
-        pmod_mat_vec_t i0 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c];
-        pmod_mat_vec_t i1 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c + 1];
-
-        // r0 = (i0 & 0xff);
-        uint16x4_t r0_wide = vand_u16(i0, vdup_n_u16(0xff));
-        // r1 = (i0 >> 8) | ((i1 & 0xf) << 4);
-        uint16x4_t r1_wide = vorr_u16(vshr_n_u16(i0, 8), vshl_n_u16(vand_u16(i1, vdup_n_u16(0xf)), 4));
-        // r2 = (i1 >> 4);
-        uint16x4_t r2_wide = vshr_n_u16(i1, 4);
-
-        // Convert to 8-bit
-        uint8x8_t r0 = vqmovn_u16(vcombine_u16(r0_wide, vdup_n_u16(0)));
-        uint8x8_t r1 = vqmovn_u16(vcombine_u16(r1_wide, vdup_n_u16(0)));
-        uint8x8_t r2 = vqmovn_u16(vcombine_u16(r2_wide, vdup_n_u16(0)));
-
-        // Store to buffer
-        uint8_t r0_buf[8];
-        uint8_t r1_buf[8];
-        uint8_t r2_buf[8];
-        vst1_u8(r0_buf, r0);
-        vst1_u8(r1_buf, r1);
-        vst1_u8(r2_buf, r2);
-        for (int i = 0; i < 4; i++)
+    if (GFq_bits == 12)
+    {
+      int buf_idx = 0;
+      for (int r = 0; r < MEDS_k; r++)
+        for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
         {
-          bs_buf[index + i][buf_idx] = r0_buf[i];
-          bs_buf[index + i][buf_idx + 1] = r1_buf[i];
-          bs_buf[index + i][buf_idx + 2] = r2_buf[i];
+          // Extract two 12-bit values. Combine them into three 8-bit values. Store these values into bs_buf.
+          pmod_mat_vec_t i0 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c];
+          pmod_mat_vec_t i1 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c + 1];
+
+          // r0 = (i0 & 0xff);
+          uint16x4_t r0_wide = vand_u16(i0, vdup_n_u16(0xff));
+          // r1 = (i0 >> 8) | ((i1 & 0xf) << 4);
+          uint16x4_t r1_wide = vorr_u16(vshr_n_u16(i0, 8), vshl_n_u16(vand_u16(i1, vdup_n_u16(0xf)), 4));
+          // r2 = (i1 >> 4);
+          uint16x4_t r2_wide = vshr_n_u16(i1, 4);
+
+          // Convert to 8-bit
+          uint8x8_t r0 = vqmovn_u16(vcombine_u16(r0_wide, vdup_n_u16(0)));
+          uint8x8_t r1 = vqmovn_u16(vcombine_u16(r1_wide, vdup_n_u16(0)));
+          uint8x8_t r2 = vqmovn_u16(vcombine_u16(r2_wide, vdup_n_u16(0)));
+
+          // Store to buffer
+          uint8_t r0_buf[8];
+          uint8_t r1_buf[8];
+          uint8_t r2_buf[8];
+          vst1_u8(r0_buf, r0);
+          vst1_u8(r1_buf, r1);
+          vst1_u8(r2_buf, r2);
+          for (int i = 0; i < loop_batch_size; i++)
+          {
+            bs_buf[index + i][buf_idx] = r0_buf[i];
+            bs_buf[index + i][buf_idx + 1] = r1_buf[i];
+            bs_buf[index + i][buf_idx + 2] = r2_buf[i];
+          }
+          buf_idx += 3;
         }
-        buf_idx += 3;
+    }
+    else
+    {
+      for (int i = 0; i < loop_batch_size; i++)
+      {
+        bitstream_t bs;
+
+        bs_init(&bs, bs_buf[index + i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+        for (int r = 0; r < MEDS_k; r++)
+          for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+            bs_write(&bs, G_tilde_ti_vec[r * MEDS_m * MEDS_n + j][i], GFq_bits);
+
+        bs_finalize(&bs);
       }
+    }
     PROFILER_STOP("bs_fill");
 
     int current_batch_invalids = 0;
-    for (int t = 0; t < BATCH_SIZE; t++)
+    for (int t = 0; t < loop_batch_size; t++)
     {
       if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
       {
@@ -468,7 +492,7 @@ int crypto_sign_vec(
         num_valid++;
       }
     }
-    num_tried += BATCH_SIZE;
+    num_tried += loop_batch_size;
   }
   PROFILER_STOP("SEC_COMMIT");
 
@@ -548,6 +572,19 @@ int crypto_sign_vec(
   LOG_HEX(sm, MEDS_SIG_BYTES + mlen);
 
   return 0;
+}
+
+void print_mat_vec(pmod_mat_vec_t *M, int rows, int cols, int size)
+{
+  for (int t = 0; t < size; t++)
+  {
+    pmod_mat_t M_non_vec[rows * cols];
+    for (int r = 0; r < rows; r++)
+      for (int c = 0; c < cols; c++)
+        M_non_vec[r * cols + c] = M[r * cols + c][t];
+    printf("t=%d\n", t);
+    pmod_mat_fprint(stdout, M_non_vec, rows, cols);
+  }
 }
 
 int crypto_sign_open_vec(
@@ -632,8 +669,8 @@ int crypto_sign_open_vec(
   // These matrices are still needed for the hash computation
   pmod_mat_t kappa_or_M_hat_i_data[MEDS_t << 1][2 * MEDS_k];
   pmod_mat_t *kappa_or_M_hat_i[MEDS_t << 1];
-  pmod_mat_t G_hat_i_data[MEDS_t << 1][MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_t *G_hat_i[MEDS_t << 1];
+  static pmod_mat_t G_hat_i_data[MEDS_t << 1][MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t *G_hat_i[MEDS_t << 1];
   static uint8_t bs_buf_data[MEDS_t << 1][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
   static uint8_t *bs_buf[MEDS_t << 1];
 
@@ -651,7 +688,7 @@ int crypto_sign_open_vec(
   pmod_mat_vec_t B_hat_inv[MEDS_n * MEDS_n];
   pmod_mat_vec_t kappa_or_M_hat_i_vec[2 * MEDS_k];
   pmod_mat_vec_t G0_prime_or_C_hat[2 * MEDS_m * MEDS_n];
-  pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
   uint8_t sigma_M_hat_i[MEDS_pub_seed_bytes];
   static pmod_mat_vec_t G_hat_i_vec[MEDS_k * MEDS_m * MEDS_n];
 
@@ -680,7 +717,14 @@ int crypto_sign_open_vec(
   PROFILER_START("SEC_COMMIT");
   while (num_valid < MEDS_t)
   {
-    for (int t = 0; t < BATCH_SIZE; t++)
+    int index = num_tried;
+
+    // Determine the batch size for the current iteration
+    int loop_batch_size = MEDS_t + num_invalid - num_tried;
+    if (loop_batch_size > BATCH_SIZE)
+      loop_batch_size = BATCH_SIZE;
+
+    for (int t = 0; t < loop_batch_size; t++)
     {
       // Load indices
       int index_netto = indexes[num_tried + t];
@@ -688,7 +732,7 @@ int crypto_sign_open_vec(
       if (h[index_netto] > 0)
       {
         for (int j = 0; j < 2 * MEDS_k; j++)
-          kappa_or_M_hat_i[index_netto][j] = bs_read(&bs, GFq_bits);
+          kappa_or_M_hat_i[index + t][j] = bs_read(&bs, GFq_bits);
 
         bs_finalize(&bs);
       }
@@ -704,41 +748,46 @@ int crypto_sign_open_vec(
             seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
             2);
 
-        rnd_matrix(kappa_or_M_hat_i[index_netto], 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
+        rnd_matrix(kappa_or_M_hat_i[index + t], 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
+      }
+
+      // Load G_vec from G
+      int G_index = h[index_netto];
+      for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++)
+      {
+        // SET_LANE_VEC(G_vec[i], G[G_index][i], t);
+        G_vec[i][t] = G[G_index][i];
       }
     }
 
-    // TODO: Load kappa_or_M_hat_i into kappa_or_M_hat_i_vec
-    // TODO: Load G_vec from G somehow
+    // Load kappa_or_M_hat_i into kappa_or_M_hat_i_vec
+    for (int r = 0; r < 2; r++)
+      for (int c = 0; c < MEDS_k; c++)
+        kappa_or_M_hat_i_vec[r * MEDS_k + c] = load_vec(kappa_or_M_hat_i + index, 2, MEDS_k, r, c);
 
     pmod_mat_s_vec_t valid = SET_S_VEC(1);
 
     pmod_mat_mul_vec(G0_prime_or_C_hat, 2, MEDS_m * MEDS_n, kappa_or_M_hat_i_vec, 2, MEDS_k, G_vec, MEDS_k, MEDS_m * MEDS_n);
 
-    // if (solve(A_hat, B_hat_inv, G0_prime_or_C_hat) < 0)
-    //   valid = 0;
     valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_hat, B_hat_inv, G0_prime_or_C_hat), ZERO_S_VEC)));
-
-    // if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n) < 0)
-    //   valid = 0;
     valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_hat, B_hat_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
-
-    // if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m) < 0)
-    //   valid = 0;
     valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_hat_inv, A_hat, MEDS_m, MEDS_m), ZERO_S_VEC)));
 
-    // int G_index = h[index_netto] > 0 ? h[index_netto] : 0;
-    // pi(G_hat_i, A_hat, B_hat, G[G_index]);
     pi_vec(G_hat_i_vec, A_hat, B_hat, G_vec);
 
-    // if (SF(G_hat_i, G_hat_i) < 0)
-    //   valid = 0;
     valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec))));
 
+    // Store G_hat_i_vec into G_hat_i[index]
+    for (int r = 0; r < MEDS_k; r++)
+      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c++)
+        store_vec(G_hat_i + index, MEDS_k, MEDS_m * MEDS_n, r, c, G_hat_i_vec[r * MEDS_m * MEDS_n + c], loop_batch_size);
+
     int current_batch_invalids = 0;
-    for (int t = 0; t < BATCH_SIZE; t++)
+
+    for (int t = 0; t < loop_batch_size; t++)
     {
-      if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
+      // TODO: Why does GET_LANE_S_VEC not work here?
+      if (valid[t] == VEC_FALSE)
       {
         // Compute indices
         int idx_source = num_tried + t;
@@ -770,14 +819,14 @@ int crypto_sign_open_vec(
 
         for (int r = 0; r < MEDS_k; r++)
           for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-            bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
+            bs_write(&bs, G_hat_i[idx_source][r * MEDS_m * MEDS_n + j], GFq_bits);
 
         bs_finalize(&bs);
 
         num_valid++;
       }
     }
-    num_tried++;
+    num_tried += loop_batch_size;
   }
   PROFILER_STOP("SEC_COMMIT");
 

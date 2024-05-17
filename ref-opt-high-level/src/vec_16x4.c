@@ -30,22 +30,22 @@
  * @param r The row of the element.
  * @param c The column of the element.
  */
-pmod_mat_vec_t load_vec(uint16_t *M[], int M_r, int M_c, int r, int c)
+pmod_mat_vec_t load_vec(GFq_t *M[], int M_r, int M_c, int r, int c)
 {
   uint16_t buf[BATCH_SIZE] = {0};
   for (int i = 0; i < BATCH_SIZE; i++)
   {
-    buf[i] = M[i][r * M_c + c];
+    buf[i] = (uint16_t) M[i][r * M_c + c];
   }
   return vld1_u16(buf);
 }
 
-void store_vec(uint16_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val)
+void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, int amount)
 {
   uint16_t buf[BATCH_SIZE] = {0};
   vst1_u16(buf, val);
-  for (int i = 0; i < BATCH_SIZE; i++)
+  for (int i = 0; i < amount; i++)
   {
-    M[i][r * M_c + c] = buf[i];
+    M[i][r * M_c + c] = (GFq_t) buf[i];
   }
 }
