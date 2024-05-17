@@ -13,7 +13,6 @@
 #define ADD_VEC(a, b) vaddl_u16(a, b)
 #define SUB_LOW_VEC(a, b) vsub_u16(a, b)
 #define SUB_VEC(a, b) vsubl_u16(a, b)
-// #define ADD_VEC_W(a, b) vaddq_u32(a, b)
 #define MUL_VEC(a, b) vmull_u16(a, b)
 #define MUL_ACC_VEC(a, b, c) vmlal_u16(a, b, c)
 #define OR_VEC(a, b) vorr_u16(a, b)
@@ -40,7 +39,6 @@
 
 // SIGNED INSTRUCTIONS & DATA TYPES
 #define ADD_S_VEC(a, b) vadd_s16(a, b)
-// #define MUL_LOW_S_VEC(a, b) vmul_s16(a, b)
 #define AND_S_VEC(a, b) vand_s16(a, b)
 #define XOR_S_VEC(a, b) veor_s16(a, b)
 #define NOT_S_VEC(a) vmvn_s16(a)
@@ -62,12 +60,6 @@
 #define BATCH_SIZE 4
 #define VEC_TRUE 0xffff
 #define VEC_FALSE 0x0000
-
-// FUNCTIONS
-// uint16x4_t reduce_vec(uint32x4_t a);
-// uint16x4_t freeze_vec(uint16x4_t a);
-
-#define REDUCE(val) val % MEDS_p;
 
 #define REDUCE_VEC(v1)                \
   ({                                  \
@@ -98,5 +90,7 @@
 
 pmod_mat_vec_t load_vec(GFq_t *M[], int M_r, int M_c, int r, int c);
 void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, int amount);
+
+void store_bitstream_12bit(uint8_t **bs_buf, int bs_index, pmod_mat_vec_t *G_vec, int batch_size);
 
 #endif

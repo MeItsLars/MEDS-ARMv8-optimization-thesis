@@ -30,6 +30,13 @@ int crypto_sign_keypair(
     unsigned char *pk,
     unsigned char *sk)
 {
+  // If GFq_t != uint16_t, return an error
+  if (sizeof(GFq_t) != 2)
+  {
+    fprintf(stderr, "ERROR: This low-level optimized version of MEDS requires GFq_t to be uint16_t.\n");
+    return -1;
+  }
+
   uint8_t delta[MEDS_sec_seed_bytes];
 
   randombytes(delta, MEDS_sec_seed_bytes);
@@ -222,6 +229,13 @@ int crypto_sign(
     const unsigned char *m, unsigned long long mlen,
     const unsigned char *sk)
 {
+  // If GFq_t != uint16_t, return an error
+  if (sizeof(GFq_t) != 2)
+  {
+    fprintf(stderr, "ERROR: This low-level optimized version of MEDS requires GFq_t to be uint16_t.\n");
+    return -1;
+  }
+
   // skip secret seed
   sk += MEDS_sec_seed_bytes;
 
@@ -425,22 +439,42 @@ int crypto_sign(
   for (int i = 0; i < MEDS_t; i++)
     bs_buf[i] = bs_buf_data[i];
 
-  int buf_idx = 0;
-  for (int r = 0; r < MEDS_k; r++)
+  if (GFq_bits == 12)
   {
-    int raw_idx = r * MEDS_m * MEDS_n;
-    for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    // Use a 12-bit optimized bitstream fill function (12 bits are used for all parameter sets)
+    int buf_idx = 0;
+    for (int r = 0; r < MEDS_k; r++)
     {
-      for (int t = 0; t < MEDS_t; t++)
+      int raw_idx = r * MEDS_m * MEDS_n;
+      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
       {
-        uint16_t i0 = G_tilde_ti[t][raw_idx + c];
-        uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
+        for (int t = 0; t < MEDS_t; t++)
+        {
+          uint16_t i0 = G_tilde_ti[t][raw_idx + c];
+          uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
 
-        bs_buf[t][buf_idx] = (i0 & 0xff);
-        bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
-        bs_buf[t][buf_idx + 2] = (i1 >> 4);
+          bs_buf[t][buf_idx] = (i0 & 0xff);
+          bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
+          bs_buf[t][buf_idx + 2] = (i1 >> 4);
+        }
+        buf_idx += 3;
       }
-      buf_idx += 3;
+    }
+  }
+  else
+  {
+    // In other cases, use a generic bitstream fill function
+    for (int t = 0; t < MEDS_t; t++)
+    {
+      bitstream_t bs;
+
+      bs_init(&bs, bs_buf[t], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+      for (int r = 0; r < MEDS_k; r++)
+        for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+          bs_write(&bs, G_tilde_ti[t][r * MEDS_m * MEDS_n + j], GFq_bits);
+
+      bs_finalize(&bs);
     }
   }
   PROFILER_STOP("bs_fill");
@@ -532,6 +566,13 @@ int crypto_sign_open(
     const unsigned char *sm, unsigned long long smlen,
     const unsigned char *pk)
 {
+  // If GFq_t != uint16_t, return an error
+  if (sizeof(GFq_t) != 2)
+  {
+    fprintf(stderr, "ERROR: This low-level optimized version of MEDS requires GFq_t to be uint16_t.\n");
+    return -1;
+  }
+  
   LOG_HEX(pk, MEDS_PK_BYTES);
   LOG_HEX(sm, smlen);
 
@@ -780,22 +821,42 @@ int crypto_sign_open(
   for (int i = 0; i < MEDS_t; i++)
     bs_buf[i] = bs_buf_data[i];
 
-  int buf_idx = 0;
-  for (int r = 0; r < MEDS_k; r++)
+  if (GFq_bits == 12)
   {
-    int raw_idx = r * MEDS_m * MEDS_n;
-    for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    // Use a 12-bit optimized bitstream fill function (12 bits are used for all parameter sets)
+    int buf_idx = 0;
+    for (int r = 0; r < MEDS_k; r++)
     {
-      for (int t = 0; t < MEDS_t; t++)
+      int raw_idx = r * MEDS_m * MEDS_n;
+      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
       {
-        uint16_t i0 = G_hat_i[t][raw_idx + c];
-        uint16_t i1 = G_hat_i[t][raw_idx + c + 1];
+        for (int t = 0; t < MEDS_t; t++)
+        {
+          uint16_t i0 = G_hat_i[t][raw_idx + c];
+          uint16_t i1 = G_hat_i[t][raw_idx + c + 1];
 
-        bs_buf[t][buf_idx] = (i0 & 0xff);
-        bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
-        bs_buf[t][buf_idx + 2] = (i1 >> 4);
+          bs_buf[t][buf_idx] = (i0 & 0xff);
+          bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
+          bs_buf[t][buf_idx + 2] = (i1 >> 4);
+        }
+        buf_idx += 3;
       }
-      buf_idx += 3;
+    }
+  }
+  else
+  {
+    // In other cases, use a generic bitstream fill function
+    for (int t = 0; t < MEDS_t; t++)
+    {
+      bitstream_t bs;
+
+      bs_init(&bs, bs_buf[t], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+      for (int r = 0; r < MEDS_k; r++)
+        for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+          bs_write(&bs, G_hat_i[t][r * MEDS_m * MEDS_n + j], GFq_bits);
+
+      bs_finalize(&bs);
     }
   }
   PROFILER_STOP("bs_fill");
