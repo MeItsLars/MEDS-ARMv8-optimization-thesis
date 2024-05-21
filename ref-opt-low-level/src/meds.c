@@ -107,7 +107,7 @@ int crypto_sign_keypair(
 
       LOG_MAT(G0prime, MEDS_k, MEDS_m * MEDS_n);
 
-      if (solve(A, B_inv[i], G0prime) < 0)
+      if (solve(A, B_inv[i], G0prime, 1) < 0)
       {
         LOG("no sol");
         continue;
@@ -399,7 +399,7 @@ int crypto_sign(
       pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
 
-      if (solve(A_tilde[i], B_tilde_inv, C) < 0)
+      if (solve(A_tilde[i], B_tilde_inv, C, 1) < 0)
       {
         LOG("no sol");
         continue;
@@ -687,20 +687,20 @@ int crypto_sign_open(
       pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
 
-      if (solve(A_hat, B_hat_inv, G0_prime) < 0)
+      if (solve(A_hat, B_hat_inv, G0_prime, 0) < 0)
       {
         LOG("crypto_sign_open - no sol");
         printf("no sol\n");
         return -1;
       }
 
-      if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
+      if (pmod_mat_inv_nct(B_hat, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1_nct) < 0)
       {
         LOG("no B_hat");
         return -1;
       }
 
-      if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
+      if (pmod_mat_inv_nct(A_hat_inv, A_hat, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1_nct) < 0)
       {
         LOG("no A_hat_inv");
         return -1;
@@ -776,19 +776,19 @@ int crypto_sign_open(
         pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
         pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
 
-        if (solve(A_hat_i, B_hat_inv, C_hat) < 0)
+        if (solve(A_hat_i, B_hat_inv, C_hat, 0) < 0)
         {
           LOG("no sol");
           continue;
         }
 
-        if (pmod_mat_inv(B_hat_i, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1) < 0)
+        if (pmod_mat_inv_nct(B_hat_i, B_hat_inv, MEDS_n, MEDS_n, pmod_mat_syst_n_2n_n_0_1_nct) < 0)
         {
           LOG("no B_hat");
           continue;
         }
 
-        if (pmod_mat_inv(A_hat_inv, A_hat_i, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1) < 0)
+        if (pmod_mat_inv_nct(A_hat_inv, A_hat_i, MEDS_m, MEDS_m, pmod_mat_syst_m_2m_m_0_1_nct) < 0)
         {
           LOG("no A_hat_inv");
           continue;

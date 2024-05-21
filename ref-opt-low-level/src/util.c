@@ -241,7 +241,7 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 //   return 0;
 // }
 
-int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
+int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime, int ct)
 {
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
@@ -267,7 +267,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   PROFILER_STOP("solve_opt_raw");
 
   PROFILER_START("pmod_mat_syst");
-  int piv = pmod_mat_syst_n_2m_nr1_0_1(N);
+  int piv = ct ? pmod_mat_syst_n_2m_nr1_0_1(N) : pmod_mat_syst_n_2m_nr1_0_1_nct(N, mod_inverse_table);
   PROFILER_STOP("pmod_mat_syst");
   if (piv != 0)
   {
@@ -327,7 +327,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   PROFILER_STOP("solve_opt_raw");
   // Sytemize 2nd sub-system.
   PROFILER_START("pmod_mat_syst");
-  N1_r = pmod_mat_syst_mr1_m_mr1_1_1(N1);
+  N1_r = ct ? pmod_mat_syst_mr1_m_mr1_1_1(N1) : pmod_mat_syst_mr1_m_mr1_1_1_nct(N1, mod_inverse_table);
   PROFILER_STOP("pmod_mat_syst");
 
   if (N1_r == -1)

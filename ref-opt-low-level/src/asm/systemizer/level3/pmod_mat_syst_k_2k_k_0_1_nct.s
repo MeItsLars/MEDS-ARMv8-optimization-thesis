@@ -1,7 +1,7 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_n_2m_nr1_0_1
-pmod_mat_syst_n_2m_nr1_0_1:
+.global pmod_mat_syst_k_2k_k_0_1_nct
+pmod_mat_syst_k_2k_k_0_1_nct:
     mov x2, #68
     mov x4, #4093
     dup v16.4h, w4
@@ -13,9 +13,12 @@ elimination_loop:
     cmp x5, #34
     b.eq elimination_loop_end
     madd x8, x2, x5, x5
+    ldrh w11, [x0, x8, lsl #1]
+    cmp x11, #0
+    b.ne elimination_loop_post_zero_fix
     add x6, x5, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x6, 35
+    cmp x6, 34
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1
@@ -75,121 +78,7 @@ elimination_row_zero_fix_outer_loop_end:
     cmp x11, #0
     b.eq ret_fail
     elimination_loop_post_zero_fix:
-    mul x15, x11, x11
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x16, x15, x11
-    lsr x7, x16, #12
-    mul x7, x7, x4
-    sub x16, x16, x7
-    lsr x7, x16, #12
-    mul x7, x7, x4
-    sub x16, x16, x7
-    mul x15, x16, x16
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x6, x15, x16
-    lsr x7, x6, #12
-    mul x7, x7, x4
-    sub x6, x6, x7
-    lsr x7, x6, #12
-    mul x7, x7, x4
-    sub x6, x6, x7
-    mul x15, x6, x6
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x6
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x16
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x11
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    cmp x15, #4093
-    csel x7, x4, xzr, ge
-    sub x11, x15, x7
+    ldrh w11, [x1, x11, lsl #1]
     dup v1.4h, w11
     add x9, x0, x8, lsl #1
     mov x7, x5
@@ -232,7 +121,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x6, x5, #1
 elimination_eliminate_rows_loop:
-    cmp x6, 35
+    cmp x6, 34
     b.eq elimination_eliminate_rows_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1

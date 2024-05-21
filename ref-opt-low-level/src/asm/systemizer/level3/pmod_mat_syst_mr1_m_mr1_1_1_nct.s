@@ -1,21 +1,55 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_n_2m_nr1_0_1
-pmod_mat_syst_n_2m_nr1_0_1:
-    mov x2, #68
+.global pmod_mat_syst_mr1_m_mr1_1_1_nct
+pmod_mat_syst_mr1_m_mr1_1_1_nct:
+    mov x2, #34
     mov x4, #4093
     dup v16.4h, w4
     dup v17.8h, w4
     dup v18.4s, w4
-    mov x3, xzr
+    mov x3, #33
     mov x5, #0
 elimination_loop:
-    cmp x5, #34
+    cmp x5, #33
     b.eq elimination_loop_end
     madd x8, x2, x5, x5
+    ldrh w11, [x0, x8, lsl #1]
+    cmp x11, #0
+    b.ne elimination_loop_post_zero_fix
+    mov x11, #68
+    add x6, x0, x8, lsl #1
+    mov x15, #0
+    mov x7, x5
+elimination_swap_or_loop:
+    cmp x7, #33
+    b.ge elimination_swap_or_loop_end
+    ldrh w14, [x6], #68
+    orr x15, x15, x14
+    add x7, x7, #1
+    b elimination_swap_or_loop
+elimination_swap_or_loop_end:
+    cmp x15, #0
+    csel x3, x3, x5, ne
+    add x9, x0, x5, lsl #1
+    add x10, x0, 66
+    mov x6, #0
+elimination_swap_loop:
+    cmp x6, #33
+    b.ge elimination_swap_loop_end
+    ldrh w12, [x9]
+    ldrh w13, [x10]
+    cmp x15, #0
+    csel x16, x12, x13, ne
+    csel w13, w13, w12, ne
+    mov x12, x16
+    strh w12, [x9], #68
+    strh w13, [x10], #68
+    add x6, x6, #1
+    b elimination_swap_loop
+elimination_swap_loop_end:
     add x6, x5, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x6, 35
+    cmp x6, 33
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1
@@ -75,121 +109,7 @@ elimination_row_zero_fix_outer_loop_end:
     cmp x11, #0
     b.eq ret_fail
     elimination_loop_post_zero_fix:
-    mul x15, x11, x11
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x16, x15, x11
-    lsr x7, x16, #12
-    mul x7, x7, x4
-    sub x16, x16, x7
-    lsr x7, x16, #12
-    mul x7, x7, x4
-    sub x16, x16, x7
-    mul x15, x16, x16
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x6, x15, x16
-    lsr x7, x6, #12
-    mul x7, x7, x4
-    sub x6, x6, x7
-    lsr x7, x6, #12
-    mul x7, x7, x4
-    sub x6, x6, x7
-    mul x15, x6, x6
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x6
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x16
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x15
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    mul x15, x15, x11
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    lsr x7, x15, #12
-    mul x7, x7, x4
-    sub x15, x15, x7
-    cmp x15, #4093
-    csel x7, x4, xzr, ge
-    sub x11, x15, x7
+    ldrh w11, [x1, x11, lsl #1]
     dup v1.4h, w11
     add x9, x0, x8, lsl #1
     mov x7, x5
@@ -232,7 +152,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x6, x5, #1
 elimination_eliminate_rows_loop:
-    cmp x6, 35
+    cmp x6, 33
     b.eq elimination_eliminate_rows_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1
@@ -296,7 +216,7 @@ elimination_eliminate_rows_loop_end:
     add x5, x5, #1
     b elimination_loop
 elimination_loop_end:
-    mov x5, #33
+    mov x5, #32
 backsub_outer_loop:
     cmp x5, #0
     b.lt backsub_outer_loop_end
@@ -327,7 +247,7 @@ backsub_inner_loop:
     csel x15, x4, xzr, ge
     sub x13, x16, x15
     strh w13, [x0, x10, lsl #1]
-    mov x7, #34
+    mov x7, #33
     madd x9, x2, x5, x7
     add x9, x0, x9, lsl #1
     madd x10, x2, x6, x7
