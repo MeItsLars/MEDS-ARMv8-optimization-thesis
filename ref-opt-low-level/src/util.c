@@ -241,9 +241,9 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h)
 //   return 0;
 // }
 
-// Disable vectorized optimization with gcc attribute
-__attribute__((optimize("no-tree-vectorize"))) int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime, int ct, int sm)
+int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime, int ct)
 {
+  int sm = 1; // TODO: Remove this
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
   PROFILER_START("solve_opt");
@@ -359,11 +359,24 @@ __attribute__((optimize("no-tree-vectorize"))) int solve_opt(pmod_mat_t *A_tilde
 
   LOG_MAT(N_swap, MEDS_n - 1, MEDS_m);
 
-  for (int r = 0; r < MEDS_m; r++)
-    for (int c = 0; c < MEDS_n - 1; c++)
-      GFq_cswap(&pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, c),
-                &pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, MEDS_m - 1),
-                eq(c, N1_r));
+  if (ct == 1)
+  {
+    for (int r = 0; r < MEDS_m; r++)
+      for (int c = 0; c < MEDS_n - 1; c++)
+        GFq_cswap(&pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, c),
+                  &pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, MEDS_m - 1),
+                  eq(c, N1_r));
+  }
+  else
+  {
+    for (int r = 0; r < MEDS_m; r++)
+    {
+      uint16_t a = pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, N1_r);
+      uint16_t b = pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, MEDS_m - 1);
+      pmod_mat_set_entry(N_swap, MEDS_n - 1, MEDS_m, r, N1_r, b);
+      pmod_mat_set_entry(N_swap, MEDS_n - 1, MEDS_m, r, MEDS_m - 1, a);
+    }
+  }
 
   LOG_MAT(N_swap, MEDS_n - 1, MEDS_m);
 
@@ -401,11 +414,24 @@ __attribute__((optimize("no-tree-vectorize"))) int solve_opt(pmod_mat_t *A_tilde
   LOG_MAT(P01nt, MEDS_n, MEDS_m);
 
   // Conditionally swap columns.
-  for (int r = 0; r < MEDS_n; r++)
-    for (int c = 0; c < MEDS_m; c++)
-      GFq_cswap(&pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, c),
-                &pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, MEDS_m - 1),
-                eq(c, N1_r));
+  if (ct == 1)
+  {
+    for (int r = 0; r < MEDS_n; r++)
+      for (int c = 0; c < MEDS_m; c++)
+        GFq_cswap(&pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, c),
+                  &pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, MEDS_m - 1),
+                  eq(c, N1_r));
+  }
+  else
+  {
+    for (int r = 0; r < MEDS_n; r++)
+    {
+      uint16_t a = pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, N1_r);
+      uint16_t b = pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, MEDS_m - 1);
+      pmod_mat_set_entry(P01nt, MEDS_n, MEDS_m, r, N1_r, b);
+      pmod_mat_set_entry(P01nt, MEDS_n, MEDS_m, r, MEDS_m - 1, a);
+    }
+  }
 
   LOG_MAT(P01nt, MEDS_n, MEDS_m);
 
@@ -449,11 +475,24 @@ __attribute__((optimize("no-tree-vectorize"))) int solve_opt(pmod_mat_t *A_tilde
 
   LOG_MAT(P00nt_swap, MEDS_n, MEDS_m);
 
-  for (int r = 0; r < MEDS_n; r++)
-    for (int c = 0; c < MEDS_m; c++)
-      GFq_cswap(&pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, c),
-                &pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, MEDS_m - 1),
-                eq(c, N1_r));
+  if (ct == 1)
+  {
+    for (int r = 0; r < MEDS_n; r++)
+      for (int c = 0; c < MEDS_m; c++)
+        GFq_cswap(&pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, c),
+                  &pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, MEDS_m - 1),
+                  eq(c, N1_r));
+  }
+  else
+  {
+    for (int r = 0; r < MEDS_n; r++)
+    {
+      uint16_t a = pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, N1_r);
+      uint16_t b = pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, MEDS_m - 1);
+      pmod_mat_set_entry(P00nt_swap, MEDS_n, MEDS_m, r, N1_r, b);
+      pmod_mat_set_entry(P00nt_swap, MEDS_n, MEDS_m, r, MEDS_m - 1, a);
+    }
+  }
 
   LOG_MAT(P00nt_swap, MEDS_n, MEDS_m);
 
@@ -527,7 +566,7 @@ __attribute__((optimize("no-tree-vectorize"))) int solve_opt(pmod_mat_t *A_tilde
           // val = ((MEDS_p + val) - prod) % MEDS_p;
           val = vsub_u16(vadd_u16(val, MEDS_p_VEC), prod_red);
           val = FREEZE_VEC(val);
-          
+
           // sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
           vst1_u16((uint16_t *)&sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r], val);
         }

@@ -107,7 +107,7 @@ int crypto_sign_keypair(
 
       LOG_MAT(G0prime, MEDS_k, MEDS_m * MEDS_n);
 
-      if (solve(A, B_inv[i], G0prime, 1, 1) < 0)
+      if (solve(A, B_inv[i], G0prime, 1) < 0)
       {
         LOG("no sol");
         continue;
@@ -399,7 +399,7 @@ int crypto_sign(
       pmod_mat_t A_tilde_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_tilde_inv[MEDS_n * MEDS_n];
 
-      if (solve(A_tilde[i], B_tilde_inv, C, 1, 1) < 0)
+      if (solve(A_tilde[i], B_tilde_inv, C, 1) < 0)
       {
         LOG("no sol");
         continue;
@@ -687,7 +687,7 @@ int crypto_sign_open(
       pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
       pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
 
-      if (solve(A_hat, B_hat_inv, G0_prime, 0, 1) < 0)
+      if (solve(A_hat, B_hat_inv, G0_prime, 0) < 0)
       {
         LOG("crypto_sign_open - no sol");
         printf("no sol\n");
@@ -776,7 +776,7 @@ int crypto_sign_open(
         pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
         pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
 
-        if (solve(A_hat_i, B_hat_inv, C_hat, 0, 1) < 0)
+        if (solve(A_hat_i, B_hat_inv, C_hat, 0) < 0)
         {
           LOG("no sol");
           continue;
