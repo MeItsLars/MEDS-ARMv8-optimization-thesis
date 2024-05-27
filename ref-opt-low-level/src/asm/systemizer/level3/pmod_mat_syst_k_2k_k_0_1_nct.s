@@ -3,6 +3,9 @@
 .global pmod_mat_syst_k_2k_k_0_1_nct
 pmod_mat_syst_k_2k_k_0_1_nct:
     mov x2, #68
+    mov w4, 0x0481
+    movk w4, 0x8018, lsl #16
+    dup v25.4h, w4
     mov x4, #4093
     dup v16.4h, w4
     dup v17.8h, w4
@@ -195,7 +198,7 @@ backsub_inner_loop:
     b.eq backsub_inner_loop_end
     madd x15, x2, x6, x5
     ldrh w14, [x0, x15, lsl #1]
-    dup v7.4h, w14
+    dup v7.8h, w14
     madd x15, x2, x5, x5
     ldrh w12, [x0, x15, lsl #1]
     madd x10, x2, x6, x5
@@ -221,6 +224,33 @@ backsub_inner_loop:
     add x9, x0, x9, lsl #1
     madd x10, x2, x6, x7
     add x10, x0, x10, lsl #1
+backsub_column_loop_neon_16x8:
+    sub x15, x2, x7
+    cmp x15, #8
+    b.lt backsub_column_loop_neon_16x4
+    ldr q3, [x9], #16
+    ldr q4, [x10]
+    umull v19.4s, v3.4h, v7.4h
+    umull2 v20.4s, v3.8h, v7.8h
+    umull v21.2d, v19.2s, v25.2s
+    umull2 v22.2d, v19.4s, v25.4s
+    umull v23.2d, v20.2s, v25.2s
+    umull2 v24.2d, v20.4s, v25.4s
+    uzp2 v21.4s, v21.4s, v22.4s
+    uzp2 v23.4s, v23.4s, v24.4s
+    ushr v21.4s, v21.4s, 11
+    ushr v23.4s, v23.4s, 11
+    mls v19.4s, v21.4s, v18.4s
+    mls v20.4s, v23.4s, v18.4s
+    uzp1 v19.8h, v19.8h, v20.8h
+    add v21.8h, v4.8h, v17.8h
+    sub v4.8h, v21.8h, v19.8h
+    cmhs v19.8h, v4.8h, v17.8h
+    and v19.16b, v19.16b, v17.16b
+    sub v4.8h, v4.8h, v19.8h
+    str q4, [x10], #16
+    add x7, x7, #8
+    b backsub_column_loop_neon_16x8
 backsub_column_loop_neon_16x4:
     sub x15, x2, x7
     cmp x15, #4

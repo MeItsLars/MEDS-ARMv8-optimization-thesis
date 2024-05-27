@@ -1,8 +1,8 @@
 .cpu cortex-a72
 .arch armv8-a
-.global pmod_mat_syst_mr1_m_mr1_1_1_nct
-pmod_mat_syst_mr1_m_mr1_1_1_nct:
-    mov x2, #34
+.global pmod_mat_syst_k_2k_k_0_0_nct
+pmod_mat_syst_k_2k_k_0_0_nct:
+    mov x2, #68
     mov w4, 0x0481
     movk w4, 0x8018, lsl #16
     dup v25.4h, w4
@@ -10,49 +10,18 @@ pmod_mat_syst_mr1_m_mr1_1_1_nct:
     dup v16.4h, w4
     dup v17.8h, w4
     dup v18.4s, w4
-    mov x3, #33
+    mov x3, xzr
     mov x5, #0
 elimination_loop:
-    cmp x5, #33
+    cmp x5, #34
     b.eq elimination_loop_end
     madd x8, x2, x5, x5
     ldrh w11, [x0, x8, lsl #1]
     cmp x11, #0
     b.ne elimination_loop_post_zero_fix
-    mov x11, #68
-    add x6, x0, x8, lsl #1
-    mov x15, #0
-    mov x7, x5
-elimination_swap_or_loop:
-    cmp x7, #33
-    b.ge elimination_swap_or_loop_end
-    ldrh w14, [x6], #68
-    orr x15, x15, x14
-    add x7, x7, #1
-    b elimination_swap_or_loop
-elimination_swap_or_loop_end:
-    cmp x15, #0
-    csel x3, x3, x5, ne
-    add x9, x0, x5, lsl #1
-    add x10, x0, 66
-    mov x6, #0
-elimination_swap_loop:
-    cmp x6, #33
-    b.ge elimination_swap_loop_end
-    ldrh w12, [x9]
-    ldrh w13, [x10]
-    cmp x15, #0
-    csel x16, x12, x13, ne
-    csel w13, w13, w12, ne
-    mov x12, x16
-    strh w12, [x9], #68
-    strh w13, [x10], #68
-    add x6, x6, #1
-    b elimination_swap_loop
-elimination_swap_loop_end:
     add x6, x5, #1
 elimination_row_zero_fix_outer_loop:
-    cmp x6, 33
+    cmp x6, 34
     b.eq elimination_row_zero_fix_outer_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1
@@ -155,7 +124,7 @@ elimination_normalize_row_loop_scalar:
 elimination_normalize_row_loop_end:
     add x6, x5, #1
 elimination_eliminate_rows_loop:
-    cmp x6, 33
+    cmp x6, 34
     b.eq elimination_eliminate_rows_loop_end
     madd x10, x2, x6, x5
     add x10, x0, x10, lsl #1
@@ -219,124 +188,6 @@ elimination_eliminate_rows_loop_end:
     add x5, x5, #1
     b elimination_loop
 elimination_loop_end:
-    mov x5, #32
-backsub_outer_loop:
-    cmp x5, #0
-    b.lt backsub_outer_loop_end
-    mov x6, #0
-backsub_inner_loop:
-    cmp x6, x5
-    b.eq backsub_inner_loop_end
-    madd x15, x2, x6, x5
-    ldrh w14, [x0, x15, lsl #1]
-    dup v7.8h, w14
-    madd x15, x2, x5, x5
-    ldrh w12, [x0, x15, lsl #1]
-    madd x10, x2, x6, x5
-    ldrh w13, [x0, x10, lsl #1]
-    mul x15, x12, x14
-    lsr x16, x15, #12
-    mul x16, x16, x4
-    sub x15, x15, x16
-    lsr x16, x15, #12
-    mul x16, x16, x4
-    sub x15, x15, x16
-    cmp x15, #4093
-    csel x16, x4, xzr, ge
-    sub x15, x15, x16
-    add x16, x13, #4093
-    sub x16, x16, x15
-    cmp x16, #4093
-    csel x15, x4, xzr, ge
-    sub x13, x16, x15
-    strh w13, [x0, x10, lsl #1]
-    mov x7, #33
-    madd x9, x2, x5, x7
-    add x9, x0, x9, lsl #1
-    madd x10, x2, x6, x7
-    add x10, x0, x10, lsl #1
-backsub_column_loop_neon_16x8:
-    sub x15, x2, x7
-    cmp x15, #8
-    b.lt backsub_column_loop_neon_16x4
-    ldr q3, [x9], #16
-    ldr q4, [x10]
-    umull v19.4s, v3.4h, v7.4h
-    umull2 v20.4s, v3.8h, v7.8h
-    umull v21.2d, v19.2s, v25.2s
-    umull2 v22.2d, v19.4s, v25.4s
-    umull v23.2d, v20.2s, v25.2s
-    umull2 v24.2d, v20.4s, v25.4s
-    uzp2 v21.4s, v21.4s, v22.4s
-    uzp2 v23.4s, v23.4s, v24.4s
-    ushr v21.4s, v21.4s, 11
-    ushr v23.4s, v23.4s, 11
-    mls v19.4s, v21.4s, v18.4s
-    mls v20.4s, v23.4s, v18.4s
-    uzp1 v19.8h, v19.8h, v20.8h
-    add v21.8h, v4.8h, v17.8h
-    sub v4.8h, v21.8h, v19.8h
-    cmhs v19.8h, v4.8h, v17.8h
-    and v19.16b, v19.16b, v17.16b
-    sub v4.8h, v4.8h, v19.8h
-    str q4, [x10], #16
-    add x7, x7, #8
-    b backsub_column_loop_neon_16x8
-backsub_column_loop_neon_16x4:
-    sub x15, x2, x7
-    cmp x15, #4
-    b.lt backsub_column_loop_scalar
-    ld1 {v3.4h}, [x9], #8
-    ld1 {v4.4h}, [x10]
-    umull v19.4s, v3.4h, v7.4h
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    sqxtn v19.4h, v19.4s
-    cmhs v20.4h, v19.4h, v16.4h
-    and v20.16b, v20.16b, v16.16b
-    sub v19.4h, v19.4h, v20.4h
-    add v20.4h, v4.4h, v16.4h
-    sub v20.4h, v20.4h, v19.4h
-    cmhs v19.4h, v20.4h, v16.4h
-    and v19.16b, v19.16b, v16.16b
-    sub v4.4h, v20.4h, v19.4h
-    st1 {v4.4h}, [x10], #8
-    add x7, x7, #4
-    b backsub_column_loop_neon_16x4
-backsub_column_loop_scalar:
-    cmp x7, x2
-    b.ge backsub_column_loop_end
-    ldrh w12, [x9], #2
-    ldrh w13, [x10]
-    mul x15, x12, x14
-    lsr x16, x15, #12
-    mul x16, x16, x4
-    sub x15, x15, x16
-    lsr x16, x15, #12
-    mul x16, x16, x4
-    sub x15, x15, x16
-    cmp x15, #4093
-    csel x16, x4, xzr, ge
-    sub x15, x15, x16
-    add x16, x13, #4093
-    sub x16, x16, x15
-    cmp x16, #4093
-    csel x15, x4, xzr, ge
-    sub x13, x16, x15
-    strh w13, [x10], #2
-    add x7, x7, #1
-    b backsub_column_loop_scalar
-backsub_column_loop_end:
-    add x6, x6, #1
-    b backsub_inner_loop
-backsub_inner_loop_end:
-    sub x5, x5, #1
-    b backsub_outer_loop
-backsub_outer_loop_end:
 ret_success:
     mov x0, x3
     ret

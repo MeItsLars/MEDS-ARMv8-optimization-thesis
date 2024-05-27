@@ -69,11 +69,14 @@ RN_Mrr = "v1.4h"
 RN_Mrr_8h = "v2.8h"
 RN_Mrc = "v3.4h"
 RN_Mrc_8h = "v3.8h"
+RN_Mrc_q = "q3"
 RN_Mr2c = "v4.4h"
 RN_Mr2c_8h = "v4.8h"
+RN_Mr2c_q = "q4"
 RN_Mrr0 = "v5.4h"
 RN_Mrr0_8h = "v6.8h"
 RN_Mr2r = "v7.4h"
+RN_Mr2r_8h = "v7.8h"
 
 RN_MEDSp = "v16.4h"
 RN_MEDSp_8h = "v17.8h"
@@ -84,6 +87,20 @@ RN_T1_w = "v19.4s"
 RN_T2 = "v20.4h"
 RN_T2_8h = "v20.8h"
 RN_T2_w = "v20.4s"
+RN_T3 = "v21.4h"
+RN_T3_8h = "v21.8h"
+RN_T3_w = "v21.4s"
+RN_T4 = "v22.4h"
+RN_T4_8h = "v22.8h"
+RN_T4_w = "v22.4s"
+RN_T5 = "v23.4h"
+RN_T5_8h = "v23.8h"
+RN_T5_w = "v23.4s"
+RN_T6 = "v24.4h"
+RN_T6_8h = "v24.8h"
+RN_T6_w = "v24.4s"
+RN_MAGIC = "v25.4h"
+RN_MAGIC_q = "q25"
 
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
@@ -479,6 +496,68 @@ def add_elimination_loop(context, asm):
     # Eliminate the rows below the current one (so that M[r + x][c] becomes 0)
     add_loop(asm, "elimination_eliminate_rows_loop", R_loop2, R_loop1, context.Mr, 1, lambda: add_elimination_row_eliminate_outer_loop(context, asm))
 
+def add_double_reduce(context, asm, rn_src1, rn_src2, rn_tmp1, rn_tmp2, rn_tmp3, rn_tmp4):
+    rn_tmp1_2d = f"{rn_tmp1[:-3]}.2d"
+    rn_tmp2_2d = f"{rn_tmp2[:-3]}.2d"
+    rn_tmp3_2d = f"{rn_tmp3[:-3]}.2d"
+    rn_tmp4_2d = f"{rn_tmp4[:-3]}.2d"
+
+    rn_src1_2s = f"{rn_src1[:-3]}.2s"
+    rn_src1_4s = f"{rn_src1[:-3]}.4s"
+    rn_src2_2s = f"{rn_src2[:-3]}.2s"
+    rn_src2_4s = f"{rn_src2[:-3]}.4s"
+
+    rn_magic_2s = f"{RN_MAGIC[:-3]}.2s"
+    rn_magic_4s = f"{RN_MAGIC[:-3]}.4s"
+
+    # Compute val * magic
+    add_nop(asm, 1, f"umull {rn_tmp1_2d}, {rn_src1_2s}, {rn_magic_2s}")
+    add_nop(asm, 1, f"umull2 {rn_tmp2_2d}, {rn_src1_4s}, {rn_magic_4s}")
+    add_nop(asm, 1, f"umull {rn_tmp3_2d}, {rn_src2_2s}, {rn_magic_2s}")
+    add_nop(asm, 1, f"umull2 {rn_tmp4_2d}, {rn_src2_4s}, {rn_magic_4s}")
+
+    # zip the results back into two registers
+    add_nop(asm, 1, f"uzp2 {rn_tmp1}, {rn_tmp1}, {rn_tmp2}")
+    add_nop(asm, 1, f"uzp2 {rn_tmp3}, {rn_tmp3}, {rn_tmp4}")
+
+    # shift right by 43 % 16 = 11 bits
+    add_nop(asm, 1, f"ushr {rn_tmp1}, {rn_tmp1}, 11")
+    add_nop(asm, 1, f"ushr {rn_tmp3}, {rn_tmp3}, 11")
+
+    # subtract
+    add_nop(asm, 1, f"mls {rn_src1_4s}, {rn_tmp1}, {RN_MEDSp_w}")
+    add_nop(asm, 1, f"mls {rn_src2_4s}, {rn_tmp3}, {RN_MEDSp_w}")
+
+def add_backsub_column_loop_neon_16x8(context, asm):
+    # Load tmp0 and tmp1 (Mrc and Mr2c)
+    add_nop(asm, 1, f"ldr {RN_Mrc_q}, [{R_Mrc_l}], #16")
+    add_nop(asm, 1, f"ldr {RN_Mr2c_q}, [{R_Mr2c_l}]") # + #16 is done at the store in the end of this loop
+
+    # Compute factor * tmp0 into RN_T1 and RN_T2 (low and high)
+    add_nop(asm, 1, f"umull {RN_T1_w}, {RN_Mrc}, {RN_Mr2r}")
+    add_nop(asm, 1, f"umull2 {RN_T2_w}, {RN_Mrc_8h}, {RN_Mr2r_8h}")
+
+    # Reduce both modulo MEDS_p
+    add_double_reduce(context, asm, RN_T1_w, RN_T2_w, RN_T3_w, RN_T4_w, RN_T5_w, RN_T6_w)
+    # Zip together
+    add_nop(asm, 1, f"uzp1 {RN_T1_8h}, {RN_T1_8h}, {RN_T2_8h}")
+
+    # Compute val=(MEDS_p + tmp1 - val)
+    # add_nop(asm, 1, f"uaddl {RN_T3_w}, {RN_Mr2c}, {RN_MEDSp}")
+    # add_nop(asm, 1, f"uaddl2 {RN_T4_w}, {RN_Mr2c_8h}, {RN_MEDSp_8h}")
+    # add_nop(asm, 1, f"sub {RN_T1}, {RN_T3}, {RN_T1}")
+    # add_nop(asm, 1, f"sub {RN_T2}, {RN_T4}, {RN_T2}")
+    add_nop(asm, 1, f"add {RN_T3_8h}, {RN_Mr2c_8h}, {RN_MEDSp_8h}")
+    add_nop(asm, 1, f"sub {RN_Mr2c_8h}, {RN_T3_8h}, {RN_T1_8h}")
+
+    # If the result is larger than MEDS_p, remove one MEDS_p
+    add_nop(asm, 1, f"cmhs {RN_T1_8h}, {RN_Mr2c_8h}, {RN_MEDSp_8h}")
+    add_nop(asm, 1, f"and {RN_T1_8h[:-3]}.16b, {RN_T1_8h[:-3]}.16b, {RN_MEDSp_8h[:-3]}.16b")
+    add_nop(asm, 1, f"sub {RN_Mr2c_8h}, {RN_Mr2c_8h}, {RN_T1_8h}")
+
+    # Store the result into M[r2][c]
+    add_nop(asm, 1, f"str {RN_Mr2c_q}, [{R_Mr2c_l}], #16")
+
 def add_backsub_column_loop_neon_16x4(context, asm):
     # Load Mrc and Mr2c
     add_nop(asm, 1, f"ld1 {{{RN_Mrc}}}, [{R_Mrc_l}], #8")
@@ -515,7 +594,7 @@ def add_backsub_inner_loop(context, asm):
     add_nop(asm, 1, f"madd {R_T1}, {R_Mc}, {R_loop2}, {R_loop1}")
     add_nop(asm, 1, f"ldrh {R_Mr2r_h}, [{R_M}, {R_T1}, lsl #1]")
     # Store M[r2][r] into RN_Mr2r
-    add_nop(asm, 1, f"dup {RN_Mr2r}, {R_Mr2r_h}")
+    add_nop(asm, 1, f"dup {RN_Mr2r_8h}, {R_Mr2r_h}")
 
     # Load R_Mrc = M[r][r] = M + 2 * M_c * r + 2 * r
     add_nop(asm, 1, f"madd {R_T1}, {R_Mc}, {R_loop1}, {R_loop1}")
@@ -544,6 +623,14 @@ def add_backsub_inner_loop(context, asm):
 
 
     ## PERFORM LOOP
+    # Step 0: Do 16x8 NEON if there are at least 8 lanes left
+    add(asm, 0, f"backsub_column_loop_neon_16x8:")
+    add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
+    add(asm, 1, f"cmp {R_T1}, #8")
+    add(asm, 1, f"b.lt backsub_column_loop_neon_16x4")
+    add_backsub_column_loop_neon_16x8(context, asm)
+    add(asm, 1, f"add {R_loop3}, {R_loop3}, #8")
+    add(asm, 1, f"b backsub_column_loop_neon_16x8")
     # Step 1: Do 16x4 NEON if there are at least 4 lanes left
     add(asm, 0, f"backsub_column_loop_neon_16x4:")
     add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
@@ -574,12 +661,17 @@ def generate_systemizer_asm(context, fun_id):
     add(asm, 0, f"{fun_id}:")
     # Set R_Mc
     add(asm, 1, f"mov {R_Mc}, #{context.Mc}")
+    # Initialize magic value (0x8018_0481 = -2145909631) into RN_MAGIC registers
+    add(asm, 1, f"mov {R_MEDSp_h}, 0x0481")
+    add(asm, 1, f"movk {R_MEDSp_h}, 0x8018, lsl #16")
+    add(asm, 1, f"dup {RN_MAGIC}, {R_MEDSp_h}")
     # Set MEDS_p
     add(asm, 1, f"mov {R_MEDSp}, #{context.MEDS_p}")
     # Initialize MEDS_p into RN_MEDSp registers
     add(asm, 1, f"dup {RN_MEDSp}, {R_MEDSp_h}")
     add(asm, 1, f"dup {RN_MEDSp_8h}, {R_MEDSp_h}")
     add(asm, 1, f"dup {RN_MEDSp_w}, {R_MEDSp_h}")
+
     # Initialize the return value
     if context.do_swap:
         add(asm, 1, f"mov {R_ret}, #{context.Mr}")
@@ -646,6 +738,7 @@ if __name__ == "__main__":
     generate_systemizer_file(name, Context(n, 2*n, n, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_n_2n_n_0_1')
     generate_systemizer_file(name, Context(m, 2*m, m, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_m_2m_m_0_1')
     generate_systemizer_file(name, Context(k, 2*k, k, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_k_2k_k_0_1')
+    generate_systemizer_file(name, Context(k, 2*k, k, False, False, MEDS_p, GFq_bits, True), 'pmod_mat_syst_k_2k_k_0_0')
     generate_systemizer_file(name, Context(n, 2*m, n-1, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_n_2m_nr1_0_1')
     generate_systemizer_file(name, Context(m-1, m, m-1, True, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_mr1_m_mr1_1_1')
     generate_systemizer_file(name, Context(5, 5, 5, False, False, MEDS_p, GFq_bits, False), 'pmod_mat_syst_5_5_5_0_0_nct')
@@ -653,5 +746,6 @@ if __name__ == "__main__":
     generate_systemizer_file(name, Context(n, 2*n, n, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_n_2n_n_0_1_nct')
     generate_systemizer_file(name, Context(m, 2*m, m, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_m_2m_m_0_1_nct')
     generate_systemizer_file(name, Context(k, 2*k, k, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_k_2k_k_0_1_nct')
+    generate_systemizer_file(name, Context(k, 2*k, k, False, False, MEDS_p, GFq_bits, False), 'pmod_mat_syst_k_2k_k_0_0_nct')
     generate_systemizer_file(name, Context(n, 2*m, n-1, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_n_2m_nr1_0_1_nct')
     generate_systemizer_file(name, Context(m-1, m, m-1, True, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_mr1_m_mr1_1_1_nct')

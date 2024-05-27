@@ -3,6 +3,9 @@
 .global pmod_mat_syst_5_5_5_0_0_nct
 pmod_mat_syst_5_5_5_0_0_nct:
     mov x2, #5
+    mov w4, 0x0481
+    movk w4, 0x8018, lsl #16
+    dup v25.4h, w4
     mov x4, #4093
     dup v16.4h, w4
     dup v17.8h, w4

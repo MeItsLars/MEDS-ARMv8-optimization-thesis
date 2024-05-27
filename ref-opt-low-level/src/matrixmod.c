@@ -224,7 +224,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
 
 GFq_t GF_inv(GFq_t val)
 {
-  PROFILER_START("GF_inv");
+  // PROFILER_START("GF_inv");
   //  if (MEDS_p == 8191)
   //  {
   //    // Use an optimal addition chain...
@@ -251,45 +251,45 @@ GFq_t GF_inv(GFq_t val)
   //  }
   //  else if (MEDS_p == 4093)
   //  {
-  //    // Use an optimal addition chain...
-  //   uint64_t tmp_0  = val;                          //  0                1
-  //   uint64_t tmp_1  = (tmp_0 * tmp_0) % MEDS_p;     //  1( 0)            2
-  //   uint64_t tmp_2  = (tmp_1 * tmp_1) % MEDS_p;     //  2( 1)            4
-  //   uint64_t tmp_3  = (tmp_2 * tmp_0) % MEDS_p;     //  3( 2, 0)         5
-  //   uint64_t tmp_4  = (tmp_3 * tmp_3) % MEDS_p;     //  4( 3)           10
-  //   uint64_t tmp_5  = (tmp_4 * tmp_3) % MEDS_p;     //  5( 4, 3)        15
-  //   uint64_t tmp_6  = (tmp_5 * tmp_5) % MEDS_p;     //  6( 5)           30
-  //   uint64_t tmp_7  = (tmp_6 * tmp_6) % MEDS_p;     //  7( 6)           60
-  //   uint64_t tmp_8  = (tmp_7 * tmp_7) % MEDS_p;     //  8( 7)          120
-  //   uint64_t tmp_9  = (tmp_8 * tmp_8) % MEDS_p;     //  9( 8)          240
-  //   uint64_t tmp_10 = (tmp_9 * tmp_5) % MEDS_p;     // 10( 9, 5)       255
-  //   uint64_t tmp_11 = (tmp_10 * tmp_10) % MEDS_p;   // 11(10)          510
-  //   uint64_t tmp_12 = (tmp_11 * tmp_11) % MEDS_p;   // 12(11)         1020
-  //   uint64_t tmp_13 = (tmp_12 * tmp_12) % MEDS_p;   // 13(12)         2040
-  //   uint64_t tmp_14 = (tmp_13 * tmp_3) % MEDS_p;    // 14(13, 3)      2045
-  //   uint64_t tmp_15 = (tmp_14 * tmp_14) % MEDS_p;   // 15(14)         4090
-  //   uint64_t tmp_16 = (tmp_15 * tmp_0) % MEDS_p;    // 16(15, 0)      4091
-  //
-  //   return tmp_16;
+     // Use an optimal addition chain...
+    uint64_t tmp_0  = val;                          //  0                1
+    uint64_t tmp_1  = (tmp_0 * tmp_0) % MEDS_p;     //  1( 0)            2
+    uint64_t tmp_2  = (tmp_1 * tmp_1) % MEDS_p;     //  2( 1)            4
+    uint64_t tmp_3  = (tmp_2 * tmp_0) % MEDS_p;     //  3( 2, 0)         5
+    uint64_t tmp_4  = (tmp_3 * tmp_3) % MEDS_p;     //  4( 3)           10
+    uint64_t tmp_5  = (tmp_4 * tmp_3) % MEDS_p;     //  5( 4, 3)        15
+    uint64_t tmp_6  = (tmp_5 * tmp_5) % MEDS_p;     //  6( 5)           30
+    uint64_t tmp_7  = (tmp_6 * tmp_6) % MEDS_p;     //  7( 6)           60
+    uint64_t tmp_8  = (tmp_7 * tmp_7) % MEDS_p;     //  8( 7)          120
+    uint64_t tmp_9  = (tmp_8 * tmp_8) % MEDS_p;     //  9( 8)          240
+    uint64_t tmp_10 = (tmp_9 * tmp_5) % MEDS_p;     // 10( 9, 5)       255
+    uint64_t tmp_11 = (tmp_10 * tmp_10) % MEDS_p;   // 11(10)          510
+    uint64_t tmp_12 = (tmp_11 * tmp_11) % MEDS_p;   // 12(11)         1020
+    uint64_t tmp_13 = (tmp_12 * tmp_12) % MEDS_p;   // 13(12)         2040
+    uint64_t tmp_14 = (tmp_13 * tmp_3) % MEDS_p;    // 14(13, 3)      2045
+    uint64_t tmp_15 = (tmp_14 * tmp_14) % MEDS_p;   // 15(14)         4090
+    uint64_t tmp_16 = (tmp_15 * tmp_0) % MEDS_p;    // 16(15, 0)      4091
+  
+    return tmp_16;
   //  }
   //  else
-  {
-    uint64_t exponent = MEDS_p - 2;
-    uint64_t t = 1;
+  // {
+  //   uint64_t exponent = MEDS_p - 2;
+  //   uint64_t t = 1;
 
-    while (exponent > 0)
-    {
-      if ((exponent & 1) != 0)
-        t = (t * (uint64_t)val) % MEDS_p;
+  //   while (exponent > 0)
+  //   {
+  //     if ((exponent & 1) != 0)
+  //       t = (t * (uint64_t)val) % MEDS_p;
 
-      val = ((uint64_t)val * (uint64_t)val) % MEDS_p;
+  //     val = ((uint64_t)val * (uint64_t)val) % MEDS_p;
 
-      exponent >>= 1;
-    }
+  //     exponent >>= 1;
+  //   }
 
-    PROFILER_STOP("GF_inv");
-    return t;
-  }
+  //   PROFILER_STOP("GF_inv");
+  //   return t;
+  // }
 }
 
 int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c, int (*pmod_mat_syst_fun)(pmod_mat_t *))
