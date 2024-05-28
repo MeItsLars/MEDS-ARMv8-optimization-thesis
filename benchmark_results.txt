@@ -27,10 +27,9 @@ verify: 2.420702   (3631053589 cycles)
 
 LOW LEVEL (PARAM=level3)
 Time (min of 1 runs):
-keygen: 0.006074   (9110905 cycles)     ~40%
-sign:   0.877265   (1315896814 cycles)  ~36%
-verify: 0.857547   (1286321058 cycles)  ~35%
-
+keygen: 0.005386   (8078960 cycles)     ~35.3%
+sign:   0.747451   (1121176831 cycles)  ~30.8%
+verify: 0.718076   (1077113794 cycles)  ~29.7%
 HIGH LEVEL (PARAM=level3)
 Time (min of 1 runs):
 keygen: 0.015280   (22920739 cycles)    TODO
@@ -39,9 +38,9 @@ verify: 1.076093   (1614138985 cycles)  ~44%
 
 LOW LEVEL (PARAM=level3) HASH OPT
 Time (min of 1 runs):
-keygen: 0.006041   (9061235 cycles)     ~40%
-sign:   0.843629   (1265443563 cycles)  ~35%
-verify: 0.811890   (1217835037 cycles)  ~34%
+keygen: 0.005402   (8102800 cycles)     ~35.4%
+sign:   0.717207   (1075810373 cycles)  ~29.6%
+verify: 0.688218   (1032327702 cycles)  ~28.4%
 
 HIGH LEVEL (PARAM=level3) HASH OPT
 Time (min of 1 runs):

@@ -766,15 +766,25 @@ int main(int argc, char *argv[])
   return 0;
 }*/
 
+extern void pmod_mat_syst_test(pmod_mat_t *M);
+
+void cool_test()
+{
+  pmod_mat_t M[] = {0, 1, 2, 3, 4, 5, 6, 7};
+  pmod_mat_fprint(stdout, M, 1, 8);
+  pmod_mat_syst_test(M);
+  pmod_mat_fprint(stdout, M, 1, 8);
+}
+
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
-  // test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0, pmod_mat_syst_k_k_k_0_0_nct);
-  // test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1, pmod_mat_syst_n_2n_n_0_1_nct);
-  // test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1, pmod_mat_syst_m_2m_m_0_1_nct);
+  test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0, pmod_mat_syst_k_k_k_0_0_nct);
+  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1, pmod_mat_syst_n_2n_n_0_1_nct);
+  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1, pmod_mat_syst_m_2m_m_0_1_nct);
   test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1, pmod_mat_syst_k_2k_k_0_1_nct);
-  // test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1, pmod_mat_syst_n_2m_nr1_0_1_nct);
-  // test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1, pmod_mat_syst_mr1_m_mr1_1_1_nct);
-  // test_performance("pmod_mat_syst_k_2k_k_0_0", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_2k_k_0_0, pmod_mat_syst_k_2k_k_0_0_nct);
+  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1, pmod_mat_syst_n_2m_nr1_0_1_nct);
+  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1, pmod_mat_syst_mr1_m_mr1_1_1_nct);
+  test_performance("pmod_mat_syst_k_2k_k_0_0", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_2k_k_0_0, pmod_mat_syst_k_2k_k_0_0_nct);
   disable_cyclecounter();
 }

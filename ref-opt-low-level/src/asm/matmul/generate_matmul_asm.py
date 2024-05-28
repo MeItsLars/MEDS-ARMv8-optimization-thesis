@@ -17,6 +17,7 @@ R_T1 = "x10"
 R_T1h = "w10"
 R_T2h = "w11"
 
+# Preserve v8-v15
 RN_A0 = "v0.4h"
 RN_A1 = "v1.4h"
 RN_A2 = "v2.4h"
@@ -25,19 +26,22 @@ RN_B0 = "v4.4h"
 RN_B1 = "v5.4h"
 RN_B2 = "v6.4h"
 RN_B3 = "v7.4h"
-RN_C0 = "v8.4s"
-RN_C1 = "v9.4s"
-RN_C2 = "v10.4s"
-RN_C3 = "v11.4s"
-RN_C0h = "v8.4h"
-RN_C1h = "v9.4h"
-RN_C2h = "v10.4h"
-RN_C3h = "v11.4h"
-RN_C0T = "v12.4s"
-RN_C1T = "v13.4s"
-RN_C2T = "v14.4s"
-RN_C3T = "v15.4s"
-RN_MEDSp = "v16.4s"
+RN_C0 = "v16.4s"
+RN_C1 = "v17.4s"
+RN_C2 = "v18.4s"
+RN_C3 = "v19.4s"
+RN_C0h = "v16.4h"
+RN_C1h = "v17.4h"
+RN_C2h = "v18.4h"
+RN_C3h = "v19.4h"
+RN_C0T = "v24.4s"
+RN_C1T = "v25.4s"
+RN_C2T = "v26.4s"
+RN_C3T = "v27.4s"
+RN_MEDSp = "v28.4s"
+RN_MAGIC_w = "v29.4s"
+RN_T1_w = "v30.4s"
+RN_T2_w = "v31.4s"
 
 def add(asm, indentation, s):
     asm.append("    " * indentation + s)
@@ -185,6 +189,32 @@ def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     if final_shrink:
         add_nop(asm, 1, f"sqxtn {rn_dst}, {rn_src}")
 
+def add_freeze_reduce_neon_16x4(asm, rn_src, rn_tmp1, rn_tmp2, shrink=False):
+    rn_tmp1_2d = f"{rn_tmp1[:-3]}.2d"
+    rn_tmp2_2d = f"{rn_tmp2[:-3]}.2d"
+    rn_src_2s = f"{rn_src[:-3]}.2s"
+    rn_src_4s = f"{rn_src[:-3]}.4s"
+    rn_src_4h = f"{rn_src[:-3]}.4h"
+    rn_magic_2s = f"{RN_MAGIC_w[:-3]}.2s"
+    rn_magic_4s = f"{RN_MAGIC_w[:-3]}.4s"
+
+    # Compute val * magic
+    add_nop(asm, 1, f"umull {rn_tmp1_2d}, {rn_src_2s}, {rn_magic_2s}")
+    add_nop(asm, 1, f"umull2 {rn_tmp2_2d}, {rn_src_4s}, {rn_magic_4s}")
+
+    # zip the results back into one register
+    add_nop(asm, 1, f"uzp2 {rn_tmp1}, {rn_tmp1}, {rn_tmp2}")
+
+    # shift right by 43 % 16 = 11 bits
+    add_nop(asm, 1, f"ushr {rn_tmp1}, {rn_tmp1}, 11")
+
+    # subtract
+    add_nop(asm, 1, f"mls {rn_src_4s}, {rn_tmp1}, {RN_MEDSp}")
+
+    # shrink to 16 bits if necessary
+    if shrink:
+        add_nop(asm, 1, f"xtn {rn_src_4h}, {rn_src_4s}")
+
 def add_k_loop(asm, context, pad_r, pad_c):
     loop_id = f"k_loop{'_pr' if pad_r else ''}{'_pc' if pad_c else ''}"
 
@@ -233,13 +263,13 @@ def add_k_loop(asm, context, pad_r, pad_c):
 
     # Reduce C modulo MEDS_p
     if not pad_r or context.r_pad_dist > 0:
-        add_reduce(asm, RN_C0, RN_C0T, RN_C0h, context.GFq_bits, not pad_c)
+        add_freeze_reduce_neon_16x4(asm, RN_C0, RN_T1_w, RN_T2_w, not pad_c)
     if not pad_r or context.r_pad_dist > 1:
-        add_reduce(asm, RN_C1, RN_C1T, RN_C1h, context.GFq_bits, not pad_c)
+        add_freeze_reduce_neon_16x4(asm, RN_C1, RN_T1_w, RN_T2_w, not pad_c)
     if not pad_r or context.r_pad_dist > 2:
-        add_reduce(asm, RN_C2, RN_C2T, RN_C2h, context.GFq_bits, not pad_c)
+        add_freeze_reduce_neon_16x4(asm, RN_C2, RN_T1_w, RN_T2_w, not pad_c)
     if not pad_r or context.r_pad_dist > 3:
-        add_reduce(asm, RN_C3, RN_C3T, RN_C3h, context.GFq_bits, not pad_c)
+        add_freeze_reduce_neon_16x4(asm, RN_C3, RN_T1_w, RN_T2_w, not pad_c)
     # Store C back into memory
     # From C + 2rC_c + 2c, compute Ci = C + 2c (C is incremented with 2rC_c in each iteration)
     add(asm, 1, f"add {R_T1}, {R_C}, {R_c}, lsl #1")
@@ -294,7 +324,11 @@ def generate_mat_mul_asm(context, fun_id):
     add(asm, 0, ".arch armv8-a")
     add(asm, 0, f".global {fun_id}")
     add(asm, 0, f"{fun_id}:")
-    # Initialize MEDS_p into v16.4s
+    # Initialize magic value (0x8018_0481 = -2145909631) into RN_MAGIC registers
+    add(asm, 1, f"mov {R_T1h}, 0x0481")
+    add(asm, 1, f"movk {R_T1h}, 0x8018, lsl #16")
+    add(asm, 1, f"dup {RN_MAGIC_w}, {R_T1h}")
+    # Initialize MEDS_p into RN_MEDSp
     add(asm, 1, f"mov {R_T1h}, #{context.MEDS_p}")
     add(asm, 1, f"dup {RN_MEDSp}, {R_T1h}")
     # Store widened versions of m, o, and n
@@ -335,14 +369,7 @@ def generate_matmul_file(name, r, c, k, MEDS_p, GFq_bits, fun_id):
 
 
 def generate_matmul_manually():
-    generate_matmul_file('oldlevel341711', 24, 24, 24, 4093, 12, 'pmod_mat_mul_asm_24_24_24')
-    generate_matmul_file('oldlevel341711', 30, 30, 30, 4093, 12, 'pmod_mat_mul_asm_30_30_30')
-    generate_matmul_file('oldlevel341711', 40, 40, 40, 4093, 12, 'pmod_mat_mul_asm_40_40_40')
-    generate_matmul_file('oldlevel341711', 50, 50, 50, 4093, 12, 'pmod_mat_mul_asm_50_50_50')
-    generate_matmul_file('oldlevel341711', 55, 55, 55, 4093, 12, 'pmod_mat_mul_asm_55_55_55')
-    generate_matmul_file('oldlevel341711', 60, 60, 60, 4093, 12, 'pmod_mat_mul_asm_60_60_60')
-    generate_matmul_file('oldlevel341711', 70, 70, 70, 4093, 12, 'pmod_mat_mul_asm_70_70_70')
-    generate_matmul_file('oldlevel341711', 80, 80, 80, 4093, 12, 'pmod_mat_mul_asm_80_80_80')
+    generate_matmul_file('level3', 4, 4, 4, 4093, 12, 'pmod_mat_mul_asm_4_4_4')
 
 def parse_params_h(path):
     with open(path, "r") as f:

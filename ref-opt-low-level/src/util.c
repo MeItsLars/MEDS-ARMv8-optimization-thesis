@@ -545,8 +545,40 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
     for (int b = MEDS_m - 3; b >= 0; b--)
       for (int c = MEDS_m - 1; c >= 0; c--)
       {
-        uint16x4_t tmp2 = vdup_n_u16(sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c]);
+        uint16x8_t tmp2_16x8 = vdupq_n_u16(sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c]);
+        uint16x4_t tmp2_16x4 = vdup_n_u16(sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c]);
+        uint16_t tmp2 = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c];
         int r = 0;
+        for (; r < MEDS_m - 8; r += 8)
+        {
+          // uint64_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
+          uint16_t tmp1_0 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
+          uint16_t tmp1_1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 1, c);
+          uint16_t tmp1_2 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 2, c);
+          uint16_t tmp1_3 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 3, c);
+          uint16_t tmp1_4 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 4, c);
+          uint16_t tmp1_5 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 5, c);
+          uint16_t tmp1_6 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 6, c);
+          uint16_t tmp1_7 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r + 7, c);
+
+          uint16x8_t tmp1 = {tmp1_0, tmp1_1, tmp1_2, tmp1_3, tmp1_4, tmp1_5, tmp1_6, tmp1_7};
+
+          uint32x4_t prod_low = vmull_u16(vget_low_u16(tmp1), vget_low_u16(tmp2_16x8));
+          uint32x4_t prod_high = vmull_high_u16(tmp1, tmp2_16x8);
+          uint16x8_t prod_low_red = (uint16x8_t)FREEZE_REDUCE_VEC_16x4(prod_low);
+          uint16x8_t prod_high_red = (uint16x8_t)FREEZE_REDUCE_VEC_16x4(prod_high);
+          uint16x8_t prod = vuzp1q_u16(prod_low_red, prod_high_red);
+
+          // uint64_t val = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r];
+          uint16x8_t val = vld1q_u16((uint16_t *)&sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r]);
+
+          // val = ((MEDS_p + val) - prod) % MEDS_p;
+          val = vsubq_u16(vaddq_u16(val, MEDS_p_VEC_16x8), prod);
+          val = FREEZE_VEC_16x8(val);
+
+          // sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
+          vst1q_u16((uint16_t *)&sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r], val);
+        }
         for (; r < MEDS_m - 4; r += 4)
         {
           // uint64_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
@@ -557,15 +589,15 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
           uint16x4_t tmp1 = {tmp1_0, tmp1_1, tmp1_2, tmp1_3};
 
           // uint64_t prod = (tmp1 * tmp2) % MEDS_p;
-          uint32x4_t prod = vmull_u16(tmp1, tmp2);
-          uint16x4_t prod_red = FREEZE_REDUCE_VEC(prod);
+          uint32x4_t prod = vmull_u16(tmp1, tmp2_16x4);
+          uint16x4_t prod_red = FREEZE_REDUCE_VEC_16x4_SHRINK(prod);
 
           // uint64_t val = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r];
           uint16x4_t val = vld1_u16((uint16_t *)&sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r]);
 
           // val = ((MEDS_p + val) - prod) % MEDS_p;
-          val = vsub_u16(vadd_u16(val, MEDS_p_VEC), prod_red);
-          val = FREEZE_VEC(val);
+          val = vsub_u16(vadd_u16(val, MEDS_p_VEC_16x4), prod_red);
+          val = FREEZE_VEC_16x4(val);
 
           // sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
           vst1_u16((uint16_t *)&sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r], val);
@@ -573,7 +605,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
         for (; r < MEDS_m; r++)
         {
           uint64_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
-          uint64_t tmp2 = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c];
 
           uint64_t prod = (tmp1 * tmp2) % MEDS_p;
 
@@ -615,27 +646,59 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
       for (int c = MEDS_m - 1; c >= 0; c--)
       {
         // uint64_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
-        uint16x4_t tmp2 = vdup_n_u16(sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c]);
+        uint16x8_t tmp2_16x8 = vdupq_n_u16(sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c]);
+        uint16x4_t tmp2_16x4 = vdup_n_u16(sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c]);
+        uint16_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
         int r = 0;
+        for (; r < MEDS_n - 8; r += 8)
+        {
+          // uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+          uint16_t tmp1_0 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+          uint16_t tmp1_1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 1, c);
+          uint16_t tmp1_2 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 2, c);
+          uint16_t tmp1_3 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 3, c);
+          uint16_t tmp1_4 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 4, c);
+          uint16_t tmp1_5 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 5, c);
+          uint16_t tmp1_6 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 6, c);
+          uint16_t tmp1_7 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 7, c);
+          uint16x8_t tmp1 = {tmp1_0, tmp1_1, tmp1_2, tmp1_3, tmp1_4, tmp1_5, tmp1_6, tmp1_7};
+
+          // uint64_t prod = (tmp1 * tmp2) % MEDS_p;
+          uint32x4_t prod_low = vmull_u16(vget_low_u16(tmp1), vget_low_u16(tmp2_16x8));
+          uint32x4_t prod_high = vmull_high_u16(tmp1, tmp2_16x8);
+          uint16x8_t prod_low_red = (uint16x8_t)FREEZE_REDUCE_VEC_16x4(prod_low);
+          uint16x8_t prod_high_red = (uint16x8_t)FREEZE_REDUCE_VEC_16x4(prod_high);
+          uint16x8_t prod = vuzp1q_u16(prod_low_red, prod_high_red);
+
+          // uint64_t val = sol[b * MEDS_n + r];
+          uint16x8_t val = vld1q_u16((uint16_t *)&sol[b * MEDS_n + r]);
+
+          // val = ((MEDS_p + val) - prod) % MEDS_p;
+          val = vsubq_u16(vaddq_u16(val, MEDS_p_VEC_16x8), prod);
+          val = FREEZE_VEC_16x8(val);
+
+          // sol[b * MEDS_n + r] = val;
+          vst1q_u16((uint16_t *)&sol[b * MEDS_n + r], val);
+        }
         for (; r < MEDS_n - 4; r += 4)
         {
           // uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
-          uint64_t tmp1_0 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
-          uint64_t tmp1_1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 1, c);
-          uint64_t tmp1_2 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 2, c);
-          uint64_t tmp1_3 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 3, c);
+          uint16_t tmp1_0 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+          uint16_t tmp1_1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 1, c);
+          uint16_t tmp1_2 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 2, c);
+          uint16_t tmp1_3 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r + 3, c);
           uint16x4_t tmp1 = {tmp1_0, tmp1_1, tmp1_2, tmp1_3};
 
           // uint64_t prod = (tmp1 * tmp2) % MEDS_p;
-          uint32x4_t prod = vmull_u16(tmp1, tmp2);
-          uint16x4_t prod_red = FREEZE_REDUCE_VEC(prod);
+          uint32x4_t prod = vmull_u16(tmp1, tmp2_16x4);
+          uint16x4_t prod_red = FREEZE_REDUCE_VEC_16x4_SHRINK(prod);
 
           // uint64_t val = sol[b * MEDS_n + r];
           uint16x4_t val = vld1_u16((uint16_t *)&sol[b * MEDS_n + r]);
 
           // val = ((MEDS_p + val) - prod) % MEDS_p;
-          val = vsub_u16(vadd_u16(val, MEDS_p_VEC), prod_red);
-          val = FREEZE_VEC(val);
+          val = vsub_u16(vadd_u16(val, MEDS_p_VEC_16x4), prod_red);
+          val = FREEZE_VEC_16x4(val);
 
           // sol[b * MEDS_n + r] = val;
           vst1_u16((uint16_t *)&sol[b * MEDS_n + r], val);
@@ -643,7 +706,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
         for (; r < MEDS_n; r++)
         {
           uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
-          uint64_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
 
           uint64_t prod = (tmp1 * tmp2) % MEDS_p;
 
@@ -680,197 +742,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime,
   PROFILER_STOP("solve_opt");
   return 0;
 }
-
-/*int solve_opt(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime, GFq_t Amm)
-{
-  _Static_assert (MEDS_n == MEDS_m, "solve_opt requires MEDS_n == MEDS_m");
-
-  pmod_mat_t P0prime0[MEDS_m*MEDS_n];
-  pmod_mat_t P0prime1[MEDS_m*MEDS_n];
-
-  for (int i = 0; i < MEDS_m*MEDS_n; i++)
-  {
-    P0prime0[i] = G0prime[i];
-    P0prime1[i] = G0prime[i + MEDS_m * MEDS_n];
-  }
-
-  pmod_mat_t N[MEDS_n * MEDS_m];
-
-  for (int i = 0; i < MEDS_m; i++)
-    for (int j = 0; j < MEDS_n; j++)
-      N[j*MEDS_m + i] = (MEDS_p - P0prime0[i*MEDS_n + j]) % MEDS_p;
-
-  //LOG_MAT(N, MEDS_n, MEDS_m);
-
-
-  pmod_mat_t M[MEDS_n*(MEDS_m + MEDS_m + 2)] = {0};
-
-  for (int i = 0; i < MEDS_m; i++)
-    for (int j = 0; j < MEDS_n; j++)
-      M[j*(MEDS_m + MEDS_m + 2) + i] = (MEDS_p - P0prime1[i*MEDS_n + j]) % MEDS_p;
-
-  for (int i = 0; i < MEDS_m; i++)
-    for (int j = 0; j < MEDS_n; j++)
-      M[j*(MEDS_m + MEDS_m + 2) + i + MEDS_n] = P0prime0[i*MEDS_n + j];
-
-  for (int j = 0; j < MEDS_n; j++)
-    M[j*(MEDS_m + MEDS_m + 2) + MEDS_m + MEDS_n] = ((uint32_t)P0prime0[(MEDS_m-1)*MEDS_n + j] * (MEDS_p - (uint32_t)Amm)) % MEDS_p;
-
-  for (int j = 0; j < MEDS_n; j++)
-    M[j*(MEDS_m + MEDS_m + 2) + MEDS_m + MEDS_n + 1] = ((uint32_t)P0prime1[(MEDS_m-1)*MEDS_n + j] * (uint32_t)Amm) % MEDS_p;
-
-
-  //LOG_MAT(M, MEDS_n, MEDS_m + MEDS_m + 2);
-
-  if (pmod_mat_syst_ct(M, MEDS_n-1, MEDS_m + MEDS_m + 2) < 0)
-    return -1;
-
-  //LOG_MAT_FMT(M, MEDS_n, MEDS_m + MEDS_m + 2, "M part");
-
-  // eliminate last row
-  for (int r = 0; r < MEDS_n-1; r++)
-  {
-    uint64_t factor = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, r);
-
-    // ignore last column
-    for (int c = MEDS_n-1; c < MEDS_m + MEDS_m + 1; c++)
-    {
-      uint64_t tmp0 = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, c);
-      uint64_t tmp1 = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, r, c);
-
-      uint64_t val = (tmp1 * factor) % MEDS_p;
-
-      val = (MEDS_p + tmp0 - val) % MEDS_p;
-
-      pmod_mat_set_entry(M, MEDS_n, MEDS_m + MEDS_m + 2,  MEDS_n-1, c, val);
-    }
-
-    pmod_mat_set_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, r, 0);
-  }
-
-  // normalize last row
-  {
-    uint64_t val = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, MEDS_n-1);
-
-    if (val == 0)
-      return -1;
-
-    val = GF_inv(val);
-
-    // ignore last column
-    for (int c = MEDS_n; c < MEDS_m + MEDS_m + 1; c++)
-    {
-      uint64_t tmp = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, c);
-
-      tmp = (tmp * val) % MEDS_p;
-
-      pmod_mat_set_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, c, tmp);
-    }
-  }
-
-  pmod_mat_set_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, MEDS_n-1, 1);
-
-  M[MEDS_n*(MEDS_m + MEDS_m + 2)-1] = 0;
-
-  //LOG_MAT_FMT(M, MEDS_n, MEDS_m + MEDS_m + 2, "M red");
-
-  // back substitute
-  for (int r = 0; r < MEDS_n-1; r++)
-  {
-    uint64_t factor = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, r, MEDS_n-1);
-
-    // ignore last column
-    for (int c = MEDS_n; c < MEDS_m + MEDS_m + 1; c++)
-    {
-        uint64_t tmp0 = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, MEDS_n-1, c);
-        uint64_t tmp1 = pmod_mat_entry(M, MEDS_n, MEDS_m + MEDS_m + 2, r, c);
-
-        uint64_t val = (tmp0 * factor) % MEDS_p;
-
-        val = (MEDS_p + tmp1 - val) % MEDS_p;
-
-        pmod_mat_set_entry(M, MEDS_n, MEDS_m + MEDS_m + 2,  r, c, val);
-    }
-
-    pmod_mat_set_entry(M, M_r, MEDS_m + MEDS_m + 2, r, MEDS_n-1, 0);
-  }
-
-
-  //LOG_MAT_FMT(M, MEDS_n, MEDS_m + MEDS_m + 2, "M done");
-
-
-  GFq_t sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m] = {0};
-
-  sol[MEDS_n*MEDS_n + MEDS_m * MEDS_m - 1] = Amm;
-
-  for (int i = 0; i < MEDS_n - 1; i++)
-    sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - MEDS_n + i] = M[(i+1) * (MEDS_m + MEDS_m + 2) - 1];
-
-  for (int i = 0; i < MEDS_n; i++)
-    sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 2*MEDS_n + i] = M[(i+1) * (MEDS_m + MEDS_m + 2) - 2];
-
-  for (int i = 0; i < MEDS_n; i++)
-    sol[MEDS_n*MEDS_n - MEDS_n + i] = ((uint32_t)P0prime0[(MEDS_m-1)*MEDS_n + i] * (uint32_t)Amm) % MEDS_p;
-
-  //LOG_VEC_FMT(sol, MEDS_n*MEDS_n + MEDS_m*MEDS_m, "initial sol");
-
-
-  // incomplete blocks:
-
-  for (int i = 0; i < MEDS_n; i++)
-    for (int j = 0; j < MEDS_n-1; j++)
-    {
-      uint32_t tmp = (uint32_t)sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 2*MEDS_n + i] + MEDS_p -
-        ((uint32_t)M[i * (MEDS_m + MEDS_m + 2) + MEDS_n + MEDS_n-2 - j] * (uint32_t)sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 2 - j]) % MEDS_p;
-      sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 2*MEDS_n + i] = tmp % MEDS_p;
-    }
-
-  for (int i = 0; i < MEDS_n; i++)
-    for (int j = 0; j < MEDS_n-1; j++)
-    {
-      uint32_t tmp = (uint32_t)sol[MEDS_n*MEDS_n - MEDS_n + i] + MEDS_p -
-        ((uint32_t)N[i * (MEDS_n) + MEDS_m-2 - j] * (uint32_t)sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 2 - j]) % MEDS_p;
-      sol[MEDS_n*MEDS_n - MEDS_n + i] = tmp % MEDS_p;
-    }
-
-  //LOG_VEC_FMT(sol, MEDS_n*MEDS_n + MEDS_m*MEDS_m, "incomplete blocks");
-
-
-  // complete blocks:
-
-  for (int block = 3; block <= MEDS_n; block++)
-    for (int i = 0; i < MEDS_n; i++)
-      for (int j = 0; j < MEDS_n; j++)
-      {
-        uint32_t tmp = sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - block*MEDS_n + i] + MEDS_p -
-          ((uint32_t)M[i * (MEDS_m + MEDS_m + 2) + MEDS_n + MEDS_n-1 - j] * (uint32_t)sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 1 - (block-2)*MEDS_n - j]) % MEDS_p;
-        sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - block*MEDS_n + i] = tmp % MEDS_p;
-      }
-
-  for (int block = 2; block <= MEDS_n; block++)
-    for (int i = 0; i < MEDS_n; i++)
-      for (int j = 0; j < MEDS_n; j++)
-      {
-        uint32_t tmp = sol[MEDS_n*MEDS_n - block*MEDS_n + i] + MEDS_p -
-          ((uint32_t)N[i * (MEDS_n) + MEDS_m-1 - j] * (uint32_t)sol[MEDS_n*MEDS_n + MEDS_m*MEDS_m - 1 - (block-1)*MEDS_n - j]) % MEDS_p;
-        sol[MEDS_n*MEDS_n - block*MEDS_n + i] = tmp % MEDS_p;
-      }
-
-  //LOG_VEC_FMT(sol, MEDS_n*MEDS_n + MEDS_m*MEDS_m, "complete blocks");
-
-
-  for (int i = 0; i < MEDS_m * MEDS_m; i++)
-    A[i] = sol[i + MEDS_n * MEDS_n];
-
-  for (int i = 0; i < MEDS_n * MEDS_n; i++)
-    B_inv[i] = sol[i];
-
-  //LOG_MAT(A, MEDS_m, MEDS_m);
-  //LOG_MAT(B_inv, MEDS_n, MEDS_n);
-
-  return 0;
-}
-*/
 
 void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G)
 {

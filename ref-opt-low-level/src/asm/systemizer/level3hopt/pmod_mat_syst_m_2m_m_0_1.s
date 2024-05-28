@@ -3,6 +3,9 @@
 .global pmod_mat_syst_m_2m_m_0_1
 pmod_mat_syst_m_2m_m_0_1:
     mov x2, #68
+    mov w4, 0x0481
+    movk w4, 0x8018, lsl #16
+    dup v25.4s, w4
     mov x4, #4093
     dup v16.4h, w4
     dup v17.8h, w4
@@ -199,17 +202,13 @@ elimination_normalize_row_loop_neon_16x4:
     b.lt elimination_normalize_row_loop_scalar
     ld1 {v3.4h}, [x9]
     umull v19.4s, v3.4h, v1.4h
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    sqxtn v3.4h, v19.4s
-    cmhs v20.4h, v3.4h, v16.4h
-    and v20.16b, v20.16b, v16.16b
-    sub v3.4h, v3.4h, v20.4h
-    st1 {v3.4h}, [x9], #8
+    umull v23.2d, v19.2s, v25.2s
+    umull2 v24.2d, v19.4s, v25.4s
+    uzp2 v23.4s, v23.4s, v24.4s
+    ushr v23.4s, v23.4s, 11
+    mls v19.4s, v23.4s, v18.4s
+    xtn v19.4h, v19.4s
+    st1 {v19.4h}, [x9], #8
     add x7, x7, #4
     b elimination_normalize_row_loop_neon_16x4
 elimination_normalize_row_loop_scalar:
@@ -248,16 +247,12 @@ elimination_row_eliminate_inner_loop_neon_16x4:
     ld1 {v3.4h}, [x9], #8
     ld1 {v4.4h}, [x10]
     umull v19.4s, v3.4h, v7.4h
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    sqxtn v19.4h, v19.4s
-    cmhs v20.4h, v19.4h, v16.4h
-    and v20.16b, v20.16b, v16.16b
-    sub v19.4h, v19.4h, v20.4h
+    umull v20.2d, v19.2s, v25.2s
+    umull2 v21.2d, v19.4s, v25.4s
+    uzp2 v20.4s, v20.4s, v21.4s
+    ushr v20.4s, v20.4s, 11
+    mls v19.4s, v20.4s, v18.4s
+    xtn v19.4h, v19.4s
     add v20.4h, v4.4h, v16.4h
     sub v20.4h, v20.4h, v19.4h
     cmhs v19.4h, v20.4h, v16.4h
@@ -306,7 +301,7 @@ backsub_inner_loop:
     b.eq backsub_inner_loop_end
     madd x15, x2, x6, x5
     ldrh w14, [x0, x15, lsl #1]
-    dup v7.4h, w14
+    dup v7.8h, w14
     madd x15, x2, x5, x5
     ldrh w12, [x0, x15, lsl #1]
     madd x10, x2, x6, x5
@@ -332,6 +327,33 @@ backsub_inner_loop:
     add x9, x0, x9, lsl #1
     madd x10, x2, x6, x7
     add x10, x0, x10, lsl #1
+backsub_column_loop_neon_16x8:
+    sub x15, x2, x7
+    cmp x15, #8
+    b.lt backsub_column_loop_neon_16x4
+    ldr q3, [x9], #16
+    ldr q4, [x10]
+    umull v19.4s, v3.4h, v7.4h
+    umull2 v20.4s, v3.8h, v7.8h
+    umull v21.2d, v19.2s, v25.2s
+    umull2 v22.2d, v19.4s, v25.4s
+    uzp2 v21.4s, v21.4s, v22.4s
+    ushr v21.4s, v21.4s, 11
+    mls v19.4s, v21.4s, v18.4s
+    umull v21.2d, v20.2s, v25.2s
+    umull2 v22.2d, v20.4s, v25.4s
+    uzp2 v21.4s, v21.4s, v22.4s
+    ushr v21.4s, v21.4s, 11
+    mls v20.4s, v21.4s, v18.4s
+    uzp1 v19.8h, v19.8h, v20.8h
+    add v21.8h, v4.8h, v17.8h
+    sub v4.8h, v21.8h, v19.8h
+    cmhs v19.8h, v4.8h, v17.8h
+    and v19.16b, v19.16b, v17.16b
+    sub v4.8h, v4.8h, v19.8h
+    str q4, [x10], #16
+    add x7, x7, #8
+    b backsub_column_loop_neon_16x8
 backsub_column_loop_neon_16x4:
     sub x15, x2, x7
     cmp x15, #4
@@ -339,16 +361,12 @@ backsub_column_loop_neon_16x4:
     ld1 {v3.4h}, [x9], #8
     ld1 {v4.4h}, [x10]
     umull v19.4s, v3.4h, v7.4h
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    ushr v20.4s, v19.4s, #12
-    mul v20.4s, v20.4s, v18.4s
-    sub v19.4s, v19.4s, v20.4s
-    sqxtn v19.4h, v19.4s
-    cmhs v20.4h, v19.4h, v16.4h
-    and v20.16b, v20.16b, v16.16b
-    sub v19.4h, v19.4h, v20.4h
+    umull v20.2d, v19.2s, v25.2s
+    umull2 v21.2d, v19.4s, v25.4s
+    uzp2 v20.4s, v20.4s, v21.4s
+    ushr v20.4s, v20.4s, 11
+    mls v19.4s, v20.4s, v18.4s
+    xtn v19.4h, v19.4s
     add v20.4h, v4.4h, v16.4h
     sub v20.4h, v20.4h, v19.4h
     cmhs v19.4h, v20.4h, v16.4h
