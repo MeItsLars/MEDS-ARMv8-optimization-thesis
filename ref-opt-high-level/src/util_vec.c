@@ -90,7 +90,6 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
   // Fill in solutions from core sub-system
   pmod_mat_vec_t N_swap[(MEDS_n - 1) * MEDS_m] = {0};
 
-  // TODO: Does this work for NEON registers?
   memcpy(N_swap, N, sizeof(N_swap));
 
   for (int r = 0; r < MEDS_m; r++)

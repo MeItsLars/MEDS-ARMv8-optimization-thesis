@@ -5,9 +5,6 @@
 
 #include "params.h"
 
-// TODO: aligned?
-// #define aligned __attribute__((aligned(16)))
-
 // UNSIGNED INTEGER INSTRUCTIONS & DATA TYPES
 #define ADD_LOW_VEC(a, b) vadd_u16(a, b)
 #define ADD_VEC(a, b) vaddl_u16(a, b)
