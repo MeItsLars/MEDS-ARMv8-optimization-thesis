@@ -15,10 +15,23 @@
 \usepackage[utf8]{inputenc}
 \usepackage{natbib}
 \usepackage{parskip}
+\usepackage{pgf-pie}
 \usepackage{tabularx}
 \usepackage{todonotes}
 \usepackage{url}
+\usepackage{xcolor}
 \usepackage{xurl}
+
+% Define nice pie chart colors
+\definecolor{pie1}{HTML}{03045e}
+\definecolor{pie2}{HTML}{023e8a}
+\definecolor{pie3}{HTML}{0077b6}
+\definecolor{pie4}{HTML}{0096c7}
+\definecolor{pie5}{HTML}{00b4d8}
+\definecolor{pie6}{HTML}{48cae4}
+\definecolor{pie7}{HTML}{90e0ef}
+\definecolor{pie8}{HTML}{ade8f4}
+\definecolor{pie9}{HTML}{caf0f8}
 
 \setlength{\marginparwidth}{2cm}
 \hypersetup{
@@ -100,6 +113,7 @@
 
 \chapter{Introduction}
 \label{ch:introduction}
+\todo[inline]{Cite Shor and Grover}
 As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm and Grover's algorithm to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
 
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
@@ -165,45 +179,7 @@ where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank
 
 \subsubsection{Sigma Protocol}
 The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in \cite{chou2024reducing}.
-
-\todo[inline]{Should I include the Sigma protocol here, or is a reference to the paper enough?}
-
-% \begin{figure}
-%   \centering
-%   \rule{\textwidth}{0.4pt}
-%   \vspace{-0.3cm}\\
-%   \begin{minipage}{1.0\textwidth}
-%     \begin{minipage}{0.5\textwidth}
-%       \textbf{Public Data}\\
-%       $q, m, n, k \in \mathbb{N}$ such that $|m-n| \leq 1$.\\
-%       $\textbf{A}_0 = \textbf{I}_m \in \text{GL}_m(q)$.\\
-%       $\textbf{B}_0 = \textbf{I}_n \in \text{GL}_n(q)$.\\
-%       $\textbf{T}_0 = \textbf{I}_k \in \text{GL}_k(q)$.\\
-%       Full-rank, linearly independent $\textbf{D}_0,\\ \textbf{D}_1 \in \mathbb{F}_q^{m \times n}$.\vspace{0.3cm}~\\
-%       \textbf{II. Commit}(pk)
-%       \begin{enumerate}
-%         \item Set $(\tilde{c_0}, \tilde{c_1}) \overset{\$}{\leftarrow} \mathbb{F}_q^{k} \times \mathbb{F}_q^{k}$. If $\tilde{c_0}$ and $\tilde{c_1}$ are linearly dependent, retry.
-%         \item For $i \in \{0, 1\}$, $\tilde{\textbf{C}_i} \leftarrow \text{matrix}(\tilde{c}_i \cdot \textbf{G}_0)$. If $\tilde{\textbf{C}_i}$ is not full-rank, go to step 1.
-%       \end{enumerate}
-%     \end{minipage}
-%     \begin{minipage}{0.5\textwidth}
-%       \textbf{I. Keygen()}
-%       \begin{enumerate}
-%         \item $\textbf{G}_0 \overset{\$}{\leftarrow} \mathds{F}_q^{k \times mn}$.
-%         \item $\textbf{A}_1, \textbf{B}_1 \overset{\$}{\leftarrow} \text{GL}_m(q) \times \text{GL}_n(q)$.
-%         \item $\textbf{G}_1, \textbf{T}_1 \leftarrow \text{SF}^{*}(\pi_{\textbf{A}_1, \textbf{B}_1}(\textbf{G}_0))$.\\
-%         If $\textbf{G}_1 = \bot$, go to step 2.
-%         \item $\text{sk} \leftarrow (\textbf{A}_1, \textbf{B}_1, \textbf{T}_1)$\\
-%         $\text{pk} \leftarrow (\textbf{G}_0, \textbf{G}_1)$.\\
-%         Return $(\text{sk}, \text{pk})$.
-%       \end{enumerate}
-%     \end{minipage}
-%   \end{minipage}\\
-%   \vspace{0.1cm}
-%   \rule{\textwidth}{0.4pt}
-%   \caption{Sigma Protocol for MEDS, see \cite{chou2024reducing}.}
-%   \label{fig:sigmaprotocol}
-% \end{figure}
+\todo[inline]{Indicate in which section the Sigma protocol is discussed.}
 
 \subsubsection{Fiat-Shamir Transform}
 To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
@@ -267,16 +243,29 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 % A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
 \subsection{MEDS Algorithms}
 \label{sec:medsalgorithms}
-The pseudocode for the three MEDS algorithms is shown in Appendix \ref{app:medsalgs}:
-\begin{enumerate}
-  \item Key generation (Algorithm \ref{alg:medskeygen}).
-  \item Signature generation (Algorithm \ref{alg:medssign}).
-  \item Signature verification (Algorithm \ref{alg:medsverify}).
-\end{enumerate}
+In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The full and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
+
+\subsubsection{Notations and Definitions}
+\todo[inline]{List notations and definitions used in the MEDS algorithms}
+
+\subsubsection{Key Generation}
+The full key generation algorithm for MEDS is shown in Algorithm \ref{alg:medskeygen}.
+\todo[inline]{Give a brief overview of the key generation algorithm.}
+
+\subsubsection{Signature Generation}
+The full signature generation algorithm for MEDS is shown in Algorithm \ref{alg:medssign}.
+\todo[inline]{Give a brief overview of the signature generation algorithm.}
+
+\subsubsection{Signature Verification}
+The full signature verification algorithm for MEDS is shown in Algorithm \ref{alg:medsverify}.
+\todo[inline]{Give a brief overview of the signature verification algorithm.}
 
 \section{ARMv8 and NEON}
 \label{sec:armv8}
 \todo[inline]{Any meaningful citations in this section?}
+\todo[inline]{Cite NEON reference manual maybe?}
+\todo[inline]{Intrinsics page?}
+
 In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 architecture. To this end, we will use a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU. We will be testing and comparing the performance of the MEDS implementation on this device.
 
 \subsection{ARMv8 Architecture}
@@ -287,11 +276,15 @@ Single Instruction, Multiple Data (SIMD) is a type of instruction that operates 
 
 In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
 
+\subsection{Assembly Instructions and Latency}
+\todo[inline]{For NEON; add pipeline information and latency for used assembly instructions}
+
 \section{Related Work}
 \todo[inline]{Give Related Work}
 \begin{itemize}
   \item The two GitHub repositories for the low-level and high-level optimizations of tradidional MEDS.
 \end{itemize}
+\todo[inline]{Add other post-quantum schemes that have been optimized on the same platform (ARMv8). Mostly signature schemes, but possibly also other ones. Definitely Keccak (with extended Keccak package).}
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
@@ -333,6 +326,7 @@ Another problem is the problem of program interference (see above). Unfortunatel
 \subsection{Measurement Setup}
 \todo[inline]{Explain which version(s) of MEDS we profile.}
 \todo[inline]{Change the profiling results to reflect the results for the new parameter sets.}
+\todo[inline]{Convert to piechart and add other values}
 We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three operations of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenoperations} and \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningoperations} and \ref{tab:medssigningfunctions} (signing), \ref{tab:medsverificationoperations} and \ref{tab:medsverificationfunctions} (verification). For each of the three operations, we provide one table for functions and one table for MEDS operations that make use of one or more functions. We only list the functions and operations that take up more than 1\% of the total number of cycles. For each function or operation, we provide the number of megacycles (MCycles) that were used in that function/operation, the percentage of the total number of cycles that were used by that function/operation, and the number of times that function/operation was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation depend on the input.
 
 \begin{table}[]
@@ -416,6 +410,25 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \label{tab:medsverificationfunctions}
 \end{table}
 
+\begin{tikzpicture}
+  \pie[
+    sum=100,
+    text=legend,
+    % pos={8,0},
+    % explode=0.1,
+    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
+  ]{59.3/matmul, 17.1/matsyst, 6.1/shakeabsorb, 1.2/GFinv, 16.3/Other}
+  \pie[
+    sum=100,
+    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9},
+    hide number
+  ]{59.3/,17.1/,6.1/,1.2/1.2\%}
+  \pie[
+    sum=100,
+    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
+  ]{59.3/,17.1/,6.1/}
+\end{tikzpicture}
+
 \subsection{Result Analysis}
 Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for about 95.3\% of the total number of cycles. For signing and verification, this number is about 83.6\%. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
 
@@ -428,11 +441,14 @@ The \texttt{pmod\_mat\_syst\_ct} function (\texttt{pmod\_mat\_syst\_ct\_partial\
 
 \todo[inline]{Perform complexity analysis?}
 
-\subsubsection{Shake256}
+\subsubsection{SHAKE256}
 A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family \cite{dworkin2015sha} and is based on the Keccak sponge construction \cite{bertoni2013keccak}. MEDS uses Shake256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
 
 \chapter{Methodology}
 \label{ch:methodology}
+
+\section{Modular Reduction}
+\label{sec:modularreduction}
 
 \section{Low-Level Optimization}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
@@ -462,7 +478,12 @@ A small percentage of the total number of cycles in each of the three operations
   * Cite keccak extended code package as well (Armv7)
   * https://gitlab.com/arm-research/security/pqax
   * Better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en
-- Perform high-level optimizations for verification and keygen
+- Perform high-level optimizations for keygen
+- Analyze minimum time complexity of low-level systemizer
+- ARM Calling Convention PDF: https://github.com/ARM-software/abi-aa/releases (cite?)
+- Change modular reduction to Barrett reduction (?)
+- Adust the 2 python generation files with an abstract file for clearity
+- Add explanation why high level slower -> data does not fit in cache. Check with toy parameter set.
 
 \chapter{Conclusion}
 \label{ch:conclusion}
