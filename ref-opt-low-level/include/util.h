@@ -14,11 +14,11 @@
 #define MEDS_p_VEC_32x4 vdupq_n_u32(MEDS_p)
 
 #define FREEZE_VEC_16x4(_v2)              \
-  ({                                 \
-    uint16x4_t _t2;                  \
+  ({                                      \
+    uint16x4_t _t2;                       \
     _t2 = vcge_u16(_v2, MEDS_p_VEC_16x4); \
     _t2 = vand_u16(_t2, MEDS_p_VEC_16x4); \
-    vsub_u16(_v2, _t2);              \
+    vsub_u16(_v2, _t2);                   \
   })
 
 #define FREEZE_VEC_16x8(_v2)               \
@@ -29,7 +29,7 @@
     vsubq_u16(_v2, _t2);                   \
   })
 
-#define FREEZE_REDUCE_VEC_16x4(_v4)                                          \
+#define FREEZE_REDUCE_VEC_16x4(_v4)                                         \
   ({                                                                        \
     uint32x4_t _t4_1 = _v4;                                                 \
     uint32x4_t _t4_2 = MAGIC_VEC;                                           \
@@ -37,13 +37,13 @@
     uint64x2_t _t4_4 = vmull_high_u32(_t4_1, _t4_2);                        \
     uint32x4_t _t4_5 = vuzp2q_u32((uint32x4_t)_t4_3, (uint32x4_t)_t4_4);    \
     uint32x4_t _t4_6 = vshrq_n_u32(_t4_5, 11);                              \
-    vmlsq_u32(_t4_1, _t4_6, MEDS_p_VEC_32x4);                                  \
+    vmlsq_u32(_t4_1, _t4_6, MEDS_p_VEC_32x4);                               \
   })
 
 #define FREEZE_REDUCE_VEC_16x4_SHRINK(_v5)          \
-  ({                                               \
+  ({                                                \
     uint32x4_t _t5_1 = FREEZE_REDUCE_VEC_16x4(_v5); \
-    vmovn_u32(_t5_1);                              \
+    vmovn_u32(_t5_1);                               \
   })
 
 void XOF(uint8_t **buf, size_t *length, const uint8_t *seed, size_t seed_len, int num);
