@@ -6,6 +6,9 @@
 
 #include "params.h"
 
+// Precomputed inverse table for MEDS_p = 4093
+extern uint16_t mod_inverse_table[4093];
+
 static inline uint64_t eq(uint64_t a, uint64_t b)
 {
    uint64_t q = a ^ b;
@@ -51,12 +54,20 @@ extern void pmod_mat_mul_asm_k_mn_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B)
 extern void pmod_mat_mul_asm_m_n_m(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
 extern void pmod_mat_mul_asm_m_n_n(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
 
+// Assembly matrix systemization functions (and non-constant time variants for verification)
 extern int pmod_mat_syst_k_k_k_0_0(pmod_mat_t *M);
 extern int pmod_mat_syst_n_2n_n_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_m_2m_m_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_k_2k_k_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_n_2m_nr1_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_mr1_m_mr1_1_1(pmod_mat_t *M);
+extern int pmod_mat_syst_k_k_k_0_0_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_n_2n_n_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_m_2m_m_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_k_2k_k_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_n_2m_nr1_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_mr1_m_mr1_1_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+
 // extern int pmod_mat_syst_2mn_mmann_2mn_1_1(pmod_mat_t *M);
 
 // int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub);
@@ -65,6 +76,8 @@ extern int pmod_mat_syst_mr1_m_mr1_1_1(pmod_mat_t *M);
 // int pmod_mat_rref(pmod_mat_t *M, int M_r, int M_c);
 
 int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c, int (*pmod_mat_syst_fun)(pmod_mat_t *));
+
+int pmod_mat_inv_nct(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c, int (*pmod_mat_syst_fun)(pmod_mat_t *, uint16_t *inverse_table));
 
 GFq_t GF_inv(GFq_t val);
 

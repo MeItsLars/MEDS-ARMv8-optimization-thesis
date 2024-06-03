@@ -32,8 +32,17 @@ extern int pmod_mat_syst_k_k_k_0_0(pmod_mat_t *M);
 extern int pmod_mat_syst_n_2n_n_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_m_2m_m_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_k_2k_k_0_1(pmod_mat_t *M);
+extern int pmod_mat_syst_k_2k_k_0_0(pmod_mat_t *M);
 extern int pmod_mat_syst_n_2m_nr1_0_1(pmod_mat_t *M);
 extern int pmod_mat_syst_mr1_m_mr1_1_1(pmod_mat_t *M);
+extern int pmod_mat_syst_5_5_5_0_0_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_k_k_k_0_0_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_n_2n_n_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_m_2m_m_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_k_2k_k_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_k_2k_k_0_0_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_n_2m_nr1_0_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
+extern int pmod_mat_syst_mr1_m_mr1_1_1_nct(pmod_mat_t *M, uint16_t *inverse_table);
 
 int test_pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int max_r, int swap, int backsub)
 {
@@ -514,7 +523,7 @@ int min_cycle_bound(int M_r, int M_c, int max_r, int swap, int backsub)
   return loads + stores + arithmetic + loop;
 }
 
-void test_performance(char name[], int r, int c, int max_r, int swap, int backsub, int (*function)(pmod_mat_t *))
+void test_performance(char name[], int r, int c, int max_r, int swap, int backsub, int (*function)(pmod_mat_t *), int (*function_nct)(pmod_mat_t *, uint16_t *))
 {
   uint8_t seed[MEDS_pub_seed_bytes];
 
@@ -528,6 +537,7 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
   __attribute__((aligned(16))) pmod_mat_t A1[r * c];
   __attribute__((aligned(16))) pmod_mat_t A2[r * c];
   __attribute__((aligned(16))) pmod_mat_t A3[r * c];
+  __attribute__((aligned(16))) pmod_mat_t A4[r * c];
 
   for (int i = 0; i < r * c; i++)
   {
@@ -535,15 +545,18 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
     A1[i] = rand_el;
     A2[i] = rand_el;
     A3[i] = rand_el;
+    A4[i] = rand_el;
   }
 
   long long systemizer_cycles[ROUNDS + 1];
   long long intrinsic_systemizer_cycles[ROUNDS + 1];
   long long asm_systemizer_cycles[ROUNDS + 1];
+  long long asm_systemizer_cycles_nct[ROUNDS + 1];
 
   int systemizer_res;
   int intrinsic_res;
   int asm_res;
+  int asm_nct_res;
 
   for (int round = 0; round < ROUNDS; round++)
   {
@@ -566,21 +579,32 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
   }
   asm_systemizer_cycles[ROUNDS] = get_cyclecounter();
 
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    asm_systemizer_cycles_nct[round] = get_cyclecounter();
+    asm_nct_res = function_nct(A4, mod_inverse_table);
+  }
+  asm_systemizer_cycles_nct[ROUNDS] = get_cyclecounter();
+
   // Calculate results
   double systemizer_median_cc = median_2(systemizer_cycles, ROUNDS + 1, 0);
   double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS + 1, 0);
   double asm_systemizer_median_cc = median_2(asm_systemizer_cycles, ROUNDS + 1, 0);
+  double asm_systemizer_median_nct_cc = median_2(asm_systemizer_cycles_nct, ROUNDS + 1, 0);
 
   double min_cycles = (double)min_cycle_bound(r, c, max_r, swap, backsub);
   double systemizer_cycle_multiplier = systemizer_median_cc / (min_cycles / 4);
   double intrinsic_cycle_multiplier = intrinsic_systemizer_median_cc / (min_cycles / 4);
   double asm_cycle_multiplier = asm_systemizer_median_cc / (min_cycles / 4);
+  double asm_nct_cycle_multiplier = asm_systemizer_median_nct_cc / (min_cycles / 4);
 
   double intrinsic_improvement = (intrinsic_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
   double asm_improvement = (asm_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+  double asm_nct_improvement = (asm_systemizer_median_nct_cc - systemizer_median_cc) / systemizer_median_cc * 100;
 
   int intrinsic_inequalities = intrinsic_res == systemizer_res ? 0 : 1;
   int asm_inequalities = asm_res == systemizer_res ? 0 : 1;
+  int asm_nct_inequalities = asm_nct_res == systemizer_res ? 0 : 1;
   for (int i = 0; i < r * c; i++)
   {
     if (A1[i] != A2[i])
@@ -590,6 +614,10 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
     if (A1[i] != A3[i])
     {
       asm_inequalities++;
+    }
+    if (A1[i] != A4[i])
+    {
+      asm_nct_inequalities++;
     }
   }
 
@@ -601,6 +629,10 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
     printf("> ASM EQUAL\n");
   else
     printf("> ASM INEQUALITIES: %d/%d\n", asm_inequalities, r * c + 1);
+  if (asm_nct_inequalities == 0)
+    printf("> ASM (NCT) EQUAL\n");
+  else
+    printf("> ASM (NCT) INEQUALITIES: %d/%d\n", asm_nct_inequalities, r * c + 1);
   if (intrinsic_inequalities == 0)
     printf("> INTRINSIC EQUAL\n");
   else
@@ -611,9 +643,11 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
   printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
   printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
   printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
+  printf("ASM (NCT) median: %f\t(x%f)\n", asm_systemizer_median_nct_cc, asm_nct_cycle_multiplier);
 
   printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
   printf("Improvement (ASM): %f%%\n", asm_improvement);
+  printf("Improvement (ASM NCT): %f%%\n", asm_nct_improvement);
   printf("\n");
 }
 
@@ -732,14 +766,25 @@ int main(int argc, char *argv[])
   return 0;
 }*/
 
+extern void pmod_mat_syst_test(pmod_mat_t *M);
+
+void cool_test()
+{
+  pmod_mat_t M[] = {0, 1, 2, 3, 4, 5, 6, 7};
+  pmod_mat_fprint(stdout, M, 1, 8);
+  pmod_mat_syst_test(M);
+  pmod_mat_fprint(stdout, M, 1, 8);
+}
+
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
-  test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0);
-  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1);
-  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1);
-  test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1);
-  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1);
-  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1);
+  test_performance("pmod_mat_syst_k_k_k_0_0", MEDS_k, MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_k_k_0_0, pmod_mat_syst_k_k_k_0_0_nct);
+  test_performance("pmod_mat_syst_n_2n_n_0_1", MEDS_n, 2 * MEDS_n, MEDS_n, 0, 1, pmod_mat_syst_n_2n_n_0_1, pmod_mat_syst_n_2n_n_0_1_nct);
+  test_performance("pmod_mat_syst_m_2m_m_0_1", MEDS_m, 2 * MEDS_m, MEDS_m, 0, 1, pmod_mat_syst_m_2m_m_0_1, pmod_mat_syst_m_2m_m_0_1_nct);
+  test_performance("pmod_mat_syst_k_2k_k_0_1", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 1, pmod_mat_syst_k_2k_k_0_1, pmod_mat_syst_k_2k_k_0_1_nct);
+  test_performance("pmod_mat_syst_n_2m_nr1_0_1", MEDS_n, 2 * MEDS_m, MEDS_n - 1, 0, 1, pmod_mat_syst_n_2m_nr1_0_1, pmod_mat_syst_n_2m_nr1_0_1_nct);
+  test_performance("pmod_mat_syst_mr1_m_mr1_1_1", MEDS_m - 1, MEDS_m, MEDS_m - 1, 1, 1, pmod_mat_syst_mr1_m_mr1_1_1, pmod_mat_syst_mr1_m_mr1_1_1_nct);
+  test_performance("pmod_mat_syst_k_2k_k_0_0", MEDS_k, 2 * MEDS_k, MEDS_k, 0, 0, pmod_mat_syst_k_2k_k_0_0, pmod_mat_syst_k_2k_k_0_0_nct);
   disable_cyclecounter();
 }

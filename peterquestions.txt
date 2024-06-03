@@ -51,3 +51,17 @@ TODO:
 - Check dat systemizer code CT is (ook die die de compiler genereert!) (timecop/valgrind?)
 - Implement low-level speedup voor systemization (vergelijken?)
 - 800-185 https://csrc.nist.gov/pubs/sp/800/185/final
+
+=== NEW ===
+- What approach to take to further optimize systemizer to get at least below the reference C implementation?
+- What code is left to optimize?
+
+- inversion:
+> zeg dat je parallel hebt geconsidered en fractions
+
+- comparison low level high level:
+> high level toch langzamer omdat er veel meer data is
+
+
+=== IDEAS ===
+- Optimize systemizer for high-level => ct GF inv lookup (even 4-way), ct skip eq0 check (high chance)

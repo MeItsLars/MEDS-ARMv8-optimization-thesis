@@ -7,6 +7,7 @@
 #include "profiler.h"
 
 #include "fips202.h"
+#include "fips202_vec.h"
 #include "params.h"
 #include "api.h"
 #include "randombytes.h"
@@ -351,6 +352,7 @@ int crypto_sign_vec(
   // Establish a pointer to the location of the address in the seed buffer
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
+  // Loop variables
   int num_valid = 0;
   int num_invalid = 0;
   int num_tried = 0;
@@ -365,7 +367,13 @@ int crypto_sign_vec(
   while (num_valid < MEDS_t)
   {
     int index = num_tried;
-    for (int t = 0; t < BATCH_SIZE; t++)
+
+    // Determine the batch size for the current iteration
+    int loop_batch_size = MEDS_t + num_invalid - num_tried;
+    if (loop_batch_size > BATCH_SIZE)
+      loop_batch_size = BATCH_SIZE;
+
+    for (int t = 0; t < loop_batch_size; t++)
     {
       int index_netto = indexes[num_tried + t];
 
@@ -393,58 +401,43 @@ int crypto_sign_vec(
     pmod_mat_mul_vec(C, 2, MEDS_m * MEDS_n, M_tilde_vec, 2, MEDS_k, G_0_vec, MEDS_k, MEDS_m * MEDS_n);
 
     // Solve for A_tilde and B_tilde
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_tilde_inv, A_tilde, MEDS_m, MEDS_m), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C, 1), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n, 1), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_tilde_inv, A_tilde, MEDS_m, MEDS_m, 1), ZERO_S_VEC)));
 
     // Apply pi function
     pi_vec(G_tilde_ti_vec, A_tilde, B_tilde, G_0_vec);
 
     // Convert to systematic form
-    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec))));
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec, 1))));
 
     // Store G_tilde_ti_vec into G_tilde_ti[index]
-    // TODO: CONVERT SO THAT NO SPECIFIC ARM TYPES ARE USED
     PROFILER_START("bs_fill");
-    int buf_idx = 0;
-    for (int r = 0; r < MEDS_k; r++)
-      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+    if (GFq_bits == 12)
+    {
+      // Use a 12-bit optimized parallel bitstream fill function (12 bits are used for all parameter sets)
+      store_bitstream_12bit(bs_buf, index, G_tilde_ti_vec, loop_batch_size);
+    }
+    else
+    {
+      // In other cases, use a generic bitstream fill function
+      for (int i = 0; i < loop_batch_size; i++)
       {
-        // Extract two 12-bit values. Combine them into three 8-bit values. Store these values into bs_buf.
-        pmod_mat_vec_t i0 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c];
-        pmod_mat_vec_t i1 = G_tilde_ti_vec[r * MEDS_m * MEDS_n + c + 1];
+        bitstream_t bs;
 
-        // r0 = (i0 & 0xff);
-        uint16x4_t r0_wide = vand_u16(i0, vdup_n_u16(0xff));
-        // r1 = (i0 >> 8) | ((i1 & 0xf) << 4);
-        uint16x4_t r1_wide = vorr_u16(vshr_n_u16(i0, 8), vshl_n_u16(vand_u16(i1, vdup_n_u16(0xf)), 4));
-        // r2 = (i1 >> 4);
-        uint16x4_t r2_wide = vshr_n_u16(i1, 4);
+        bs_init(&bs, bs_buf[index + i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
-        // Convert to 8-bit
-        uint8x8_t r0 = vqmovn_u16(vcombine_u16(r0_wide, vdup_n_u16(0)));
-        uint8x8_t r1 = vqmovn_u16(vcombine_u16(r1_wide, vdup_n_u16(0)));
-        uint8x8_t r2 = vqmovn_u16(vcombine_u16(r2_wide, vdup_n_u16(0)));
+        for (int r = 0; r < MEDS_k; r++)
+          for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+            bs_write(&bs, G_tilde_ti_vec[r * MEDS_m * MEDS_n + j][i], GFq_bits);
 
-        // Store to buffer
-        uint8_t r0_buf[8];
-        uint8_t r1_buf[8];
-        uint8_t r2_buf[8];
-        vst1_u8(r0_buf, r0);
-        vst1_u8(r1_buf, r1);
-        vst1_u8(r2_buf, r2);
-        for (int i = 0; i < 4; i++)
-        {
-          bs_buf[index + i][buf_idx] = r0_buf[i];
-          bs_buf[index + i][buf_idx + 1] = r1_buf[i];
-          bs_buf[index + i][buf_idx + 2] = r2_buf[i];
-        }
-        buf_idx += 3;
+        bs_finalize(&bs);
       }
+    }
     PROFILER_STOP("bs_fill");
 
     int current_batch_invalids = 0;
-    for (int t = 0; t < BATCH_SIZE; t++)
+    for (int t = 0; t < loop_batch_size; t++)
     {
       if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
       {
@@ -466,15 +459,31 @@ int crypto_sign_vec(
         num_valid++;
       }
     }
-    num_tried += BATCH_SIZE;
+    num_tried += loop_batch_size;
   }
   PROFILER_STOP("SEC_COMMIT");
 
   // Hash all commitments
-  PROFILER_START("SEC_HASH_COMMIT");
+  PROFILER_START("hash");
+#ifdef MEDS_hash_opt
+  // Use parallel hashing to compute 4 digests at once
+  uint8_t digest_G_tilde_ti[MEDS_t][MEDS_digest_bytes];
+  for (int i = 0; i < MEDS_t; i += 4)
+  {
+    keccak_state_vec4 h_shake_G_tilde_ti;
+    shake256_init_vec4(&h_shake_G_tilde_ti);
+    shake256_absorb_vec4(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec4(&h_shake_G_tilde_ti);
+    shake256_squeeze_vec4(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+  }
+  // Hash the digests into a single digest
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&h_shake, digest_G_tilde_ti[i], MEDS_digest_bytes);
+#else
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&h_shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-  PROFILER_STOP("SEC_HASH_COMMIT");
+#endif
+  PROFILER_STOP("hash");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 
@@ -530,6 +539,19 @@ int crypto_sign_vec(
   LOG_HEX(sm, MEDS_SIG_BYTES + mlen);
 
   return 0;
+}
+
+void print_mat_vec(pmod_mat_vec_t *M, int rows, int cols, int size)
+{
+  for (int t = 0; t < size; t++)
+  {
+    pmod_mat_t M_non_vec[rows * cols];
+    for (int r = 0; r < rows; r++)
+      for (int c = 0; c < cols; c++)
+        M_non_vec[r * cols + c] = M[r * cols + c][t];
+    printf("t=%d\n", t);
+    pmod_mat_fprint(stdout, M_non_vec, rows, cols);
+  }
 }
 
 int crypto_sign_open_vec(
@@ -610,176 +632,190 @@ int crypto_sign_open_vec(
 
   uint8_t *sigma = &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(MEDS_seed_tree_height, 0)];
 
-  pmod_mat_t G_hat_i[MEDS_k * MEDS_m * MEDS_n];
+  // Initialize matrices that will be filled during the commitment phase
+  // These matrices are still needed for the hash computation
+  pmod_mat_t kappa_or_M_hat_i_data[MEDS_t << 1][2 * MEDS_k];
+  pmod_mat_t *kappa_or_M_hat_i[MEDS_t << 1];
+  static uint8_t bs_buf_data[MEDS_t << 1][CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+  static uint8_t *bs_buf[MEDS_t << 1];
 
-  pmod_mat_t kappa[2 * MEDS_k];
+  for (int i = 0; i < MEDS_t << 1; i++)
+  {
+    kappa_or_M_hat_i[i] = kappa_or_M_hat_i_data[i];
+    bs_buf[i] = bs_buf_data[i];
+  }
 
+  // Define temporary arrays that will be used during a single commitment computation
+  pmod_mat_vec_t A_hat[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_hat[MEDS_n * MEDS_n];
+  pmod_mat_vec_t A_hat_inv[MEDS_m * MEDS_m];
+  pmod_mat_vec_t B_hat_inv[MEDS_n * MEDS_n];
+  pmod_mat_vec_t kappa_or_M_hat_i_vec[2 * MEDS_k];
+  pmod_mat_vec_t G0_prime_or_C_hat[2 * MEDS_m * MEDS_n];
+  static pmod_mat_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  uint8_t sigma_M_hat_i[MEDS_pub_seed_bytes];
+  static pmod_mat_vec_t G_hat_i_vec[MEDS_k * MEDS_m * MEDS_n];
+
+  // Initialize hash function
   keccak_state shake;
   shake256_init(&shake);
 
+  // Create a seed buffer for use during the challenges. Set the start of the buffer to the salt.
   uint8_t seed_buf[MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t)] = {0};
   memcpy(seed_buf, alpha, MEDS_st_salt_bytes);
 
+  // Establish a pointer to the location of the address in the seed buffer
   uint8_t *addr_pos = seed_buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
+  // Loop variables
+  int num_valid = 0;
+  int num_invalid = 0;
+  int num_tried = 0;
+  int indexes[MEDS_t << 1];
+
   for (int i = 0; i < MEDS_t; i++)
+    indexes[i] = i;
+  for (int i = MEDS_t; i < (MEDS_t << 1); i++)
+    indexes[i] = 0;
+
+  PROFILER_START("SEC_COMMIT");
+  while (num_valid < MEDS_t)
   {
-    if (h[i] > 0)
+    int index = num_tried;
+
+    // Determine the batch size for the current iteration
+    int loop_batch_size = MEDS_t + num_invalid - num_tried;
+    if (loop_batch_size > BATCH_SIZE)
+      loop_batch_size = BATCH_SIZE;
+
+    for (int t = 0; t < loop_batch_size; t++)
     {
-      LOG("h[%i] > 0\n", i);
+      // Load indices
+      int index_netto = indexes[num_tried + t];
 
-      for (int j = 0; j < 2 * MEDS_k; j++)
-        kappa[j] = bs_read(&bs, GFq_bits);
-
-      bs_finalize(&bs);
-
-      LOG_MAT_FMT(kappa, 2, MEDS_k, "kappa[%i]", i);
-
-      pmod_mat_t G0_prime[2 * MEDS_m * MEDS_n];
-
-      pmod_mat_mul(G0_prime, 2, MEDS_m * MEDS_n, kappa, 2, MEDS_k, G[h[i]], MEDS_k, MEDS_m * MEDS_n);
-
-      LOG_MAT_FMT(G0_prime, 2, MEDS_m * MEDS_n, "G0_prime[%i]", i);
-
-      pmod_mat_t A_hat[MEDS_m * MEDS_m];
-      pmod_mat_t B_hat[MEDS_n * MEDS_n];
-
-      pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
-      pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
-
-      if (solve(A_hat, B_hat_inv, G0_prime) < 0)
+      if (h[index_netto] > 0)
       {
-        LOG("crypto_sign_open - no sol");
-        printf("no sol\n");
-        return -1;
+        for (int j = 0; j < 2 * MEDS_k; j++)
+          kappa_or_M_hat_i[index + t][j] = bs_read(&bs, GFq_bits);
+
+        bs_finalize(&bs);
       }
-
-      if (pmod_mat_inv(B_hat, B_hat_inv, MEDS_n, MEDS_n) < 0)
+      else
       {
-        LOG("no B_hat");
-        return -1;
-      }
-
-      if (pmod_mat_inv(A_hat_inv, A_hat, MEDS_m, MEDS_m) < 0)
-      {
-        LOG("no A_hat_inv");
-        return -1;
-      }
-
-      LOG_MAT_FMT(A_hat, MEDS_m, MEDS_m, "A_hat[%i]", i);
-      LOG_MAT_FMT(B_hat, MEDS_n, MEDS_n, "B_hat[%i]", i);
-
-      pi(G_hat_i, A_hat, B_hat, G[h[i]]);
-
-      LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
-
-      if (SF(G_hat_i, G_hat_i) < 0)
-      {
-        fprintf(stderr, "Signature verification failed!\n");
-
-        return -1;
-      }
-
-      LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
-    }
-    else
-    {
-      LOG("h[%i] == 0\n", i);
-
-      while (1 == 1)
-      {
-        LOG_VEC_FMT(&sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes, "seeds[%i]", i);
-
-        uint8_t sigma_M_hat_i[MEDS_pub_seed_bytes];
-
         for (int j = 0; j < 4; j++)
-          addr_pos[j] = (i >> (j * 8)) & 0xff;
+          addr_pos[j] = (index_netto >> (j * 8)) & 0xff;
 
-        memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
+        memcpy(seed_buf + MEDS_st_salt_bytes, &sigma[index_netto * MEDS_st_seed_bytes], MEDS_st_seed_bytes);
 
-        LOG_HEX(seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t));
-
-        XOF((uint8_t *[]){sigma_M_hat_i, &sigma[i * MEDS_st_seed_bytes]},
+        XOF((uint8_t *[]){sigma_M_hat_i, &sigma[index_netto * MEDS_st_seed_bytes]},
             (size_t[]){MEDS_pub_seed_bytes, MEDS_st_seed_bytes},
             seed_buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t),
             2);
 
-        pmod_mat_t M_hat_i[2 * MEDS_k];
+        rnd_matrix(kappa_or_M_hat_i[index + t], 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
+      }
 
-        LOG_HEX_FMT(sigma_M_hat_i, MEDS_pub_seed_bytes, "sigma_M_hat[%i]", i);
+      // Load G_vec from G
+      int G_index = h[index_netto];
+      for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++)
+        G_vec[i][t] = G[G_index][i];
+    }
 
-        // rnd_inv_matrix(M_hat_i, 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
-        {
-          keccak_state shake;
-          shake256_absorb_once(&shake, sigma_M_hat_i, MEDS_pub_seed_bytes);
+    // Load kappa_or_M_hat_i into kappa_or_M_hat_i_vec
+    for (int r = 0; r < 2; r++)
+      for (int c = 0; c < MEDS_k; c++)
+        kappa_or_M_hat_i_vec[r * MEDS_k + c] = load_vec(kappa_or_M_hat_i + index, 2, MEDS_k, r, c);
 
-          for (int r = 0; r < 2; r++)
-            for (int c = 0; c < MEDS_k; c++)
-              pmod_mat_set_entry(M_hat_i, 2, MEDS_k, r, c, rnd_GF(&shake));
-        }
+    pmod_mat_s_vec_t valid = SET_S_VEC(1);
 
-        LOG_MAT_FMT(M_hat_i, 2, MEDS_k, "M_hat[%i]", i);
+    pmod_mat_mul_vec(G0_prime_or_C_hat, 2, MEDS_m * MEDS_n, kappa_or_M_hat_i_vec, 2, MEDS_k, G_vec, MEDS_k, MEDS_m * MEDS_n);
 
-        pmod_mat_t C_hat[2 * MEDS_m * MEDS_n];
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_hat, B_hat_inv, G0_prime_or_C_hat, 0), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_hat, B_hat_inv, MEDS_n, MEDS_n, 0), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_hat_inv, A_hat, MEDS_m, MEDS_m, 0), ZERO_S_VEC)));
 
-        pmod_mat_mul(C_hat, 2, MEDS_m * MEDS_n, M_hat_i, 2, MEDS_k, G[0], MEDS_k, MEDS_m * MEDS_n);
+    pi_vec(G_hat_i_vec, A_hat, B_hat, G_vec);
 
-        LOG_MAT_FMT(C_hat, 2, MEDS_m * MEDS_n, "C_hat[%i]", i);
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec, 0))));
 
-        pmod_mat_t A_hat_i[MEDS_m * MEDS_m];
-        pmod_mat_t B_hat_i[MEDS_n * MEDS_n];
+    // Store G_hat_i_vec into G_hat_i[index]
+    if (GFq_bits == 12)
+    {
+      // Use a 12-bit optimized parallel bitstream fill function (12 bits are used for all parameter sets)
+      store_bitstream_12bit(bs_buf, index, G_hat_i_vec, loop_batch_size);
+    }
+    else
+    {
+      // In other cases, use a generic bitstream fill function
+      for (int i = 0; i < loop_batch_size; i++)
+      {
+        bitstream_t bs;
 
-        pmod_mat_t A_hat_inv[MEDS_m * MEDS_m];
-        pmod_mat_t B_hat_inv[MEDS_n * MEDS_n];
+        bs_init(&bs, bs_buf[index + i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
-        if (solve(A_hat_i, B_hat_inv, C_hat) < 0)
-        {
-          LOG("no sol");
-          continue;
-        }
+        for (int r = 0; r < MEDS_k; r++)
+          for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+            bs_write(&bs, G_hat_i_vec[r * MEDS_m * MEDS_n + j][i], GFq_bits);
 
-        if (pmod_mat_inv(B_hat_i, B_hat_inv, MEDS_n, MEDS_n) < 0)
-        {
-          LOG("no B_hat");
-          continue;
-        }
-
-        if (pmod_mat_inv(A_hat_inv, A_hat_i, MEDS_m, MEDS_m) < 0)
-        {
-          LOG("no A_hat_inv");
-          continue;
-        }
-
-        LOG_MAT_FMT(A_hat_i, MEDS_m, MEDS_m, "A_hat[%i]", i);
-        LOG_MAT_FMT(B_hat_i, MEDS_n, MEDS_n, "B_hat[%i]", i);
-
-        pi(G_hat_i, A_hat_i, B_hat_i, G[0]);
-
-        LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
-
-        if (SF(G_hat_i, G_hat_i) == 0)
-        {
-          LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
-          break;
-        }
-
-        LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+        bs_finalize(&bs);
       }
     }
 
-    bitstream_t bs;
-    uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+    int current_batch_invalids = 0;
 
-    bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    for (int t = 0; t < loop_batch_size; t++)
+    {
+      if (GET_LANE_S_VEC(valid, t) == VEC_FALSE)
+      {
+        // Compute indices
+        int idx_source = num_tried + t;
+        int idx_target = MEDS_t + num_invalid + current_batch_invalids;
 
-    for (int r = 0; r < MEDS_k; r++)
-      for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
+        // If the commitment was invalid and the hash is a non-zero hash, return failure
+        if (h[indexes[idx_source]] > 0)
+        {
+          printf("Signature verification failed!\n");
+          return -1;
+        }
 
-    bs_finalize(&bs);
+        indexes[idx_target] = indexes[idx_source];
+        bs_buf[idx_target] = bs_buf_data[idx_source];
+        kappa_or_M_hat_i[idx_target] = kappa_or_M_hat_i_data[idx_source];
 
-    shake256_absorb(&shake, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+        // Update counters
+        num_invalid++;
+        current_batch_invalids++;
+      }
+      else
+      {
+        num_valid++;
+      }
+    }
+    num_tried += loop_batch_size;
   }
+  PROFILER_STOP("SEC_COMMIT");
+
+  // Hash all commitments
+  PROFILER_START("hash");
+#ifdef MEDS_hash_opt
+  // Use parallel hashing to compute 4 digests at once
+  uint8_t digest_G_hat[MEDS_t][MEDS_digest_bytes];
+  for (int i = 0; i < MEDS_t; i += 4)
+  {
+    keccak_state_vec4 shake_G_hat;
+    shake256_init_vec4(&shake_G_hat);
+    shake256_absorb_vec4(&shake_G_hat, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec4(&shake_G_hat);
+    shake256_squeeze_vec4(digest_G_hat[i], digest_G_hat[i + 1], digest_G_hat[i + 2], digest_G_hat[i + 3], MEDS_digest_bytes, &shake_G_hat);
+  }
+  // Hash the digests into a single digest
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&shake, digest_G_hat[i], MEDS_digest_bytes);
+#else
+  for (int i = 0; i < MEDS_t; i++)
+    shake256_absorb(&shake, bs_buf[i], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+#endif
+  PROFILER_STOP("hash");
 
   shake256_absorb(&shake, (uint8_t *)(sm + MEDS_SIG_BYTES), smlen - MEDS_SIG_BYTES);
 

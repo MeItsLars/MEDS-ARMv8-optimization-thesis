@@ -6,3 +6,6 @@ List of things that were changed as a low-level optimization compared to the ori
 - Matrix systemization replaced by assembly reference in all positions in the code
 - Functions using various systemization sizes altered to include a function pointer to the assembly systemization reference
 - Created a specific and faster implementation for copying commitment data into the buffer that will be hashed (bs_fill) which is now executed after the challenge loop (only works for GFq_size=12)
+- Added keccak files for parallel hashing, an optional feature that changes the signature and gives a small speedup.
+- Added non-constant time implementation for GF inversion and matrix systemization
+- Made parts of the 'solve' method faster
