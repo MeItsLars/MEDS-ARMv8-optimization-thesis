@@ -124,3 +124,11 @@ add_executable(profile ${PROJECT_SOURCE_DIR}/profile.c)
 target_include_directories(profile PRIVATE ${INCLUDE_DIRECTORIES})
 target_link_libraries(profile PRIVATE common_sources_with_profiler ${OPENSSL_LIBRARIES})
 target_compile_definitions(profile PRIVATE PROFILER)
+
+##########################################################
+# Build target: benchmark
+##########################################################
+message("Adding target: benchmark")
+add_executable(benchmark ${PROJECT_SOURCE_DIR}/benchmark.c)
+target_include_directories(benchmark PRIVATE ${INCLUDE_DIRECTORIES})
+target_link_libraries(benchmark PRIVATE common_sources ${OPENSSL_LIBRARIES})

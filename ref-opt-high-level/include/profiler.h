@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+
 #include "cyclecounter.h"
 
 typedef struct
