@@ -401,15 +401,15 @@ int crypto_sign_vec(
     pmod_mat_mul_vec(C, 2, MEDS_m * MEDS_n, M_tilde_vec, 2, MEDS_k, G_0_vec, MEDS_k, MEDS_m * MEDS_n);
 
     // Solve for A_tilde and B_tilde
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_tilde_inv, A_tilde, MEDS_m, MEDS_m), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_tilde, B_tilde_inv, C, 1), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_tilde, B_tilde_inv, MEDS_n, MEDS_n, 1), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_tilde_inv, A_tilde, MEDS_m, MEDS_m, 1), ZERO_S_VEC)));
 
     // Apply pi function
     pi_vec(G_tilde_ti_vec, A_tilde, B_tilde, G_0_vec);
 
     // Convert to systematic form
-    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec))));
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_tilde_ti_vec, G_tilde_ti_vec, 1))));
 
     // Store G_tilde_ti_vec into G_tilde_ti[index]
     PROFILER_START("bs_fill");
@@ -730,13 +730,13 @@ int crypto_sign_open_vec(
 
     pmod_mat_mul_vec(G0_prime_or_C_hat, 2, MEDS_m * MEDS_n, kappa_or_M_hat_i_vec, 2, MEDS_k, G_vec, MEDS_k, MEDS_m * MEDS_n);
 
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_hat, B_hat_inv, G0_prime_or_C_hat), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_hat, B_hat_inv, MEDS_n, MEDS_n), ZERO_S_VEC)));
-    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_hat_inv, A_hat, MEDS_m, MEDS_m), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(solve_vec(A_hat, B_hat_inv, G0_prime_or_C_hat, 0), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(B_hat, B_hat_inv, MEDS_n, MEDS_n, 0), ZERO_S_VEC)));
+    valid = AND_S_VEC(valid, TO_S_VEC(GEQ_S_VEC(pmod_mat_inv_vec(A_hat_inv, A_hat, MEDS_m, MEDS_m, 0), ZERO_S_VEC)));
 
     pi_vec(G_hat_i_vec, A_hat, B_hat, G_vec);
 
-    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec))));
+    valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec, 0))));
 
     // Store G_hat_i_vec into G_hat_i[index]
     if (GFq_bits == 12)

@@ -8,7 +8,7 @@
 #include "meds.h"
 #include "matrixmod.h"
 
-pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime)
+pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv, pmod_mat_vec_t *G0prime, int ct)
 {
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
@@ -33,7 +33,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
 
   PROFILER_STOP("solve_vec_raw");
   // Systemize core sub-system while pivoting all but the last row.
-  pmod_mat_s_vec_t piv = pmod_mat_syst_ct_partial_vec(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1);
+  pmod_mat_s_vec_t piv = pmod_mat_syst_ct_partial_vec(N, MEDS_n, 2 * MEDS_m, MEDS_n - 1, ct);
 
   PROFILER_START("solve_vec_raw");
   // Conditional move -1 to ret if piv is not zero
@@ -74,7 +74,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
   GFq_vec_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
 
   PROFILER_STOP("solve_vec_raw");
-  pmod_mat_s_vec_t N1_r = pmod_mat_rref_vec(N1, MEDS_m - 1, MEDS_m);
+  pmod_mat_s_vec_t N1_r = pmod_mat_rref_vec(N1, MEDS_m - 1, MEDS_m, ct);
   PROFILER_START("solve_vec_raw");
 
   // Conditionally move -1 to ret if N1_r is -1
@@ -251,7 +251,7 @@ void pi_vec(pmod_mat_vec_t *Gout, pmod_mat_vec_t *A, pmod_mat_vec_t *B, pmod_mat
   PROFILER_STOP("pi");
 }
 
-pmod_mat_s_vec_t SF_vec(pmod_mat_vec_t *Gprime, pmod_mat_vec_t *G)
+pmod_mat_s_vec_t SF_vec(pmod_mat_vec_t *Gprime, pmod_mat_vec_t *G, int ct)
 {
   PROFILER_START("SF");
   pmod_mat_vec_t M[MEDS_k * MEDS_k];
@@ -261,7 +261,7 @@ pmod_mat_s_vec_t SF_vec(pmod_mat_vec_t *Gprime, pmod_mat_vec_t *G)
 
   pmod_mat_s_vec_t ret = SET_S_VEC(-1);
   pmod_mat_s_vec_t zero = ZERO_S_VEC;
-  pmod_mat_s_vec_t res = pmod_mat_inv_vec(M, M, MEDS_k, MEDS_k);
+  pmod_mat_s_vec_t res = pmod_mat_inv_vec(M, M, MEDS_k, MEDS_k, ct);
   pmod_mat_mul_vec(Gprime, MEDS_k, MEDS_m * MEDS_n, M, MEDS_k, MEDS_k, G, MEDS_k, MEDS_m * MEDS_n);
 
   // Conditionally move 0 to ret if res is 0

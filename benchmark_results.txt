@@ -20,29 +20,24 @@ With matmul v5                   | 13.948.697    | 1.393.397.632 | 1.393.389.568
 
 
 REFERENCE (PARAM=level3)
-Time (min of 1 runs):
-keygen: 0.015244   (22865354 cycles)
-sign:   2.424797   (3637195336 cycles)
-verify: 2.420702   (3631053589 cycles)
+keygen: 0.015244   (22865354 cycles)    100%
+sign:   2.424797   (3637195336 cycles)  100%
+verify: 2.420702   (3631053589 cycles)  100%
 
 LOW LEVEL (PARAM=level3)
-Time (min of 1 runs):
 keygen: 0.005386   (8078960 cycles)     ~35.3%
 sign:   0.747451   (1121176831 cycles)  ~30.8%
 verify: 0.718076   (1077113794 cycles)  ~29.7%
 HIGH LEVEL (PARAM=level3)
-Time (min of 1 runs):
-keygen: 0.015198   (22797674 cycles)    ~99.7%
-sign:   0.976686   (1465028672 cycles)  ~40.2%
-verify: 0.985952   (1478928303 cycles)  ~40.7%
+keygen: 0.015185   (22778066 cycles)    ~99.6%
+sign:   0.975189   (1462782888 cycles)  ~40.2%
+verify: 0.935815   (1403722081 cycles)  ~38.6%
 
 LOW LEVEL (PARAM=level3) HASH OPT
-Time (min of 1 runs):
 keygen: 0.005402   (8102800 cycles)     ~35.4%
 sign:   0.717207   (1075810373 cycles)  ~29.6%
 verify: 0.688218   (1032327702 cycles)  ~28.4%
 HIGH LEVEL (PARAM=level3) HASH OPT
-Time (min of 1 runs):
-keygen: 0.015183   (22774000 cycles)    ~99.6%
-sign:   0.938682   (1408022919 cycles)  ~38.7%
-verify: 0.955730   (1433594443 cycles)  ~39.4%
+keygen: 0.015279   (22918554 cycles)    ~100.2%
+sign:   0.938888   (1408331277 cycles)  ~38.7%
+verify: 0.904157   (1356236049 cycles)  ~37.4%
