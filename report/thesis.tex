@@ -462,7 +462,12 @@ A small percentage of the total number of cycles in each of the three operations
   * Cite keccak extended code package as well (Armv7)
   * https://gitlab.com/arm-research/security/pqax
   * Better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en
-- Perform high-level optimizations for verification and keygen
+- Perform high-level optimizations for keygen
+- Analyze minimum time complexity of low-level systemizer
+- ARM Calling Convention PDF: https://github.com/ARM-software/abi-aa/releases (cite?)
+- Change modular reduction to Barrett reduction (?)
+- Adust the 2 python generation files with an abstract file for clearity
+- Add explanation why high level slower -> data does not fit in cache. Check with toy parameter set.
 
 \chapter{Conclusion}
 \label{ch:conclusion}
