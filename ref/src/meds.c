@@ -18,6 +18,7 @@
 
 #include "seed.h"
 #include "util.h"
+#include "profiler.h"
 #include "bitstream.h"
 
 #include "matrixmod.h"
@@ -150,6 +151,7 @@ int crypto_sign_keypair(
 
     bitstream_t bs;
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -160,6 +162,7 @@ int crypto_sign_keypair(
 
       bs_finalize(&bs);
     }
+    PROFILER_STOP("bs_fill");
 
     LOG_VEC(tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes, "G[1:] (pk)");
     tmp_pk += MEDS_PK_BYTES - MEDS_pub_seed_bytes;
@@ -181,6 +184,7 @@ int crypto_sign_keypair(
 
     bitstream_t bs;
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, sk + MEDS_sec_seed_bytes + MEDS_pub_seed_bytes, MEDS_SK_BYTES - MEDS_sec_seed_bytes - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -206,6 +210,7 @@ int crypto_sign_keypair(
 
       bs_finalize(&bs);
     }
+    PROFILER_STOP("bs_fill");
 
     LOG_HEX(sk, MEDS_SK_BYTES);
   }
@@ -411,6 +416,7 @@ int crypto_sign(
     bitstream_t bs;
     uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
     for (int r = 0; r < MEDS_k; r++)
@@ -418,6 +424,7 @@ int crypto_sign(
         bs_write(&bs, G_tilde_ti[r * MEDS_m * MEDS_n + j], GFq_bits);
 
     bs_finalize(&bs);
+    PROFILER_STOP("bs_fill");
 
     LOG_HEX(bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
@@ -733,6 +740,7 @@ int crypto_sign_open(
     bitstream_t bs;
     uint8_t bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, bs_buf, CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
 
     for (int r = 0; r < MEDS_k; r++)
@@ -740,6 +748,7 @@ int crypto_sign_open(
         bs_write(&bs, G_hat_i[r * MEDS_m * MEDS_n + j], GFq_bits);
 
     bs_finalize(&bs);
+    PROFILER_STOP("bs_fill");
 
     // Optionally use alternative hashing scheme that allows for parallel hashing
 #ifdef MEDS_hash_opt

@@ -220,7 +220,7 @@ int pmod_mat_syst_ct_partial_swap_backsub(pmod_mat_t *M, int M_r, int M_c, int m
 
 GFq_t GF_inv(GFq_t val)
 {
-  PROFILER_START("GF_inv");
+  // PROFILER_START("GF_inv");
 //  if (MEDS_p == 8191)
 //  {
 //    // Use an optimal addition chain...
@@ -283,7 +283,7 @@ GFq_t GF_inv(GFq_t val)
       exponent >>= 1;
     }
 
-    PROFILER_STOP("GF_inv");
+    // PROFILER_STOP("GF_inv");
     return t;
   }
 }

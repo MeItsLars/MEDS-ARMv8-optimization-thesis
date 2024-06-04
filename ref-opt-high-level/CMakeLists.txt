@@ -159,6 +159,14 @@ target_link_libraries(profile PRIVATE common_sources_with_profiler asm_sources $
 target_compile_definitions(profile PRIVATE PROFILER)
 
 ##########################################################
+# Build target: benchmark
+##########################################################
+message("Adding target: benchmark")
+add_executable(benchmark ${PROJECT_SOURCE_DIR}/benchmark.c)
+target_include_directories(benchmark PRIVATE ${INCLUDE_DIRECTORIES})
+target_link_libraries(benchmark PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
+
+##########################################################
 # Build target: test_vec
 ##########################################################
 message("Adding target: test_vec")
