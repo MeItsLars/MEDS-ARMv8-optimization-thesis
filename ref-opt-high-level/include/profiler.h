@@ -7,6 +7,8 @@
 
 #include "cyclecounter.h"
 
+#define PROFILER_CYCLE_COST 159
+
 typedef struct
 {
   char name[256];
@@ -159,6 +161,7 @@ static float standard_deviation(long long arr[], int n)
       if (strcmp(profileresults[i].name, target_name) == 0)                                  \
       {                                                                                      \
         long long cycle_count = end_cycle_count - profileresults[i].start_cycle_count;       \
+        cycle_count -= PROFILER_CYCLE_COST;                                                  \
         profileresults[i].total_cycle_count += cycle_count;                                  \
         profileresults[i].start_cycle_count = 0;                                             \
         if (profileresults[i].cycle_count_index < 100)                                       \

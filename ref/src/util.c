@@ -36,7 +36,6 @@ GFq_t rnd_GF(keccak_state *shake)
 
     val = val & ((1 << GFq_bits) - 1);
   }
-
   return val;
 }
 
@@ -244,6 +243,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
   PROFILER_START("solve_opt");
+  PROFILER_START("solve_opt_raw");
 
   // set up core sub-system
   pmod_mat_t N[MEDS_n * (2 * MEDS_m)] = {0};
@@ -259,6 +259,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
     }
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
+  PROFILER_STOP("solve_opt_raw");
 
   // Systemize core sub-system while pivoting all but the last row.
   int piv;
@@ -268,6 +269,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
     PROFILER_STOP("solve_opt");
     return -1;
   }
+  PROFILER_START("solve_opt_raw");
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
@@ -315,7 +317,9 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   int N1_r;
 
   // Sytemize 2nd sub-system.
+  PROFILER_STOP("solve_opt_raw");
   N1_r = pmod_mat_rref(N1, MEDS_m - 1, MEDS_m);
+  PROFILER_START("solve_opt_raw");
 
   if (N1_r == -1)
   {
@@ -521,6 +525,7 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(A_tilde, MEDS_m, MEDS_m);
   LOG_MAT(B_tilde_inv, MEDS_n, MEDS_n);
 
+  PROFILER_STOP("solve_opt_raw");
   PROFILER_STOP("solve_opt");
   return 0;
 }
@@ -718,18 +723,15 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
 
 void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G)
 {
-  PROFILER_START("pi");
   for (int i = 0; i < MEDS_k; i++)
   {
     pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, A, MEDS_m, MEDS_m, &G[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n);
     pmod_mat_mul(&Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, &Gout[i * MEDS_m * MEDS_n], MEDS_m, MEDS_n, B, MEDS_n, MEDS_n);
   }
-  PROFILER_STOP("pi");
 }
 
 int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
 {
-  PROFILER_START("SF");
   pmod_mat_t M[MEDS_k * MEDS_k];
 
   for (int r = 0; r < MEDS_k; r++)
@@ -738,11 +740,7 @@ int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
   if (pmod_mat_inv(M, M, MEDS_k, MEDS_k) == 0)
   {
     pmod_mat_mul(Gprime, MEDS_k, MEDS_m * MEDS_n, M, MEDS_k, MEDS_k, G, MEDS_k, MEDS_m * MEDS_n);
-
-    PROFILER_STOP("SF");
     return 0;
   }
-
-  PROFILER_STOP("SF");
   return -1;
 }
