@@ -8,9 +8,8 @@
 #include "cyclecounter.h"
 #include "params.h"
 #include "api.h"
-#include "meds.h"
+#include "meds_vec.h"
 #include "profiler.h"
-#include "poison.h"
 
 profileresult profileresults[1000];
 int number_of_profileresults = 0;
@@ -58,21 +57,21 @@ int main(int argc, char *argv[])
   enable_cyclecounter();
 
   printf("> Generating sk, pk, and a signature\n");
-  crypto_sign_keypair(pk, sk);
-  crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+  crypto_sign_keypair_vec(pk, sk);
+  crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
 
   if (mode == 0 || mode == 1)
   {
     printf("> Benchmarking keygen\n");
     printf("  Warmup\n");
     for (int i = 0; i < WARMUP; i++)
-      crypto_sign_keypair(pk, sk);
+      crypto_sign_keypair_vec(pk, sk);
 
     printf("  Measuring\n");
     for (int i = 0; i < ROUNDS; i++)
     {
       keygen_cycles[i] = get_cyclecounter();
-      crypto_sign_keypair(pk, sk);
+      crypto_sign_keypair_vec(pk, sk);
     }
     keygen_cycles[ROUNDS] = get_cyclecounter();
   }
@@ -82,13 +81,13 @@ int main(int argc, char *argv[])
     printf("> Benchmarking sign\n");
     printf("  Warmup\n");
     for (int i = 0; i < WARMUP; i++)
-      crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+      crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
 
     printf("  Measuring\n");
     for (int i = 0; i < ROUNDS; i++)
     {
       sign_cycles[i] = get_cyclecounter();
-      crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+      crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     }
     sign_cycles[ROUNDS] = get_cyclecounter();
   }
@@ -100,7 +99,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < WARMUP; i++)
     {
       unsigned long long sig_len_copy = sig_len;
-      crypto_sign_open((unsigned char *)msg, (unsigned long long *)&sig_len_copy, sig, sig_len, pk);
+      crypto_sign_open_vec((unsigned char *)msg, (unsigned long long *)&sig_len_copy, sig, sig_len, pk);
     }
 
     printf("  Measuring\n");
@@ -108,7 +107,7 @@ int main(int argc, char *argv[])
     {
       verify_cycles[i] = get_cyclecounter();
       unsigned long long sig_len_copy = sig_len;
-      crypto_sign_open((unsigned char *)msg, (unsigned long long *)&sig_len_copy, sig, sig_len, pk);
+      crypto_sign_open_vec((unsigned char *)msg, (unsigned long long *)&sig_len_copy, sig, sig_len, pk);
     }
     verify_cycles[ROUNDS] = get_cyclecounter();
   }

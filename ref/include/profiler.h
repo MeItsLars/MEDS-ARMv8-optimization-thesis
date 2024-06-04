@@ -50,14 +50,15 @@ static float median(long long arr[], int n)
   }
 }
 
-static float median_2(long long arr[], int n, int print)
+static float median_2(long long arr[], int measurements, int print)
 {
-  long long differences[n - 1];
+  int n = measurements - 1;
+  long long differences[n];
   if (print == 1)
   {
     printf("MEDIANS:\n");
   }
-  for (int i = 0; i < n - 1; i++)
+  for (int i = 0; i < n; i++)
   {
     differences[i] = arr[i + 1] - arr[i];
     if (print)
@@ -69,7 +70,7 @@ static float median_2(long long arr[], int n, int print)
   {
     printf("\n");
   }
-  qsort(differences, n - 1, sizeof(long long), compare);
+  qsort(differences, n, sizeof(long long), compare);
   if (n % 2 == 0)
     return (differences[n / 2 - 1] + differences[n / 2]) / 2.0;
   else

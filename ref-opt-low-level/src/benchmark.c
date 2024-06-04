@@ -10,7 +10,6 @@
 #include "api.h"
 #include "meds.h"
 #include "profiler.h"
-#include "poison.h"
 
 profileresult profileresults[1000];
 int number_of_profileresults = 0;

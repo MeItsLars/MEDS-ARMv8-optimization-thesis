@@ -20,9 +20,15 @@ With matmul v5                   | 13.948.697    | 1.393.397.632 | 1.393.389.568
 
 
 REFERENCE (PARAM=level3)
-keygen: 0.015244   (22865354 cycles)    100%
-sign:   2.424797   (3637195336 cycles)  100%
-verify: 2.420702   (3631053589 cycles)  100%
+> Keygen:
+  Median cycles: 22656316
+  Time:          0.02 s
+> Sign:
+  Median cycles: 3623801344
+  Time:          2.42 s
+> Verify:
+  Median cycles: 3628162048
+  Time:          2.42 s
 
 LOW LEVEL (PARAM=level3)
 keygen: 0.005386   (8078960 cycles)     ~35.3%
