@@ -234,7 +234,7 @@ The team behind MEDS has proposed three parameter sets for the new optimized ver
     MEDS-122000 & Level 5 & -256.005 \\
     \bottomrule
   \end{tabular}
-  \caption{MEDS Security Levels. \textbf{FS} denotes the security of the Fiat-Shamir construction.}
+  \caption{MEDS Security Levels. \textbf{FS} denotes the claimed security of a MEDS parameter set in bits.}
   \label{tab:medssecuritylevels}
 \end{table}
 
@@ -243,7 +243,7 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 % A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
 \subsection{MEDS Algorithms}
 \label{sec:medsalgorithms}
-In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The full and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
+In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
 
 \subsubsection{Notations and Definitions}
 \todo[inline]{List notations and definitions used in the MEDS algorithms}
@@ -327,29 +327,21 @@ Another problem is the problem of program interference (see above). Unfortunatel
 \todo[inline]{Explain which version(s) of MEDS we profile.}
 \todo[inline]{Change the profiling results to reflect the results for the new parameter sets.}
 \todo[inline]{Convert to piechart and add other values}
-We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three operations of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenoperations} and \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningoperations} and \ref{tab:medssigningfunctions} (signing), \ref{tab:medsverificationoperations} and \ref{tab:medsverificationfunctions} (verification). For each of the three operations, we provide one table for functions and one table for MEDS operations that make use of one or more functions. We only list the functions and operations that take up more than 1\% of the total number of cycles. For each function or operation, we provide the number of megacycles (MCycles) that were used in that function/operation, the percentage of the total number of cycles that were used by that function/operation, and the number of times that function/operation was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation depend on the input.
+We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three algorithms of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningfunctions} (signing), and \ref{tab:medsverificationfunctions} (verification). For each algorithm, we list the functions that take up more than 1\% of the total number of cycles. We provide the number of megacycles (MCycles) that were used in that function, the percentage of the total number of cycles that were used by that function, and the number of times that function was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation can depend on the input.
 
 \begin{table}[]
   \centering
   \begin{tabular}{lrrr}
     \toprule
-    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-    \texttt{pi} & 5.1 & 22.5\% & 3 \\
-    \texttt{SF} & 2.9 & 12.9\% & 3 \\
-    \bottomrule
-  \end{tabular}
-  \caption{MEDS-41711 Keygen Profiling Results: Operations}
-  \label{tab:medskeygenoperations}
-  ~\\
-  \begin{tabular}{lrrr}
-    \toprule
-    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+      \texttt{pmod\_mat\_mul} & 15.97 & 69.81 & 70 \\
+      \texttt{pmod\_mat\_syst} & 2.07 & 9.07 & 6 \\
+      \texttt{rnd\_sys\_mat} & 2.07 & 9.06 & 1 \\
+      \texttt{solve\_opt\_raw} & 1.41 & 6.18 & 3 \\
+      \texttt{bs\_fill} & 1.06 & 4.64 & 2 \\
     \midrule
-    \texttt{pmod\_mat\_mul} & 10.1 & 44.1\% & 138 \\
-    \texttt{rnd\_sys\_mat} & 6.8 & 30.0\% & 1 \\
-    \texttt{shake256\_squeeze} & 2.6 & 11.5\% & 12121 \\
-    \texttt{pmod\_mat\_syst\_ct} & 2.2 & 9.7\% & 15 \\
+      Cumulative & 22.59 & 98.76 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-41711 Keygen Profiling Results: Functions}
@@ -360,23 +352,15 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \centering
   \begin{tabular}{lrrr}
     \toprule
-    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-    \texttt{pi} & 1033.7 & 38.8\% & 608 \\
-    \texttt{SF} & 602.2 & 22.6\% & 608 \\
-    \bottomrule
-  \end{tabular}
-  \caption{MEDS-41711 Signing Profiling Results: Operations}
-  \label{tab:medssigningoperations}
-  ~\\
-  \begin{tabular}{lrrr}
-    \toprule
-    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+      \texttt{pmod\_mat\_mul} & 2523.80 & 69.22 & 14635 \\
+      \texttt{pmod\_mat\_syst} & 391.87 & 10.75 & 1040 \\
+      \texttt{solve\_opt} & 293.11 & 8.04 & 624 \\
+      \texttt{bs\_fill} & 212.75 & 5.84 & 208 \\
+      \texttt{shake256\_absorb} & 202.92 & 5.57 & 212 \\
     \midrule
-    \texttt{pmod\_mat\_mul} & 1576.7 & 59.1\% & 27995 \\
-    \texttt{pmod\_mat\_syst\_ct} & 455.1 & 17.1\% & 3043 \\
-    \texttt{shake256\_absorb} & 161.8 & 6.1\% & 1830 \\
-    \texttt{GF\_inv} & 31.0 & 1.2\% & 66924 \\
+      Cumulative & 3624.46 & 99.42 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-41711 Signing Profiling Results: Functions}
@@ -387,47 +371,39 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \centering
   \begin{tabular}{lrrr}
     \toprule
-    \textbf{Operation} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
+    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-    \texttt{pi} & 1033.7 & 38.8\% & 608 \\
-    \texttt{SF} & 602.2 & 22.6\% & 608 \\
-    \bottomrule
-  \end{tabular}
-  \caption{MEDS-41711 Verification Profiling Results: Operations}
-  \label{tab:medsverificationoperations}
-  ~\\
-  \begin{tabular}{lrrr}
-    \toprule
-    \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} & \textbf{\# Calls} \\
+      \texttt{pmod\_mat\_mul} & 2525.93 & 69.23 & 14560 \\
+      \texttt{pmod\_mat\_syst} & 391.58 & 10.73 & 1040 \\
+      \texttt{solve\_opt} & 293.18 & 8.04 & 624 \\
+      \texttt{bs\_fill} & 212.75 & 5.83 & 208 \\
+      \texttt{shake256\_absorb} & 202.94 & 5.56 & 210 \\
     \midrule
-    \texttt{pmod\_mat\_mul} & 1577.5 & 59.3\% & 27013 \\
-    \texttt{pmod\_mat\_syst\_ct} & 455.3 & 17.1\% & 3045 \\
-    \texttt{shake256\_absorb} & 161.3 & 6.1\% & 1101 \\
-    \texttt{GF\_inv} & 30.5 & 1.2\% & 66989 \\
+      Cumulative & 3626.38 & 99.39 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-41711 Verification Profiling Results: Functions}
   \label{tab:medsverificationfunctions}
 \end{table}
 
-\begin{tikzpicture}
-  \pie[
-    sum=100,
-    text=legend,
-    % pos={8,0},
-    % explode=0.1,
-    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
-  ]{59.3/matmul, 17.1/matsyst, 6.1/shakeabsorb, 1.2/GFinv, 16.3/Other}
-  \pie[
-    sum=100,
-    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9},
-    hide number
-  ]{59.3/,17.1/,6.1/,1.2/1.2\%}
-  \pie[
-    sum=100,
-    color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
-  ]{59.3/,17.1/,6.1/}
-\end{tikzpicture}
+% \begin{tikzpicture}
+%   \pie[
+%     sum=100,
+%     text=legend,
+%     % pos={8,0},
+%     % explode=0.1,
+%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
+%   ]{59.3/matmul, 17.1/matsyst, 6.1/shakeabsorb, 1.2/GFinv, 16.3/Other}
+%   \pie[
+%     sum=100,
+%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9},
+%     hide number
+%   ]{59.3/,17.1/,6.1/,1.2/1.2\%}
+%   \pie[
+%     sum=100,
+%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
+%   ]{59.3/,17.1/,6.1/}
+% \end{tikzpicture}
 
 \subsection{Result Analysis}
 Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for about 95.3\% of the total number of cycles. For signing and verification, this number is about 83.6\%. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
