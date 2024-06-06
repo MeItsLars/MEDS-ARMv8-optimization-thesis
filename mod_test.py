@@ -1,5 +1,14 @@
-magic = 0x8018_0481
+# magic = 0x8018_0481
+import random
+
+
+k = 43
 MEDS_p = 4093
+magic = 2**k // MEDS_p + 1
+
+print("magic:", magic)
+print("k:", k)
+print("MEDS_p:", MEDS_p)
 
 def reduce(i):
     return i % 4093
@@ -12,21 +21,48 @@ def reduce(i):
 #     t5 = t4 * 4093
 #     return t5
 
-def reduce_ct(i):
+def reduce_ct(i, k, magic):
     t1 = i * magic
-    t1 = t1 >> 43
-    return i - t1 * MEDS_p
+    t1 = t1 >> k
+    res = i - t1 * MEDS_p
+    # if res >= MEDS_p:
+    #     res -= MEDS_p
+    return res
 
-# def test():
-#     for i in range(10000):
-#         if reduce(i) != reduce_ct(i):
-#             print("Error:")
-#             print("reduce({}) = {}".format(i, reduce(i)))
-#             print("reduce_ct({}) = {}".format(i, reduce_ct(i)))
-#             return
-#     print("All tests passed")
+def reduce_ct2(i):
+    t1 = i * magic
+    t1_top_half = t1 >> 32
+    t1_top_half = t1_top_half >> 11
+    t1 = t1_top_half * MEDS_p
+    return i - t1
 
-# test()
+def testy(k, magic):
+    t = 1
+    while t < 2**32:
+        for j in range(100000):
+            i = t + random.randint(0, t)
+            if reduce(i) != reduce_ct(i, k, magic):
+                print("Error:")
+                print("reduce({}) = {}".format(i, reduce(i)))
+                print("reduce_ct({}) = {}".format(i, reduce_ct(i, k, magic)))
+                return False
+        t *= 2
+    print("All tests passed")
+    return True
+
+def testy2():
+    for i in range(12, 64):
+        print("Attempting k=", i)
+        k = i
+        magic = 2**k // MEDS_p + 1
+        success = testy(k, magic)
+        if success:
+            print("Success")
+            return
+        else:
+            print("Failed")
+
+testy2()
 
 def reference(factor, tmp0, tmp1):
     return (MEDS_p + tmp1 - ((tmp0 * factor) % MEDS_p)) % MEDS_p
@@ -73,7 +109,7 @@ def test(factor, tmp0, tmp1):
         print("Success")
         return True
 
-test(2131, 4222, 3232)
-test(400, 32, 424)
-test(10, 10, 20)
-test(1, 1, 1)
+# test(2131, 4222, 3232)
+# test(400, 32, 424)
+# test(10, 10, 20)
+# test(1, 1, 1)

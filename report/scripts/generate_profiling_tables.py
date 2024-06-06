@@ -8,6 +8,7 @@ TABLE_TEMPLATE = """
 %s
     \\midrule
 %s
+%s
     \\bottomrule
   \\end{tabular}
 """
@@ -72,6 +73,14 @@ def compute_cumulative(data: List[dict]) -> tuple:
     total_percentage = sum([float(entry["percentage"]) for entry in data])
     return total_cycles, total_percentage
 
+def compute_remaining(data: List[dict]) -> tuple:
+    total_cycles = sum([entry["cycles"] for entry in data])
+    total_percentage = sum([float(entry["percentage"]) for entry in data])
+    all_cycles = total_cycles / (total_percentage / 100)
+    remaining_cycles = all_cycles - total_cycles
+    remaining_percentage = 100 - total_percentage
+    return remaining_cycles, remaining_percentage
+
 def generate_table(data: List[str]) -> str:
     parsed_data = parse_algorithm_data(data)
     table_data = []
@@ -79,7 +88,9 @@ def generate_table(data: List[str]) -> str:
         table_data.append(f"      {entry['function']} & {entry['cycles']:.2f} & {entry['percentage']} & {entry['calls']} \\\\")
     cumulative_data = compute_cumulative(parsed_data)
     cumulative_table_data = f"      Cumulative & {cumulative_data[0]:.2f} & {cumulative_data[1]:.2f} & \\\\"
-    return TABLE_TEMPLATE % ("\n".join(table_data), cumulative_table_data)
+    remaining_data = compute_remaining(parsed_data)
+    remaining_table_data = f"      Remaining & {remaining_data[0]:.2f} & {remaining_data[1]:.2f} & \\\\"
+    return TABLE_TEMPLATE % ("\n".join(table_data), cumulative_table_data, remaining_table_data)
 
 print(generate_table(KEYGEN_ROW_DATA))
 print(generate_table(SIGN_ROW_DATA))

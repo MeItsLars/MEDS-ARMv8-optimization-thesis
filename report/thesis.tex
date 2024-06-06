@@ -5,6 +5,7 @@
 \usepackage{algpseudocode}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{booktabs}
 \usepackage{dsfont}
 \usepackage{enumitem}
@@ -13,6 +14,7 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage[utf8]{inputenc}
+\usepackage{listings}
 \usepackage{natbib}
 \usepackage{parskip}
 \usepackage{pgf-pie}
@@ -40,6 +42,50 @@
     filecolor=black,
     linkcolor=black,
     urlcolor=black
+}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\lstdefinestyle{CStyle}{
+  language=C,
+  commentstyle=\color{green!60!blue},
+  keywordstyle=\color{blue},
+  numberstyle=\tiny\color{black!80},
+  stringstyle=\color{green},
+  basicstyle=\footnotesize\ttfamily,
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=5pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2,
+  morekeywords={uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32}
+}
+
+
+\lstdefinestyle{ASMStyle}{
+  language=C,
+  commentstyle=\color{green!60!blue},
+  keywordstyle=\color{blue},
+  numberstyle=\tiny\color{black!80},
+  stringstyle=\color{green},
+  basicstyle=\footnotesize\ttfamily,
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=5pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2,
+  morekeywords={umull, umull2, uzp2, ushr, mls, xtn}
 }
 
 % Set the line spacing between paragraphs
@@ -178,10 +224,12 @@ MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) pro
 where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
 
 \subsubsection{Sigma Protocol}
+\label{sec:sigmaprotocol}
 The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in \cite{chou2024reducing}.
 \todo[inline]{Indicate in which section the Sigma protocol is discussed.}
 
 \subsubsection{Fiat-Shamir Transform}
+\label{sec:fiatshamir}
 To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
 
 In the Fiat-Shamir transform, various techniques and optimizations can be used to increase the security or lower the size of the public key and the signature. The following techniques are considered in the MEDS scheme:
@@ -195,6 +243,7 @@ In the Fiat-Shamir transform, various techniques and optimizations can be used t
 By selecting $t$, $s$ and $w$ carefully and combining them with other parameters of the scheme, the security of the scheme can be increased to the desired level. Multiple combinations of parameters are used in MEDS to achieve various security levels \cite{chou2023meds}. The selection of these parameters has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
 
 \subsection{Parameter Sets}
+\label{sec:parametersets}
 The security of MEDS depends on the choice of a set of parameters. The parameters that are used in the MEDS scheme are the following:
 \begin{itemize}
   \item $q$: The size of the finite field $\mathbb{F}_q$ over which all computations are done.
@@ -262,6 +311,7 @@ The full signature verification algorithm for MEDS is shown in Algorithm \ref{al
 
 \section{ARMv8 and NEON}
 \label{sec:armv8}
+\todo[inline]{Somewhere, explain cache poisoning and timing attacks}
 \todo[inline]{Any meaningful citations in this section?}
 \todo[inline]{Cite NEON reference manual maybe?}
 \todo[inline]{Intrinsics page?}
@@ -323,11 +373,10 @@ There are a few problems with cycle counting that we need to mitigate. First of 
 Another problem is the problem of program interference (see above). Unfortunately, this is a problem that is hard to prevent completely, but we can work around it. By running the program multiple times and taking the median of the results, we can reduce the impact of interference on the results. This is a common technique in benchmarking.
 
 \section{MEDS Profiling Results}
+\label{sec:medsprofilingresults}
+
 \subsection{Measurement Setup}
-\todo[inline]{Explain which version(s) of MEDS we profile.}
-\todo[inline]{Change the profiling results to reflect the results for the new parameter sets.}
-\todo[inline]{Convert to piechart and add other values}
-We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We executed measurements for the three algorithms of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningfunctions} (signing), and \ref{tab:medsverificationfunctions} (verification). For each algorithm, we list the functions that take up more than 1\% of the total number of cycles. We provide the number of megacycles (MCycles) that were used in that function, the percentage of the total number of cycles that were used by that function, and the number of times that function was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function/operation can depend on the input.
+We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We decided to profile the code for the MEDS-55520 parameter set, which is in the middle of the three parameter sets in terms of security level. The results will be representative for the other parameter sets as well. We executed measurements for the three algorithms of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningfunctions} (signing), and \ref{tab:medsverificationfunctions} (verification). For each algorithm, we list the functions or code sections that take up more than 1\% of the total number of cycles. We provide the number of megacycles (MCycles) that were used in that function, the percentage of the total number of cycles that were used by that function, and the number of times that function was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function can depend on the input.
 
 \begin{table}[]
   \centering
@@ -338,13 +387,14 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
       \texttt{pmod\_mat\_mul} & 15.97 & 69.81 & 70 \\
       \texttt{pmod\_mat\_syst} & 2.07 & 9.07 & 6 \\
       \texttt{rnd\_sys\_mat} & 2.07 & 9.06 & 1 \\
-      \texttt{solve\_opt\_raw} & 1.41 & 6.18 & 3 \\
+      \texttt{solve\_opt} & 1.41 & 6.18 & 3 \\
       \texttt{bs\_fill} & 1.06 & 4.64 & 2 \\
     \midrule
       Cumulative & 22.59 & 98.76 & \\
+      Remaining & 0.28 & 1.24 & \\
     \bottomrule
   \end{tabular}
-  \caption{MEDS-41711 Keygen Profiling Results: Functions}
+  \caption{MEDS-55520 Keygen Profiling Results}
   \label{tab:medskeygenfunctions}
 \end{table}
 
@@ -361,9 +411,10 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
       \texttt{shake256\_absorb} & 202.92 & 5.57 & 212 \\
     \midrule
       Cumulative & 3624.46 & 99.42 & \\
+      Remaining & 21.14 & 0.58 & \\
     \bottomrule
   \end{tabular}
-  \caption{MEDS-41711 Signing Profiling Results: Functions}
+  \caption{MEDS-55520 Signing Profiling Results}
   \label{tab:medssigningfunctions}
 \end{table}
 
@@ -380,9 +431,10 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
       \texttt{shake256\_absorb} & 202.94 & 5.56 & 210 \\
     \midrule
       Cumulative & 3626.38 & 99.39 & \\
+      Remaining & 22.26 & 0.61 & \\
     \bottomrule
   \end{tabular}
-  \caption{MEDS-41711 Verification Profiling Results: Functions}
+  \caption{MEDS-55520 Verification Profiling Results}
   \label{tab:medsverificationfunctions}
 \end{table}
 
@@ -406,33 +458,147 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
 % \end{tikzpicture}
 
 \subsection{Result Analysis}
-Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for about 95.3\% of the total number of cycles. For signing and verification, this number is about 83.6\%. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
+Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for 98.76\% of the total number of cycles. For signing and verification, this number is 99.42\% and 99.39\%, respectively. In all three algorithms, the remainder of the cycles is spent on a wide set of functions that take up a small amount of time. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
 
 \subsubsection{Matrix Multiplication}
-For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time. For signing and verification, this is almost 60\%. This function is used to multiply two matrices $A^{m \times n}$ and $B^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
+For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A^{m \times n}$ and $B^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
 % This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
 
 \subsubsection{Matrix Systemization}
-The \texttt{pmod\_mat\_syst\_ct} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 17\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
+The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
 
 \todo[inline]{Perform complexity analysis?}
 
+\subsubsection{System Solving}
+The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time.
+
+\subsubsection{Bitstream Filling}
+The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we use, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to make the resulting keys and signatures more compact.
+
 \subsubsection{SHAKE256}
-A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family \cite{dworkin2015sha} and is based on the Keccak sponge construction \cite{bertoni2013keccak}. MEDS uses Shake256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
+\label{sec:shake256}
+A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. Shake256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family \cite{dworkin2015sha} and is based on the Keccak sponge construction \cite{bertoni2013keccak}. MEDS uses SHAKE256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section \ref{sec:medsworks}).
+
+\subsubsection{Random Systemized Matrix Generator}
+The \texttt{rnd\_sys\_mat} function is responsible for about 9\% of the total number of cycles for key generation. This function is used to generate a random systemized matrix over a finite field $\mathbb{F}_q$. Nearly all of its cycles are spent on generating random field elements using the \texttt{shake256\_squeeze} function (see Section \ref{sec:shake256}).
 
 \chapter{Methodology}
 \label{ch:methodology}
+We have established two approaches to optimize the MEDS implementation. These approaches are not specific to ARMv8, but their implementation will be tailored to the ARMv8 architecture.
+\begin{itemize}
+  \item \textbf{Low-Level Optimization}:\\
+  This approach focuses on optimizing the MEDS implementation at a low level. This means that we will look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
+  \item \textbf{High-Level Optimization}:\\
+  This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge is done in the exact same way. This means that we can compute multiple challenges in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple challenges at once.
+\end{itemize}
+In this Chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}, respectively. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
 
 \section{Modular Reduction}
 \label{sec:modularreduction}
+Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we will use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we can not rely on this operator, as it is not defined for NEON registers and there is no direct alternative in assembly.
+
+Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. There are various algorithms that can be used to perform modular reduction. Especially for large moduli, there are a lot of possible algorithms and optimizations to choose from\todo{Cite?}. However, as our modulus is relatively small and fits in just 12 bits, we do not have to consider these more complex algorithms. Instead, we have considered the following well-known algorithms.
+\begin{itemize}
+  \item \textbf{Naive Reduction}\\
+  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. The main problem with this approach is that division is not a constant time operation, which can lead to timing attacks. Furthermore, the division operation is usually relatively slow compared to other operations.
+  \todo[inline]{References to timing attack section?}
+  \item \textbf{Montgomery Reduction}\\
+  Montgomery reduction is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input to be converted to a Montgomery representation, after which (for our input sizes) the reduction algorithm can be executed with 2 multiplications, 2 additions/subtractions, and a right shift, followed by a conditional subtraction.
+  \todo[inline]{Cite}
+  \item \textbf{Barrett Reduction}\\
+  Barrett reduction is a modular reduction algorithm that is similar to Montgomery reduction in the sense that it also subtracts a multiple of the modulus from the input. However, it does not require the input to be converted to a different representation. For our input sizes, the algorithm can be executed with 2 multiplications, 1 subtraction, and a right shift (with an optional conditional subtraction, see Section \ref{sec:barrettreduction}).
+  \todo[inline]{Cite}
+\end{itemize}
+
+Montgomery reduction is generally very efficient when a large chain of multiplications is required and the overhead of converting to and from Montgomery representation is negligible compared to the number of multiplications/reductions. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we have decided to use Barrett reduction instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
+
+\subsection{Barrett Reduction}
+\label{sec:barrettreduction}
+Barrett reduction works by approximating the modular reduction. Given an unsigned integer $a$ and a modulus $n$, clearly
+\[
+  a \mod n = a - \left\lfloor \frac{a}{n} \right\rfloor \cdot n.
+\]
+
+From this, the Barrett reduction formula for unsigned integers can be derived (Definition \ref{def:barrettreduction}).
+
+\begin{definition}[Barrett Reduction for unsigned integers]
+  \label{def:barrettreduction}
+  Let $a$ be an unsigned integer and $n$ be a modulus.
+  Let $R$ be a constant such that $R = 2^k > n$ for some $k$.
+  \[
+    a \mod n = a - \left\lfloor \frac{a \cdot \left[\frac{R}{n}\right]}{R} \right\rfloor \cdot n.
+  \]
+  where $\left[\right]$ represents a rounding operation such as floor or ceiling.
+\end{definition}
+
+As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
+
+\subsubsection{Choice of $k$}
+Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the floor function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ also has a big advantage: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
+
+For our MEDS parameter sets, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4093 \cdot 4093) \approx 29.5$ bits. This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
+
+As $2^{30}$ is a relatively small number, we use a brute force approach to find the smallest $k$ that satisfies this condition. This value turns out to be $k = 43$. This gives $m = \lceil \frac{2^{43}}{4093} \rceil = 0\text{x}80180481$. This number fits nicely into 32 bits, which means that we can store it in 32-bit NEON lanes.
+
+\subsection{Implementation}
+The reference code for our Barrett reduction algorithm is shown in Algorithm \ref{alg:barrettreduction}. This algorithm does not operate on vectorized data and serves as a baseline for implementing the NEON version.
+
+\begin{algorithm}
+  \caption{MEDS Barrett Reduction}
+  \label{alg:barrettreduction}
+  \begin{algorithmic}
+    \Function{reduce}{$a$}
+      \State $m \gets 0\text{x}80180481$
+      \State $v \gets a \cdot m$
+      \State $v \gets v \gg 43$
+      \State \Return $a - v \cdot 4093$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+The NEON version of the Barrett reduction algorithm is shown in Algorithm \ref{alg:neonbarretreductionc} (C code) and Algorithm \ref{alg:neonbarretreductionasm} (assembly code). The C code uses NEON intrinsics to perform the reduction on 128-bit NEON registers. The assembly code is a direct translation of the C code to ARMv8 assembly. Both algorithms assume that the input consists of four 32-bit unsigned integers that are stored in 4 lanes of a 128-bit NEON register. The output can either be stored in 4 32-bit lanes or 4 16-bit lanes, depending on the requirements of the calling function.
+
+\begin{algorithm}
+  \caption{NEON Barrett Reduction (C)}
+  \label{alg:neonbarretreductionc}
+  \lstinputlisting[language=C, style=CStyle]{code/barrett_reduce_c.c}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{NEON Barrett Reduction (Assembly)}
+  \label{alg:neonbarretreductionasm}
+  \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/barrett_reduce_asm.s}
+\end{algorithm}
+
+From the assembly code, we can see that the reduction is done using 5 instructions (not counting the optional shrink). Including latency, the reduction takes 16 cycles to complete\todo{Check this, give reasoning} and is able to reduce 4 elements.
 
 \section{Low-Level Optimization}
+\label{sec:lowleveloptimization}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
+The low-level optimization approach focuses on optimizing the individual functions that take up a significant amount of time in the MEDS implementation. As can be seen from the profiling results displayed in Section \ref{sec:medsprofilingresults}, over 99\% of the total number of cycles used in signing and verification is used on just 5 functions. In this section, we will discuss the optimization of each of these functions.
 
 \subsection{Matrix Multiplication}
+\label{sec:matrixmultiplication}
+Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A^{m \times n}$ and $B^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm\todo{cite} and the Coppersmith-Winograd algorithm\todo{cite}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
+
+\subsection{Matrix Systemization}
+\label{sec:matrixsystemization}
+
+\subsection{System Solving}
+\label{sec:systemsolving}
+
+\subsection{Bitstream Filling}
+\label{sec:bitstreamfilling}
+
+\subsection{SHAKE256}
+\label{sec:shake256lowlevel}
 
 \section{High-Level Optimization}
+\label{sec:highleveloptimization}
 \todo[inline]{Explain how we perform the optimization on a high level, i.e. parallelize over the challenges}
+
+\section{Hash Function Optimization}
+\label{sec:hashfunctionoptimization}
 
 \chapter{Results}
 \label{ch:results}
