@@ -64,7 +64,7 @@
   showstringspaces=false,
   showtabs=false,                  
   tabsize=2,
-  morekeywords={uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32}
+  morekeywords={uint64_t, pmod_mat_entry, uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32}
 }
 
 
@@ -484,7 +484,7 @@ The \texttt{rnd\_sys\_mat} function is responsible for about 9\% of the total nu
 
 \chapter{Methodology}
 \label{ch:methodology}
-We have established two approaches to optimize the MEDS implementation. These approaches are not specific to ARMv8, but their implementation will be tailored to the ARMv8 architecture.
+We have established two approaches to optimize the MEDS implementation. These approaches are not specific to ARMv8, but their implementation will be tailored to the ARMv8 architecture. Note that the two approaches are mutually exclusive, meaning they can not be combined. We will implement both approaches and evaluate their performance to determine which approach gives the highest speedup.
 \begin{itemize}
   \item \textbf{Low-Level Optimization}:\\
   This approach focuses on optimizing the MEDS implementation at a low level. This means that we will look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
@@ -575,31 +575,11 @@ From the assembly code, we can see that the reduction is done using 5 instructio
 \section{Low-Level Optimization}
 \label{sec:lowleveloptimization}
 \todo[inline]{For every optimized function, give a minimum cycle bound and a reasoning. Explain the techniques used to optimize the functions.}
-The low-level optimization approach focuses on optimizing the individual functions that take up a significant amount of time in the MEDS implementation. As can be seen from the profiling results displayed in Section \ref{sec:medsprofilingresults}, over 99\% of the total number of cycles used in signing and verification is used on just 5 functions. In this section, we will discuss the optimization of each of these functions.
+The low-level optimization approach focuses on optimizing the individual functions that take up a significant amount of time in the MEDS implementation. As can be seen from the profiling results displayed in Section \ref{sec:medsprofilingresults}, over 99\% of the total number of cycles used in signing and verification is used on just 5 functions. In this section, we will discuss the optimization of three of these functions: matrix multiplication (Section \ref{sec:matrixmultiplication}), matrix systemization (Section \ref{sec:matrixsystemization}), and system solving (Section \ref{sec:systemsolving}). The optimization of the other two functions is not specific to the low-level optimization approach and will be discussed in Section \ref{sec:bitstreamfilling} (bitstream filling) and Section \ref{sec:hashfunctionoptimization} (SHAKE256).
 
 \subsection{Matrix Multiplication}
 \label{sec:matrixmultiplication}
-Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A^{m \times n}$ and $B^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:naivematrixmultiplication}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm\todo{cite} and the Coppersmith-Winograd algorithm\todo{cite}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
-
-\todo[inline]{Algorithm to appendix?}
-\begin{algorithm}
-  \caption{Naive Matrix Multiplication}
-  \label{alg:naivematrixmultiplication}
-  \begin{algorithmic}
-    \Function{matrix\_mul}{$A^{m \times n}, B^{n \times o}$}
-      \State $C \gets \text{zero matrix of size } m \times o$
-      \For{$c \gets 0$ to $m$}
-        \For{$r \gets 0$ to $o$}
-          \For{$k \gets 0$ to $n$}
-            \State $C[c][r] \gets C[c][r] + A[c][k] \cdot B[k][r]$
-          \EndFor
-          \State $C[c][r] \gets C[c][r] \mod 4093$
-        \EndFor
-      \EndFor
-      \State \Return $C$
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm}
+Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A^{m \times n}$ and $B^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm\todo{cite} and the Coppersmith-Winograd algorithm\todo{cite}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
 
 \subsubsection{Optimization}
 \label{sec:matrixmultiplicationoptimization}
@@ -676,7 +656,7 @@ The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} 
 \subsubsection{Minimum Cycle Bound}
 In order to understand the performance of our optimized matrix multiplication algorithm, we need to find a minimum bound on the number of cycles that the algorithm will take to execute. In order to do this, we will establish a minimum bound on the number of instructions that the algorithm uses.
 
-A very crude minimum cycle bound on the naive algorithm (see Algorithm \ref{alg:naivematrixmultiplication}) can be established by counting the number of arithmetic operations required:
+A very crude minimum cycle bound on the naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication}) can be established by counting the number of arithmetic operations required:
 \begin{itemize}
   \item $m \cdot o \cdot n$ multiplications and additions
   \item $m \cdot o$ modulo operations
@@ -710,57 +690,104 @@ Matrix systemization is responsible for converting a matrix $A^{m \times n}$ ove
   $A'$ is in reduced row-echelon form (RREF), with the additional property that the first $m \times m$ submatrix of $A'$ is the identity matrix.
 \end{itemize}
 
-The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains some functionality that swaps rows and/or columns of the matrix to ensure that the leading coefficient of a row is not 0. The algorithm is is depicted in Algorithm \ref{alg:systemizer}.
+The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains some functionality that swaps rows and/or columns of the matrix to ensure that the leading coefficient of a row is not 0. The algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
 
-\todo[inline]{Algorithm to appendix?}
-\begin{algorithm}
-  \caption{Matrix Systemizer}
-  \label{alg:systemizer}
-  \begin{algorithmic}
-    \Function{systemize}{$A^{m \times n}$, do\_swap, do\_backsub}
-      \For{$r \gets 0$ to $m$}
-        \If{do\_swap}
-          \State Blah
-        \EndIf
-        \For{$r_2 \gets r+1$ to $m$}
-          \If{$A[r][r] = 0$}
-            \For{$c \gets r$ to $n$}
-              \State $A[r][c] \gets (A[r][c] + A[r_2][c]) \mod 4093$
-            \EndFor
-          \EndIf
-        \EndFor
-        \If{$A[r][r] = 0$}
-          \State \Return failure
-        \EndIf
-        \State
-        \State $v \gets \text{GF\_inv}(A[r][r])$
-        \For{$c \gets r$ to $n$}
-          \State $A[r][c] \gets (A[r][c] \cdot v) \mod 4093$
-        \EndFor
-        \State
-        \For{$r_2 \gets r+1$ to $m$}
-          \For{$c \gets r$ to $n$}
-            \State $v \gets (A[r][c] \cdot A[r_2][r]) \mod 4093$
-            \State $A[r2][c] \gets (4093 + A[r2][c] - $v$) \mod 4093$
-          \EndFor
-        \EndFor
-      \EndFor
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm}
+\subsubsection{Optimization}
+\label{sec:matrixsystemizationoptimization}
+We will optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we will optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
+
+For all nested loops, we will apply the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored next to each other in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
+
+Unfortunately, we are unable to use a full 8-way vectorization for all loops, as the algorithm uses multiplication operations. When multiplying two 16-bit values, the result is a 32-bit value, of which we can not store 8 in a 128-bit NEON register. We can work around this issue by using the \texttt{umull} instruction to multiply the lower 4 16-bit values of two registers and the \texttt{umull2} instruction to multiply the upper 4 16-bit values of two registers. After reducing both results, we can use the \texttt{uzp1} operation to combine the results back into a single 128-bit register.
+
+\subsubsection{Handling Non-Multiples of 8}
+\label{sec:matrixsystemizationnonmultiples}
+The inner loops that we are optimizing usually do not loop over a dimension that is a multiple of 8. To handle this, we use the following approach:
+\begin{enumerate}
+  \item While at least 8 elements are left to process, use the 8-way vectorization approach.
+  \item After this, if there are at least 4 elements left to process, use one iteration of a 4-way vectorized approach.
+  \item After this, use a non-vectorized approach for any remaining elements (maximum 3).
+\end{enumerate}
+
+\subsubsection{Implementation}
+As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\todo{Footnote to Git}. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
+
+\subsubsection{Minimum Cycle Bound}
+\todo[inline]{Analyse this}
 
 \subsection{System Solving}
 \label{sec:systemsolving}
+In all three operations of MEDS, the \texttt{solve\_opt} function is used to solve a system of linear equations over the finite field $\mathbb{F}_{4093}$. The system that needs to be solved is constructed in a very specific way, which allows for a more efficient method of solving it (as opposed to using a more general algorithm like Gaussian elimination). Even though this more efficient method is used, the function still takes up a significant amount of time in the MEDS implementation.
 
-\subsection{Bitstream Filling}
-\label{sec:bitstreamfilling}
+% Majority of time is spent on two tripple-nested loops
+Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 88 \%$\todo{Actually measure this}) is spent on two relatively small tripple-nested loops, while the remainder of the time ($\pm 12 \%$\todo{Actually measure this}) is spent on all other parts of the function combined. Therefore, we have decided to focus on optimizing these two loops. Both loops have the exact same structure, so we will only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
 
-\subsection{SHAKE256}
-\label{sec:shake256lowlevel}
+\begin{algorithm}
+  \caption{System Solving: Time-Consuming Loop 1}
+  \label{alg:systemsolving1}
+  \lstinputlisting[language=C, style=CStyle]{code/solve_opt_loop1.c}
+\end{algorithm}
+
+\subsubsection{Optimization}
+\label{sec:systemsolvingoptimization}
+Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we will try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$.
+
+As the field elements are stored in 16 bits, we are able to compute 8 elements at the same time using 128-bit NEON registers. Therefore, we will compute the results for 8 values of $r$ at the same time. We start by loading \texttt{tmp1}, which gives us a small problem, as these 8 values are not stored next to each other in memory. Therefore, we load these values using normal load instructions and store them in a 128-bit NEON register. The remaining loads and stores can be done using vectorized instructions as those values are stored next to each other in memory.
+
+Just like with matrix systemization, we are unable to use a full 8-way vectorization as the algorithm uses multiplication instructions, which result in 32-bit values. We apply the same approach as with matrix systemization to work around this issue, see Section \ref{sec:matrixsystemizationoptimization}.
+
+\subsubsection{Handling Non-Multiples of 8}
+Also like with matrix systemization, the number of elements that need to be processed is usually not a multiple of 8. We use the same approach as with matrix systemization to handle this issue (see Section \ref{sec:matrixsystemizationnonmultiples}), meaning we decrease the parallelization factor to 4 and 1 when there are not enough elements left to process.
+
+\subsubsection{Implementation}
+As the \texttt{solve\_opt} function is very large, we have decided not to implement the full function in ARMv8 assembly. This presented us with two options: either we use NEON intrinsics to parallelize the two time-consuming loops, or we write (a script that generates) ARMv8 assembly code for the two time-consuming loops. As the loops themselves are not very complex, we have decided to use NEON intrinsics to parallelize them, under the assumption that the assembly variant would not be much faster. Exploring the assembly-based optimization of these loops and the full function is left as future work\todo{Reference to sec}.
+
+The optimized C code with NEON intrinsics is quite elaborate, so we will not show it here. Instead, we refer to the code in the code repository\todo{Footnote to Git}.
+
+\subsubsection{Minimum Cycle Bound}
+\todo[inline]{Analyse this? Or skip? Should be fairly easy to analyze.}
 
 \section{High-Level Optimization}
 \label{sec:highleveloptimization}
-\todo[inline]{Explain how we perform the optimization on a high level, i.e. parallelize over the challenges}
+The high-level optimization approach focuses on optimizing the MEDS implementation by parallelizing over the challenge space. MEDS uses a large number ($t$) of challenges in both signing and verification, which are all computed independently. Additionally, the computation for each challenge is exactly the same for signing and very similar for verification. This means that we can parallelize the computation of the challenges over the challenge space.
+
+Before we can parallelize the computation of the challenges, we need to determine the number of challenges that we will compute in parallel. The challenge computation is executed over $\mathbb{F}_{4093}$, which means that the field elements can be stored in 12 bits (which fits in a 16-bit register). This means that we can store up to 8 field elements in a single 128-bit NEON register. From this, there are two possible parallelization factors we can consider.
+\begin{enumerate}
+  \item \textbf{4-Way Parallelization}:\\
+  Nearly all operations on field elements allow the values to stay in 16-bit registers. An exception is multiplication: the result of a multiplication of two field elements is a 24-bit value, which fits in a 32-bit register. This means that we can compute 4 multiplications at the same time using 128-bit NEON registers. Because of this limitation, we can choose to compute 4 challenges at a time.
+  \item \textbf{8-Way Parallelization}:\\
+  We can work around the multiplication limitation by using instructions such as \texttt{umull} and \texttt{umull2} to multiply the lower and upper 4 values (respectively) of two 128-bit NEON registers, after which we can reduce the results and combine them back into a single 128-bit register. Using this technique, we can compute 8 challenges at the same time.
+\end{enumerate}
+Our initial implementation uses 4-way parallelization, as this is the easiest to implement. We will explore the 8-way parallelization as future work\todo{Reference to sec}.
+
+In this section, we will discuss the high-level optimization of the MEDS implementation. We will first discuss the alterations that need to be made to the underlying datatypes to allow for high-level parallelization in Section \ref{sec:highleveldatatypes}. We will then discuss how we can use these datatypes to parallelize the supplemental algorithms in Section \ref{sec:suppalgorithmsparallelization}. Next, we will discuss the actual parallelization of the challenge computations in Section \ref{sec:challengeparallelization}. Finally, we will discuss the limitations of the high-level optimization approach in Section \ref{sec:highlevellimitations}.
+
+% In the next subsection, we will explain our alteration of the datatypes such that parallelization becomes possible
+\subsection{Datatypes and Functions}
+\label{sec:highleveldatatypes}
+
+\subsection{Supplemental Algorithms}
+\label{sec:suppalgorithmsparallelization}
+In order to parallelize the challenge computations, we need to modify the supplemental algorithms that are used in the MEDS implementation. In the reference implementation, these algorithms perform operations for matrices or values that belong to a single challenge. We need to modify these algorithms such that they can perform operations for multiple challenges at the same time. The following algorithms need to be modified:
+% * pmod_mat_mul (matrix multiplication)
+% * pmod_mat_syst_ct_partial_swap_backsub_vec (matrix systemization)
+% * GF_inv_vec (Galois Field inversion)
+% * pmod_mat_inv_vec (matrix inversion)
+% * solve_vec (matrix system solving)
+% * pi_vec (applying the pi function)
+% * SF_vec (applying the SF function)
+
+\subsection{Challenge Parallelization}
+\label{sec:challengeparallelization}
+
+\subsubsection{Verification}
+
+\subsection{Limitations}
+\label{sec:highlevellimitations}
+
+\section{Bitstream Filling}
+\label{sec:bitstreamfilling}
+ref uses long algorithm\todo{Git}
 
 \section{Hash Function Optimization}
 \label{sec:hashfunctionoptimization}
@@ -768,10 +795,7 @@ The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algor
 \chapter{Results}
 \label{ch:results}
 \todo[inline]{Contains the results of the benchmarking of the non-optimized and optimized MEDS implementations.}
-
-\chapter{Discussion}
-\label{ch:discussion}
-\todo[inline]{Discuss the results.}
+\todo[inline]{Discuss results.}
 
 \chapter{Future work}
 \label{ch:futurework}
@@ -788,10 +812,11 @@ The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algor
 - Perform high-level optimizations for keygen
 - Analyze minimum time complexity of low-level systemizer
 - ARM Calling Convention PDF: https://github.com/ARM-software/abi-aa/releases (cite?)
-- Change modular reduction to Barrett reduction (?)
 - Adust the 2 python generation files with an abstract file for clearity
 - Add explanation why high level slower -> data does not fit in cache. Check with toy parameter set.
 - Check possibilities for 8x8 matrix multiplication
+- Check possibilities for 8-wide high-level parllel
+- Optimize solve method using a pure-assembly approach
 
 \chapter{Conclusion}
 \label{ch:conclusion}

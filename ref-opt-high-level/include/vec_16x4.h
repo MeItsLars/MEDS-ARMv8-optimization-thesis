@@ -58,35 +58,6 @@
 #define VEC_TRUE 0xffff
 #define VEC_FALSE 0x0000
 
-/*
-#define REDUCE_VEC(v1)                \
-  ({                                  \
-    uint32x4_t _t1;                   \
-    uint32x4_t _v1 = v1;              \
-    _t1 = vshrq_n_u32(_v1, GFq_bits); \
-    _t1 = vmulq_n_u32(_t1, MEDS_p);   \
-    _v1 = vsubq_u32(_v1, _t1);        \
-    _t1 = vshrq_n_u32(_v1, GFq_bits); \
-    _t1 = vmulq_n_u32(_t1, MEDS_p);   \
-    _v1 = vsubq_u32(_v1, _t1);        \
-    vqmovn_u32(_v1);                  \
-  })
-
-#define FREEZE_VEC(_v2)              \
-  ({                                 \
-    uint16x4_t _t2;                  \
-    _t2 = vcge_u16(_v2, MEDS_p_VEC); \
-    _t2 = vand_u16(_t2, MEDS_p_VEC); \
-    vsub_u16(_v2, _t2);              \
-  })
-
-#define FREEZE_REDUCE_VEC(_v3)        \
-  ({                                  \
-    uint16x4_t _t3 = REDUCE_VEC(_v3); \
-    FREEZE_VEC(_t3);                  \
-  })
-*/
-
 #define MAGIC_VEC vdupq_n_u32(0x80180481)
 
 #define MEDS_p_VEC_16x4 vdup_n_u16(MEDS_p)
