@@ -64,7 +64,7 @@
   showstringspaces=false,
   showtabs=false,                  
   tabsize=2,
-  morekeywords={uint64_t, pmod_mat_entry, uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32}
+  morekeywords={uint64_t, pmod_mat_entry, uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32, pmod_mat_t, pmod_mat_vec_t, pmod_mat_vec_w_t, ZERO_VEC_W, MUL_ACC_VEC, FREEZE_REDUCE_VEC}
 }
 
 
@@ -309,6 +309,9 @@ The full signature generation algorithm for MEDS is shown in Algorithm \ref{alg:
 The full signature verification algorithm for MEDS is shown in Algorithm \ref{alg:medsverify}.
 \todo[inline]{Give a brief overview of the signature verification algorithm.}
 
+\subsection{Known Attacks}
+\todo[inline]{List the best known attack(s) on MEDS (or the underlying problem)? Not sure if this section is necessary.}
+
 \section{ARMv8 and NEON}
 \label{sec:armv8}
 \todo[inline]{Somewhere, explain cache poisoning and timing attacks}
@@ -473,7 +476,7 @@ The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swa
 The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time.
 
 \subsubsection{Bitstream Filling}
-The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we use, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to make the resulting keys and signatures more compact.
+The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to make the resulting keys and signatures more compact.\todo[inline]{This is true for the keys and signatures, but this performance is used before hashing}
 
 \subsubsection{SHAKE256}
 \label{sec:shake256}
@@ -489,7 +492,7 @@ We have established two approaches to optimize the MEDS implementation. These ap
   \item \textbf{Low-Level Optimization}:\\
   This approach focuses on optimizing the MEDS implementation at a low level. This means that we will look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
   \item \textbf{High-Level Optimization}:\\
-  This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge is done in the exact same way. This means that we can compute multiple challenges in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple challenges at once.
+  This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the exact same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
 \end{itemize}
 In this Chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}, respectively. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
 
@@ -536,7 +539,7 @@ As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right 
 \subsubsection{Choice of $k$}
 Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the floor function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ also has a big advantage: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
 
-For our MEDS parameter sets, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
+For the MEDS parameter sets that we consider, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
 
 As $2^{30}$ is a relatively small number, we use a brute force approach to find the smallest $k$ that satisfies this condition. This value turns out to be $k = 43$. This gives $m = \lceil \frac{2^{43}}{4093} \rceil = 0\text{x}80180481$. This number fits nicely into 32 bits, which means that we can store it in 32-bit NEON lanes.
 
@@ -680,6 +683,7 @@ Given that reduction takes 5 cycles and the remaining operations take 1 cycle, w
 
 \subsection{Matrix Systemization}
 \label{sec:matrixsystemization}
+\todo[inline]{First recap what matrix systemization is.}
 \todo[inline]{This definition should definitely go into the MEDS section.}
 \todo[inline]{Citations Echelon?}
 Matrix systemization is responsible for converting a matrix $A^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized form. In MEDS, the systemized form $A'^{m \times n}$ of a matrix $A^{m \times n}$ can take two forms:
@@ -694,9 +698,9 @@ The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algor
 
 \subsubsection{Optimization}
 \label{sec:matrixsystemizationoptimization}
-We will optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we will optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
+We will optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the (changing) value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we will optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
 
-For all nested loops, we will apply the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored next to each other in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
+For all nested loops, we will apply parallelization to the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored next to each other in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
 
 Unfortunately, we are unable to use a full 8-way vectorization for all loops, as the algorithm uses multiplication operations. When multiplying two 16-bit values, the result is a 32-bit value, of which we can not store 8 in a 128-bit NEON register. We can work around this issue by using the \texttt{umull} instruction to multiply the lower 4 16-bit values of two registers and the \texttt{umull2} instruction to multiply the upper 4 16-bit values of two registers. After reducing both results, we can use the \texttt{uzp1} operation to combine the results back into a single 128-bit register.
 
@@ -723,7 +727,7 @@ In all three operations of MEDS, the \texttt{solve\_opt} function is used to sol
 Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 88 \%$\todo{Actually measure this}) is spent on two relatively small tripple-nested loops, while the remainder of the time ($\pm 12 \%$\todo{Actually measure this}) is spent on all other parts of the function combined. Therefore, we have decided to focus on optimizing these two loops. Both loops have the exact same structure, so we will only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
 
 \begin{algorithm}
-  \caption{System Solving: Time-Consuming Loop 1}
+  \caption{System Solving: Time-consuming loop 1}
   \label{alg:systemsolving1}
   \lstinputlisting[language=C, style=CStyle]{code/solve_opt_loop1.c}
 \end{algorithm}
@@ -749,48 +753,160 @@ The optimized C code with NEON intrinsics is quite elaborate, so we will not sho
 
 \section{High-Level Optimization}
 \label{sec:highleveloptimization}
-The high-level optimization approach focuses on optimizing the MEDS implementation by parallelizing over the challenge space. MEDS uses a large number ($t$) of challenges in both signing and verification, which are all computed independently. Additionally, the computation for each challenge is exactly the same for signing and very similar for verification. This means that we can parallelize the computation of the challenges over the challenge space.
+The high-level optimization approach focuses on optimizing the MEDS implementation by parallelizing over the challenge space. MEDS uses a large number ($t$) of challenges and commitments in both signing and verification, which are all computed independently in a for-loop. Additionally, the computation for each commitment is exactly the same for signing and very similar for verification. This means that we can parallelize the computation of the commitments for each challenge.
 
-Before we can parallelize the computation of the challenges, we need to determine the number of challenges that we will compute in parallel. The challenge computation is executed over $\mathbb{F}_{4093}$, which means that the field elements can be stored in 12 bits (which fits in a 16-bit register). This means that we can store up to 8 field elements in a single 128-bit NEON register. From this, there are two possible parallelization factors we can consider.
+Before we can parallelize the computation of the commitments, we need to determine the number of commitments that we will compute in parallel. The commitment computation is executed over $\mathbb{F}_{4093}$, which means that the field elements can be stored in 12 bits (which fits in a 16-bit register). This means that we can store up to 8 field elements in a single 128-bit NEON register. From this, there are two possible parallelization factors we can consider.
 \begin{enumerate}
   \item \textbf{4-Way Parallelization}:\\
-  Nearly all operations on field elements allow the values to stay in 16-bit registers. An exception is multiplication: the result of a multiplication of two field elements is a 24-bit value, which fits in a 32-bit register. This means that we can compute 4 multiplications at the same time using 128-bit NEON registers. Because of this limitation, we can choose to compute 4 challenges at a time.
+  Nearly all operations on field elements allow the values to stay in 16-bit registers. An exception is multiplication: the result of a multiplication of two field elements is a 24-bit value, which fits in a 32-bit register. This means that we can compute 4 multiplications at the same time using 128-bit NEON registers. Because of this limitation, we can choose to compute 4 commitments at a time.
   \item \textbf{8-Way Parallelization}:\\
-  We can work around the multiplication limitation by using instructions such as \texttt{umull} and \texttt{umull2} to multiply the lower and upper 4 values (respectively) of two 128-bit NEON registers, after which we can reduce the results and combine them back into a single 128-bit register. Using this technique, we can compute 8 challenges at the same time.
+  We can work around the multiplication limitation by using instructions such as \texttt{umull} and \texttt{umull2} to multiply the lower and upper 4 values (respectively) of two 128-bit NEON registers, after which we can reduce the results and combine them back into a single 128-bit register. Using this technique, we can compute 8 commitments at the same time.
 \end{enumerate}
 Our initial implementation uses 4-way parallelization, as this is the easiest to implement. We will explore the 8-way parallelization as future work\todo{Reference to sec}.
 
-In this section, we will discuss the high-level optimization of the MEDS implementation. We will first discuss the alterations that need to be made to the underlying datatypes to allow for high-level parallelization in Section \ref{sec:highleveldatatypes}. We will then discuss how we can use these datatypes to parallelize the supplemental algorithms in Section \ref{sec:suppalgorithmsparallelization}. Next, we will discuss the actual parallelization of the challenge computations in Section \ref{sec:challengeparallelization}. Finally, we will discuss the limitations of the high-level optimization approach in Section \ref{sec:highlevellimitations}.
+In this section, we will discuss the high-level optimization of the MEDS implementation. We will first discuss the alterations that need to be made to the underlying datatypes and supplemental algorithms to allow for high-level parallelization in Section \ref{sec:highleveldataalgorithms}. Next, we will discuss the actual parallelization of the commitment computations in Section \ref{sec:commitmentparallelization}. Finally, we will discuss the limitations of the high-level optimization approach in Section \ref{sec:highlevellimitations}.
 
-% In the next subsection, we will explain our alteration of the datatypes such that parallelization becomes possible
-\subsection{Datatypes and Functions}
-\label{sec:highleveldatatypes}
+\subsection{Parallelization of Datatypes and Supplemental Algorithms}
+\label{sec:highleveldataalgorithms}
+In the reference implementation of MEDS, the main datatypes used are defined as follows:
+\begin{verbatim}
+  #define GFq_t uint16_t
+  #define pmod_mat_t GFq_t
+\end{verbatim}
+These two datatypes represent a field element and a matrix element, respectively. Matrices are stored as one-dimensional arrays in row-major order, and are passed to functions using pointers to a \texttt{pmod\_mat\_t}.
 
-\subsection{Supplemental Algorithms}
+In order to parallelize the algorithms that use these datatypes, we will adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x4.h} file\todo{Git reference} containing these new datatypes, which are defined as follows:
+\begin{verbatim}
+  #define GFq_vec_t uint16x4_t
+  #define pmod_mat_vec_t GFq_vec_t
+\end{verbatim}
+These two datatypes represent 4 field elements and 4 matrix elements, respectively. By passing these datatypes to a modified version of a function, we can compute the function output for 4 commitments at the same time.
+
+Additionally, we will define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x4.h}\todo{Git} file. Examples of such definitions include:
+\begin{verbatim}
+  #define ADD_VEC(a, b) vaddl_u16(a, b)
+  #define MUL_VEC(a, b) vmull_u16(a, b)
+  #define OR_VEC(a, b) vorr_u16(a, b)
+\end{verbatim}
+The main advantage of this approach is that the entire high-level-optimized MEDS implementation can easily be converted to use a different CPU architecture (that supports vectorization) such as AVX\todo{cite} or \todo{?} simply by changing the definitions in the \texttt{vec\_16x4.h} file.
+
+\subsubsection{Supplemental Algorithms}
 \label{sec:suppalgorithmsparallelization}
-In order to parallelize the challenge computations, we need to modify the supplemental algorithms that are used in the MEDS implementation. In the reference implementation, these algorithms perform operations for matrices or values that belong to a single challenge. We need to modify these algorithms such that they can perform operations for multiple challenges at the same time. The following algorithms need to be modified:
-% * pmod_mat_mul (matrix multiplication)
-% * pmod_mat_syst_ct_partial_swap_backsub_vec (matrix systemization)
-% * GF_inv_vec (Galois Field inversion)
-% * pmod_mat_inv_vec (matrix inversion)
-% * solve_vec (matrix system solving)
-% * pi_vec (applying the pi function)
-% * SF_vec (applying the SF function)
+In order to parallelize the commitment computations, we need to modify the supplemental algorithms that are used in the MEDS implementation. In the reference implementation, these algorithms perform operations for matrices or values that belong to a single commitment. We need to modify these algorithms such that they can perform operations for multiple commitments at the same time. The following algorithms need to be modified:
+\begin{enumerate}
+  \item \textbf{Matrix Multiplication}: \texttt{pmod\_mat\_mul}\\
+  Responsible for multiplying two matrices over the finite field $\mathbb{F}_{4093}$.
+  \item \textbf{Matrix Systemization}: \texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub}\\
+  Responsible for converting a matrix into a systemized form (Algorithm \ref{alg:systemizer}, Appendix \ref{app:supplementalalgs}).
+  \item \textbf{Field Inversion}: \texttt{GF\_inv}\\
+  Responsible for inverting a field element over the finite field $\mathbb{F}_{4093}$.
+  \item \textbf{Matrix Inversion}: \texttt{pmod\_mat\_inv}\\
+  Responsible for inverting a matrix over the finite field $\mathbb{F}_{4093}$.
+  \item \textbf{System Solving}: \texttt{solve\_opt}\\
+  Responsible for solving a system of linear equations over the finite field $\mathbb{F}_{4093}$.
+  \item \textbf{Applying the $\pi$ Function}: \texttt{pi}\\
+  Responsible for applying the $\pi$ function (Algorithm \ref{alg:medspifunction}, Appendix \ref{app:supplementalalgs}) to a pair of matrices.
+  \item \textbf{Applying the SF Function}: \texttt{SF}\\
+  Responsible for applying the SF function (Algorithm \ref{alg:medssffunction}, Appendix \ref{app:supplementalalgs}) to a matrix.
+\end{enumerate}
+Each of these algorithms will be modified to work with the vectorized datatypes defined in the \texttt{vec\_16x4.h} file. These algorithms will then be plugged into the MEDS implementation, which will be modified to compute multiple commitments at the same time.
 
-\subsection{Challenge Parallelization}
-\label{sec:challengeparallelization}
+To give a brief overview of the modifications that need to be made to these algorithms, we will provide an example for the matrix multiplication algorithm. The reference matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplication} (Appendix \ref{app:supplementalalgs}). The C code for this algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationc}. The modified matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationvec}. Both algorithms are slightly simplified for the sake of readability.
+
+\begin{algorithm}
+  \caption{Matrix Multiplication (Non-Vectorized)}
+  \label{alg:medsmatrixmultiplicationc}
+  \lstinputlisting[language=C, style=CStyle]{code/matrix_multiplication.c}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{Matrix Multiplication (Vectorized for 4 commitments)}
+  \label{alg:medsmatrixmultiplicationvec}
+  \lstinputlisting[language=C, style=CStyle]{code/matrix_multiplication_vec.c}
+\end{algorithm}
+
+As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x4.h} file. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository\todo{Footnote to Git}.
+
+\subsection{Parallelization of Commitment Computations}
+\label{sec:commitmentparallelization}
+Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm \todo{ref}) and verification (Algorithm \todo{ref}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while-loop that runs until the commitment is succesfully generated. This is why the signing and verification code exhibits the following structure:
+\begin{verbatim}
+  // Initial definitions and loading
+  for (int i = 0; i < t; i++) {
+    while (1) {
+      // Compute commitment
+      if (commitment is computed) {
+        break;
+      }
+    }
+  }
+  // Final operations
+\end{verbatim}
+This structure introduces a problem if we want to parallelize the computation of the commitments. We can't simply parallelize the for-loop to use $\frac{t}{4}$ iterations, as the while loop might run for a different number of iterations for each commitment. Additionally, although the computation of two different commitments is independent, the computation of the same commitment (after a failure) is dependent on the previous computation of that commitment. This means that we also can't parallelize the while-loop.
+
+\subsubsection{Optimization}
+\label{sec:commitmentparallelizationoptimization}
+We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This structure is suitable for parallelization and has the following structure:
+\begin{verbatim}
+  // Initial definitions and loading
+  while (there are uncomputed/failed commitments) {
+    // 1. Load data for next 4 uncomputed/failed commitments
+    // 2. Compute these commitments in parallel
+    // 3(a). Store results for successful commitments
+    // 3(b). Store information for failed commitments
+  }
+  // Final operations
+\end{verbatim}
+Of course, this introduces some overhead, as steps 1 and 3 in the structure above can not be parallelized and take slightly more time than their equivalent in the reference implementation. However, the parallelization of step 2 will result in a significant speedup, as the computation of the commitments itself is by far the most time-consuming part of the MEDS implementation.
+
+\subsubsection{Loading and Storing}
+\label{sec:commitmentparallelizationloadingstoring}
+As we are computing multiple commitments at the same time, we need to alter the way in which we load and store the data for these commitments. Specifically, we need to make sure that the data for each computation is loaded into the correct lanes of a set of NEON registers.
+\todo[inline]{Check complete data loading situation. Do we really need `MEDS\_t << 1'?}
 
 \subsubsection{Verification}
+\todo[inline]{Briefly explain the slightly different situation for verification.}
 
 \subsection{Limitations}
 \label{sec:highlevellimitations}
+\todo[inline]{Explain cache size disadvantage.}
 
 \section{Bitstream Filling}
 \label{sec:bitstreamfilling}
-ref uses long algorithm\todo{Git}
+After the commitments are computed, the resulting matrices are hashed, after which the hash output is converted into an array of $t$ challenges. The input to the hash function is an array of 8-bit unsigned integers. For the MEDS parameter sets that we consider, the matrix elements fit in 12 bits and are stored as 16-bit unsigned integers. This means that the 16-bit values need to be converted to 8-bit values before they can be hashed. Although this can be done by simply splitting the 16-bit values into two 8-bit values, MEDS uses the more complex approach of only using the 12 least significant bits (which contain the field element) of each 16-bit value. These 12-bit values are concatenated into a bitstream which is then hashed.
 
-\section{Hash Function Optimization}
+The main advantage of this approach is that the number of 8-bit values that need to be hashed is reduced by a factor of $\frac{16}{12} = \frac{4}{3}$, lowering the number of calls to the hash function. However, it also comes with the disadvantage that the process of filling the bitstream is more complex and time-consuming than the alternative of splitting the 16-bit values into two 8-bit values.
+
+\subsection{Optimizing the Existing Approach}
+The reference implementation\todo{Footnote to Git} for filling the bitstream is generalized to work with up to 32 bits per value and therefore has to keep track of and update the current bit position in the bitstream. This means that we can save some time by using a specialized approach for filling bitstreams with 12-bit values.
+
+Our optimization relies on the observation that two 12-bit values can be converted to three 8-bit values (which are required by the hash function) using a few simple bitwise operations. The number of values that need to be converted is always a multiple of 2, which means we do not need an additional check at the end. A conceptual pseudocode implementation of this approach is shown in Algorithm \ref{alg:bitstreamfilling}.
+
+\begin{algorithm}
+  \label{alg:bitstreamfilling}
+  \caption{Bitstream Filling for 12-bit values}
+  \begin{algorithmic}
+    \State \textbf{Input:} $v$: array of $n$ 16-bit unsigned integers
+    \State \textbf{Output:} $bs$: array of $\frac{3}{2}n$ 8-bit unsigned integers
+    \State $bs \gets \text{empty array of size } \frac{3}{2}n$
+    \State $i \gets 0$
+    \For{$j \gets 0$ to $n$ in steps of 2}
+      \State $v_1 \gets v[j]$
+      \State $v_2 \gets v[j + 1]$
+      \State $bs[i] \gets v_1 ~\&~ \texttt{0xFF}$
+      \State $bs[i + 1] \gets (v_1 \gg 8) ~|~ ((v_2 ~\&~ \texttt{0xF}) \ll 4)$
+      \State $bs[i + 2] \gets (v_2 \gg 4) ~\&~ \texttt{0xFF}$
+      \State $i \gets i + 3$
+    \EndFor
+  \end{algorithmic}
+\end{algorithm}
+
+\subsection{Alternative Approach}
+\todo[inline]{Check if splitting 16-bit values into two 8-bit values is faster.}
+
+\section{Hash Structure Optimization}
 \label{sec:hashfunctionoptimization}
+\todo[inline]{Leuke plaatjes (sequence vs parallel)}
 
 \chapter{Results}
 \label{ch:results}
@@ -817,6 +933,7 @@ ref uses long algorithm\todo{Git}
 - Check possibilities for 8x8 matrix multiplication
 - Check possibilities for 8-wide high-level parllel
 - Optimize solve method using a pure-assembly approach
+- Check possibilities for ignoring bitstream filling and hashing the resulting data directly
 
 \chapter{Conclusion}
 \label{ch:conclusion}

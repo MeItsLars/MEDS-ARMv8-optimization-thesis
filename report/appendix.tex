@@ -323,3 +323,36 @@ The MEDS key generation, signing, and verification algorithms require some addit
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
+
+\begin{algorithm}
+  \caption{MEDS `pi' function $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$}
+  \label{alg:medspifunction}
+  \begin{algorithmic}
+    \Function{pi}{$\textbf{A}^{m \times m}, \textbf{B}^{n \times n}, \textbf{G}^{k \times mn}$}
+      \State $G' \gets \text{matrix (array) of size } k \times mn$
+      \For{$i \gets 0$ to $k$}
+        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
+        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
+      \EndFor
+      \State \Return $G'$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{MEDS `SF' function}
+  \label{alg:medssffunction}
+  \begin{algorithmic}
+    \Function{SF}{$\textbf{G}^{k \times mn}$}
+      \State $M \gets \text{matrix (array) of size } k \times k$
+      \For{$r \gets 0$ to $k$}
+        \State $M[r \cdot k:(r+1) \cdot k] \gets \textbf{G}[r \cdot mn:r \cdot mn + k]$
+      \EndFor
+      \State $M^{-1} \gets \text{mat\_inv}(M)$
+      \If{$M^{-1} = \bot$}
+        \State \Return $\bot$
+      \EndIf
+      \State \Return $\text{matrix\_mul}(M^{-1}, \textbf{G})$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
