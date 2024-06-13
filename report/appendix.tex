@@ -2,6 +2,9 @@
 \chapter{MEDS Algorithms}
 \label{app:medsalgs}
 
+\section{Notations}
+
+\section{Key Algorithms}
 \begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
@@ -233,4 +236,123 @@ $\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\hat{\textbf{G}}_{t-1}[;k,mn-
     \State \textbf{return} $\bot$
 \EndIf
 \end{algorithmic}
+\end{algorithm}
+
+\section{Supplemental Algorithms}
+\label{app:supplementalalgs}
+The MEDS key generation, signing, and verification algorithms require some additional algorithms to function. In this section, we present a few algorithms that are used by the three MEDS algorithms. Note that we do not list all supplemental algorithms, but only those that are relevant to our research.
+
+\begin{algorithm}
+  \caption{MEDS Matrix Multiplication}
+  \label{alg:medsmatrixmultiplication}
+  \begin{algorithmic}
+    \Function{matrix\_mul}{$A^{m \times n}, B^{n \times o}$}
+      \State $C \gets \text{zero matrix of size } m \times o$
+      \For{$c \gets 0$ to $m$}
+        \For{$r \gets 0$ to $o$}
+          \For{$k \gets 0$ to $n$}
+            \State $C[c][r] \gets C[c][r] + A[c][k] \cdot B[k][r]$
+          \EndFor
+          \State $C[c][r] \gets C[c][r] \mod 4093$
+        \EndFor
+      \EndFor
+      \State \Return $C$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{MEDS Matrix Systemizer}
+  \label{alg:systemizer}
+  \begin{algorithmic}
+    \Function{systemize}{$A^{m \times n}$, $r_\text{max}$, do\_swap, do\_backsub}
+      \State $ret \gets m \cdot \text{do\_swap}$
+      \For{$r \gets 0$ to $r_\text{max}$}
+        \State \texttt{// Attempt to make the diagonal element non-zero}
+        \If{do\_swap}
+          \State $z \gets 0$
+          \For{$r_2 \gets r$ to $m$}
+            \State $z \gets z$ or $A[r_2][r]$
+          \EndFor
+          \If{$z = 0$}
+            \State $ret \gets r$
+            \For{$i \gets 0$ to $r$}
+              \State $A[i][r], A[i][n-1] \gets A[i][n-1], A[i][r]$
+            \EndFor
+          \EndIf
+        \EndIf
+        \For{$r_2 \gets r+1$ to $m$}
+          \If{$A[r][r] = 0$}
+            \For{$c \gets r$ to $n$}
+              \State $A[r][c] \gets (A[r][c] + A[r_2][c]) \mod 4093$
+            \EndFor
+          \EndIf
+        \EndFor
+        \If{$A[r][r] = 0$}
+          \State \Return $-1$
+        \EndIf
+        \State \texttt{// Normalize row r such that A[r][r] = 1}
+        \State $v \gets \text{GF\_inv}(A[r][r])$
+        \For{$c \gets r$ to $n$}
+          \State $A[r][c] \gets (A[r][c] \cdot v) \mod 4093$
+        \EndFor
+        \State \texttt{// Eliminate A[r2][r] for r2 > r}
+        \For{$r_2 \gets r+1$ to $m$}
+          \For{$c \gets r$ to $n$}
+            \State $v \gets (A[r][c] \cdot A[r_2][r]) \mod 4093$
+            \State $A[r2][c] \gets ((A[r2][c] - $v$) + 4093) \mod 4093$
+          \EndFor
+        \EndFor
+      \EndFor
+      \State \texttt{// Return if we don't need to do back substitution}
+      \If{!do\_backsub}
+        \State \Return $ret$
+      \EndIf
+      \State \texttt{// Perform back substitution}
+      \For{$r \gets r_\text{max}-1$ to $0$}
+        \For{$r_2 \gets 0$ to $r$}
+          \State $v \gets (A[r][r] \cdot A[r_2][r]) \mod 4093$
+          \State $A[r_2][r] \gets ((A[r_2][r] - $v$) + 4093) \mod 4093$
+          \For{$c \gets r_\text{max}$ to $n$}
+            \State $v \gets (A[r][c] \cdot A[r_2][r]) \mod 4093$
+            \State $A[r_2][c] \gets ((A[r_2][c] - $v$) + 4093) \mod 4093$
+          \EndFor
+        \EndFor
+      \EndFor
+      \State \Return $ret$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{MEDS `pi' function $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$}
+  \label{alg:medspifunction}
+  \begin{algorithmic}
+    \Function{pi}{$\textbf{A}^{m \times m}, \textbf{B}^{n \times n}, \textbf{G}^{k \times mn}$}
+      \State $G' \gets \text{matrix (array) of size } k \times mn$
+      \For{$i \gets 0$ to $k$}
+        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
+        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
+      \EndFor
+      \State \Return $G'$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{MEDS `SF' function}
+  \label{alg:medssffunction}
+  \begin{algorithmic}
+    \Function{SF}{$\textbf{G}^{k \times mn}$}
+      \State $M \gets \text{matrix (array) of size } k \times k$
+      \For{$r \gets 0$ to $k$}
+        \State $M[r \cdot k:(r+1) \cdot k] \gets \textbf{G}[r \cdot mn:r \cdot mn + k]$
+      \EndFor
+      \State $M^{-1} \gets \text{mat\_inv}(M)$
+      \If{$M^{-1} = \bot$}
+        \State \Return $\bot$
+      \EndIf
+      \State \Return $\text{matrix\_mul}(M^{-1}, \textbf{G})$
+    \EndFunction
+  \end{algorithmic}
 \end{algorithm}
