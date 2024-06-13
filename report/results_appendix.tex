@@ -1,0 +1,22 @@
+\chapter{Benchmark Results}
+\label{app:benchmark_results}
+\begin{table}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lrrrrrrrrr}
+      \toprule
+      & \multicolumn{3}{c}{\textbf{MEDS-21595}} & \multicolumn{3}{c}{\textbf{MEDS-55520}} & \multicolumn{3}{c}{\textbf{MEDS-122000}} \\
+      & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+      \midrule
+      Reference & 0.0 & 0.0 & 0.0 & 22.7 & 3623.8 & 3628.2 & 0.0 & 0.0 & 0.0 \\
+      Low-Level & 0.0 & 0.0 & 0.0 & 7.9 & 1120.2 & 1069.0 & 0.0 & 0.0 & 0.0 \\
+      High-Level & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
+      Low-Level (New Hash Structure) & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
+      High-Level (New Hash Structure) & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
+
+      \bottomrule
+    \end{tabular}%
+  }
+  \caption{Benchmarking results for all variants of MEDS. The values represent the number of megacycles required to execute that algorithm.}
+  \label{tab:overall_benchmark_results}
+\end{table}
