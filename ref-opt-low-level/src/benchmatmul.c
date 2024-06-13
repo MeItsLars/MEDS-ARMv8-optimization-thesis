@@ -906,29 +906,37 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
 
 float min_cycle_bound(int m, int o, int n)
 {
-  float r_loops = m * 0.25;
-  float c_loops = n * 0.25;
-  float k_loops = o * 0.25;
+  // float r_loops = m * 0.25;
+  // float c_loops = n * 0.25;
+  // float k_loops = o * 0.25;
 
-  float result = 0;
-  result += r_loops;                             // R loop add and compare
-  result += r_loops * c_loops;                   // C loop add and compare
-  result += r_loops * c_loops * k_loops;         // K loop add and compare
-  result += r_loops * c_loops * k_loops * 2;     // K loop address calculation
-  result += r_loops * c_loops * k_loops * 4;     // Load A
-  result += r_loops * c_loops * k_loops * 4;     // Load B
-  result += r_loops * c_loops * k_loops * 4 * 4; // Compute C
-  result += r_loops * c_loops * 4 * 9;           // Reduce C
-  result += r_loops * c_loops * 4;               // Store C
+  // float result = 0;
+  // // result += r_loops;                             // R loop add and compare
+  // // result += r_loops * c_loops;                   // C loop add and compare
+  // // result += r_loops * c_loops * k_loops;         // K loop add and compare
+  // // result += r_loops * c_loops * k_loops * 2;     // K loop address calculation
+  // result += r_loops * c_loops * k_loops * 4;     // Load A
+  // result += r_loops * c_loops * k_loops * 4;     // Load B
+  // result += r_loops * c_loops * k_loops * 4 * 4; // Compute C
+  // result += r_loops * c_loops * 4 * 5;           // Reduce C
+  // result += r_loops * c_loops * 4;               // Store C
 
+  // return 4 * result;
+
+  float result = (1/16.0) * m * n * (6 * o + 24);
   return 4 * result;
+
+  // float result = 0;
+  // result += m * n * o * 1; // Arithmetic
+  // result += m * n * 5;     // Modular reduction
+  // return result;
 }
 // float min_cycle_bound(int m, int o, int n)
 // {
 //   int loads = 0;
 //   int stores = 0;
 //   int arithmetic = 0;
-//   int reduction_cost = 9;
+//   int reduction_cost = 5;
 
 //   for (int c = 0; c < m; c++)
 //     for (int r = 0; r < n; r++)
