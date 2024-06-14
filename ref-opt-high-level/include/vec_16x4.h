@@ -58,6 +58,7 @@
 #define VEC_TRUE 0xffff
 #define VEC_FALSE 0x0000
 
+#if MEDS_p == 4093
 #define MAGIC_VEC vdupq_n_u32(0x80180481)
 
 #define MEDS_p_VEC_16x4 vdup_n_u16(MEDS_p)
@@ -84,6 +85,21 @@
   })
 
 #define FREEZE_REDUCE_VEC(_v5) REDUCE_VEC(_v5)
+
+#else
+// Use a simple reduction technique in order for the 'toy' parameter set to function.
+#define REDUCE_VEC(_v4)       \
+  ({                          \
+    uint16x4_t _t4;           \
+    _t4[0] = _v4[0] % MEDS_p; \
+    _t4[1] = _v4[1] % MEDS_p; \
+    _t4[2] = _v4[2] % MEDS_p; \
+    _t4[3] = _v4[3] % MEDS_p; \
+    _t4;                      \
+  })
+#define FREEZE_VEC(_v5) REDUCE_VEC(_v5)
+#define FREEZE_REDUCE_VEC(_v5) REDUCE_VEC(_v5)
+#endif
 
 pmod_mat_vec_t load_vec(GFq_t *M[], int M_r, int M_c, int r, int c);
 void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, int amount);

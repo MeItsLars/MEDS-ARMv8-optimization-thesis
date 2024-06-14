@@ -442,22 +442,40 @@ int crypto_sign(
   if (GFq_bits == 12)
   {
     // Use a 12-bit optimized bitstream fill function (12 bits are used for all parameter sets)
-    int buf_idx = 0;
-    for (int r = 0; r < MEDS_k; r++)
+    for (int t = 0; t < MEDS_t; t++)
     {
-      int raw_idx = r * MEDS_m * MEDS_n;
-      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+      int buf_idx = 0;
+      uint16_t previous_element;
+      int has_previous_element = 0;
+      for (int r = 0; r < MEDS_k; r++)
       {
-        for (int t = 0; t < MEDS_t; t++)
+        int c = MEDS_k;
+        int raw_idx = r * MEDS_m * MEDS_n;
+        // If the previous row had an element left, write it with the first element of this row
+        if (has_previous_element)
         {
-          uint16_t i0 = G_tilde_ti[t][raw_idx + c];
-          uint16_t i1 = G_tilde_ti[t][raw_idx + c + 1];
-
-          bs_buf[t][buf_idx] = (i0 & 0xff);
-          bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
-          bs_buf[t][buf_idx + 2] = (i1 >> 4);
+          BUF_SET_12BIT_PAIR(bs_buf[t], buf_idx, previous_element, G_tilde_ti[t][raw_idx + c]);
+          c++;
+          has_previous_element = 0;
         }
-        buf_idx += 3;
+        // Write the rest of the row in pairs of 12-bit elements
+        for (; c < MEDS_m * MEDS_n - 1; c += 2)
+        {
+          BUF_SET_12BIT_PAIR(bs_buf[t], buf_idx, G_tilde_ti[t][raw_idx + c], G_tilde_ti[t][raw_idx + c + 1]);
+        }
+        // If this row has an element left, save it for the next row
+        if (c == MEDS_m * MEDS_n - 1)
+        {
+          previous_element = G_tilde_ti[t][raw_idx + c];
+          has_previous_element = 1;
+        }
+      }
+      // If the final row had an element left, store it
+      if (has_previous_element)
+      {
+        uint16_t i0 = previous_element;
+        bs_buf[t][buf_idx++] = (i0 & 0xff);
+        bs_buf[t][buf_idx++] = (i0 >> 8);
       }
     }
   }
@@ -572,7 +590,7 @@ int crypto_sign_open(
     fprintf(stderr, "ERROR: This low-level optimized version of MEDS requires GFq_t to be uint16_t.\n");
     return -1;
   }
-  
+
   LOG_HEX(pk, MEDS_PK_BYTES);
   LOG_HEX(sm, smlen);
 
@@ -824,22 +842,40 @@ int crypto_sign_open(
   if (GFq_bits == 12)
   {
     // Use a 12-bit optimized bitstream fill function (12 bits are used for all parameter sets)
-    int buf_idx = 0;
-    for (int r = 0; r < MEDS_k; r++)
+    for (int t = 0; t < MEDS_t; t++)
     {
-      int raw_idx = r * MEDS_m * MEDS_n;
-      for (int c = MEDS_k; c < MEDS_m * MEDS_n; c += 2)
+      int buf_idx = 0;
+      uint16_t previous_element;
+      int has_previous_element = 0;
+      for (int r = 0; r < MEDS_k; r++)
       {
-        for (int t = 0; t < MEDS_t; t++)
+        int c = MEDS_k;
+        int raw_idx = r * MEDS_m * MEDS_n;
+        // If the previous row had an element left, write it with the first element of this row
+        if (has_previous_element)
         {
-          uint16_t i0 = G_hat_i[t][raw_idx + c];
-          uint16_t i1 = G_hat_i[t][raw_idx + c + 1];
-
-          bs_buf[t][buf_idx] = (i0 & 0xff);
-          bs_buf[t][buf_idx + 1] = (i0 >> 8) | ((i1 & 0xf) << 4);
-          bs_buf[t][buf_idx + 2] = (i1 >> 4);
+          BUF_SET_12BIT_PAIR(bs_buf[t], buf_idx, previous_element, G_hat_i[t][raw_idx + c]);
+          c++;
+          has_previous_element = 0;
         }
-        buf_idx += 3;
+        // Write the rest of the row in pairs of 12-bit elements
+        for (; c < MEDS_m * MEDS_n - 1; c += 2)
+        {
+          BUF_SET_12BIT_PAIR(bs_buf[t], buf_idx, G_hat_i[t][raw_idx + c], G_hat_i[t][raw_idx + c + 1]);
+        }
+        // If this row has an element left, save it for the next row
+        if (c == MEDS_m * MEDS_n - 1)
+        {
+          previous_element = G_hat_i[t][raw_idx + c];
+          has_previous_element = 1;
+        }
+      }
+      // If the final row had an element left, store it
+      if (has_previous_element)
+      {
+        uint16_t i0 = previous_element;
+        bs_buf[t][buf_idx++] = (i0 & 0xff);
+        bs_buf[t][buf_idx++] = (i0 >> 8);
       }
     }
   }
