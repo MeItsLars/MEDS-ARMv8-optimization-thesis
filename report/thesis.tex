@@ -210,7 +210,7 @@ Such that, given $(pk, sk) \leftarrow \text{G}(1^n)$:
 \]
 for all $m$.
 
-\subsection{How MEDS works}
+\subsection{How MEDS Works}
 \label{sec:medsworks}
 Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence, which is closely related to the notion of Code Equivalence that is used in LESS \cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition.
 
@@ -503,8 +503,7 @@ Throughout the entirety of the MEDS implementation, modular reduction is used ex
 Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. There are various algorithms that can be used to perform modular reduction. Especially for large moduli, there are a lot of possible algorithms and optimizations to choose from\todo{Cite?}. However, as our modulus is relatively small and fits in just 12 bits, we do not have to consider these more complex algorithms. Instead, we have considered the following well-known algorithms.
 \begin{itemize}
   \item \textbf{Naive Reduction}\\
-  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. The main problem with this approach is that division is not a constant time operation, which can lead to timing attacks. Furthermore, the division operation is usually relatively slow compared to other operations.
-  \todo[inline]{References to timing attack section?}
+  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. The main problem with this approach is that division is not a constant time operation, which can lead to timing attacks\todo{ref sec}. Furthermore, the division operation is usually relatively slow compared to other operations.
   \item \textbf{Montgomery Reduction}\\
   Montgomery reduction is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input to be converted to a Montgomery representation, after which (for our input sizes) the reduction algorithm can be executed with 2 multiplications, 2 additions/subtractions, and a right shift, followed by a conditional subtraction.
   \todo[inline]{Cite}
@@ -846,7 +845,7 @@ This structure introduces a problem if we want to parallelize the computation of
 
 \subsubsection{Optimization}
 \label{sec:commitmentparallelizationoptimization}
-We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This structure is suitable for parallelization and has the following structure:
+We can overcome the aforementioned problems by using a different approach\todo{Cite existing git thing} to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This structure is suitable for parallelization and has the following structure:
 \begin{verbatim}
   // Initial definitions and loading
   while (there are uncomputed/failed commitments) {
@@ -873,9 +872,9 @@ As we are computing multiple commitments at the same time, we need to alter the 
 
 \section{Bitstream Filling}
 \label{sec:bitstreamfilling}
-After the commitments are computed, the resulting matrices are hashed, after which the hash output is converted into an array of $t$ challenges. The input to the hash function is an array of 8-bit unsigned integers. For the MEDS parameter sets that we consider, the matrix elements fit in 12 bits and are stored as 16-bit unsigned integers. This means that the 16-bit values need to be converted to 8-bit values before they can be hashed. Although this can be done by simply splitting the 16-bit values into two 8-bit values, MEDS uses the more complex approach of only using the 12 least significant bits (which contain the field element) of each 16-bit value. These 12-bit values are concatenated into a bitstream which is then hashed.
+After the commitments are computed, the resulting matrices are hashed, after which the hash output is converted into an array of $t$ challenges. The input to the hash function is an array of 8-bit unsigned integers. For the MEDS parameter sets that we consider, the matrix elements fit in 12 bits and are stored as 16-bit unsigned integers. This means that the 16-bit values need to be converted to 8-bit values before they can be hashed. Although this can be done by simply changing the pointer type (for C implementations), MEDS uses the more complex approach of only using the 12 least significant bits (which contain the field element) of each 16-bit value. These 12-bit values are concatenated into a bitstream which is then hashed.
 
-The main advantage of this approach is that the number of 8-bit values that need to be hashed is reduced by a factor of $\frac{16}{12} = \frac{4}{3}$, lowering the number of calls to the hash function. However, it also comes with the disadvantage that the process of filling the bitstream is more complex and time-consuming than the alternative of splitting the 16-bit values into two 8-bit values.
+The main advantage of this approach is that the number of 8-bit values that need to be hashed is reduced by a factor of $\frac{16}{12} = \frac{4}{3}$, lowering the number of calls to the hash function. However, it also comes with the disadvantage that the process of filling the bitstream is more complex and time-consuming than the alternative of changing the pointer type.
 
 \subsection{Optimizing the Existing Approach}
 The reference implementation\todo{Footnote to Git} for filling the bitstream is generalized to work with up to 32 bits per value and therefore has to keep track of and update the current bit position in the bitstream. This means that we can save some time by using a specialized approach for filling bitstreams with 12-bit values.
@@ -902,26 +901,127 @@ Our optimization relies on the observation that two 12-bit values can be convert
 \end{algorithm}
 
 \subsection{Alternative Approach}
-\todo[inline]{Check if splitting 16-bit values into two 8-bit values is faster.}
+\todo[inline]{I performed a quick check to see if the alternative approach of changing the pointer type is faster. It turns out it is a bit faster. If there is time left, I will implement this approach as well. Otherwise, I will leave it as future work.}
 
-\section{Hash Structure Optimization}
+\section{Hash Structure}
 \label{sec:hashfunctionoptimization}
-\todo[inline]{Leuke plaatjes (sequence vs parallel)}
+The result of the computation of each commitment is a large matrix. To convert these commitments into a set of challenges (as is required by the Fiat-Shamir structure, see Section \ref{sec:fiatshamir}), the commitments are hashed (using the SHAKE256 hash function) into a single Keccak state. This state is then converted into an array of $t$ challenges.
+
+The commitment matrices are hashed in a sequential manner, meaning that to hash commitment $i$, we are dependent on the hash output of commitment $i - 1$. The structure of this hashing process is depicted in Figure \ref{fig:hashstructure}. In this figure, $\tilde{\textbf{G}}_i$ represents the commitment matrix for commitment $i$, converted such that it is stored in an array of $k(mn - k)$ unsigned 8-bit integers (see Section \ref{sec:parametersets} for values of $m$, $n$, and $k$). $\textit{Hash}_1$ represents a call to SHAKE256, which in turn calls the Keccak-f[1600] permutation until the entire input array is absorbed. $s_i$ represents the intermediate Keccak state after hashing commitment $i$, where $s_0$ is 0. The resulting state $s_t$ is used to generate the array of challenges.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{hash/hash_struct_seq.png}
+  \caption{MEDS Commitment Hashing Structure.}
+  \label{fig:hashstructure}
+\end{figure}
+
+The hashing process for a single commitment is already quite computationally expensive, as it requires $\frac{8 \cdot k(mn-k)}{1600}$ calls to the Keccak-f[1600] permutation (which operates on 1600 bits at a time). For parameter set 3 (see Section \ref{sec:parametersets}), this results in over 196 calls to the permutation. Additionally, the hashing process is not parallelizable because of the sequantial structure of the process. The profiling results (see Section \ref{sec:medsprofilingresults}) show that the hashing process takes up a little over 5\% of the total execution time of signing and verification, which makes it worthwhile to explore possible optimizations.
+
+\subsection{Hash Structure Optimization}
+There is little to no room for improvement in the actual SHAKE256 hash function, as it (and the underlying Keccak permutation) is already widely studied and optimized. However, we can optimize the structure of the hashing process in such a way that we can compute the hashing result for multiple commitments in parallel. To do this, we need to alter the structure of the hashing process. This altered structure is depicted in Figure \ref{fig:hashstructureopt}. In this structure, the hashing structure is split into two stages:
+\begin{enumerate}
+  \item \textbf{Stage 1}: $\textit{Hash}_1$\\
+  In the first stage, the commitment matrices are hashed into a set of intermediate states $i_0, i_1, \ldots, i_{t-1}$ using the same $\textit{Hash}_1$ function as in the original structure. This stage can be parallelized, as the hashing of each commitment no longer depends on other commitments.
+  \item \textbf{Stage 2}: $\textit{Hash}_2$\\
+  In the second stage, we combine the intermediate states $i_0, i_1, \ldots, i_{t-1}$ into a single state $s_t$ that we can use to generate the array of challenges. We do this by repeatedly applying the $\textit{Hash}_2$ function (which also calls SHAKE256) to the intermediate states and the running state $s$. This stage is once again sequential, but it only requires $t$ calls to the Keccak-f[1600] permutation.
+\end{enumerate}
+The resulting structure introduces a small amount of overhead, as stage 2 requires $t$ additional calls to the Keccak-f[1600] permutation. However, as stage 1 can now be parallelized, the overall execution time of the hashing process is expected to decrease.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{hash/hash_struct_par.png}
+  \caption{Optimized MEDS Commitment Hashing Structure.}
+  \label{fig:hashstructureopt}
+\end{figure}
+
+Unfortunately, the final state $s_t$ that the optimized structure generates is different from the final state that the original structure generates. This means that the resulting challenges will also be different between the two structures. Although this does not compromise the security of the scheme, it does meen that the optimized and reference implementations are not compatible with each other. Therefore, we leave this optimized hash structure as a suggested change to the MEDS scheme.
+
+\subsection{Implementation}
+The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package\todo{cite} does not contain optimized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer\todo{cite} has resulted in a large set of optimized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
+
+We have benchmarked these implementations on the Cortex-A72 and found that the \texttt{keccak\_f1600\_x4\_hybrid\_asm\_v3p}\footnote{\url{https://gitlab.com/arm-research/security/pqax/-/blob/master/asm/manual/keccak\_f1600/keccak\_f1600\_x4\_hybrid\_asm\_v3p.s}} optimized permutation (which is able to process 4 states in parallel) requires the lowest amount of cycles per state permutation. As the number of challenges $t$ is a multiple of 4 for all MEDS parameter sets that we consider, this means that we can easily plug this optimized permutation into the new hash structure.
+
+\section{Non-Constant Time Implementations}
+\label{sec:nonconstanttime}
+% \todo[inline]{Explain the possibility of using non-constant time implementations for various functions in the verification phase.}
+% - Use non-constant time implementations for various functions in the verification phase (both high and low level):
+%   * Gaussian elimination 0 checks
+%   * GF\_inv: use a lookup table
+To prevent timing and cache-based side-channel attacks\todo{reference section}, it is important that the MEDS implementation is constant-time. However, this is only the case for the key generation and signing phases of MEDS. The verification phase is not required to be constant-time, as it operates only on public data. This means that we can use non-constant time code for the verification phase. In this section, we will list the functions that can be optimized using non-constant time implementations. The implementation of each optimization is slightly different for the low-level and high-level approach, but the idea is the same.
+
+\subsection{Finite Field Inversion}
+MEDS requires the inversion of field elements over the finite field $\mathbb{F}_{4093}$. The constant-time algorithm used in the reference implementation utilizes an optimal addition chain which takes a few hundred cycles to execute. However, as the number of possible field elements is limited to 4093, we can precompute the inverse of each field element and store it in a lookup table. This allows us to invert a field element simply by executing an array lookup, which takes only a few cycles to execute.
+
+\subsection{Matrix Systemization}
+During matrix systemization (shown in Algorithm \ref{alg:systemizer}), the algorithm spends some time on making sure the leading coefficient of each row is nonzero (it almost always is). As the implementation is constant time, this entire process is execute even if the leading coefficient is already nonzero. In a non-constant time implementation, we can add a check to see if the leading coefficient is zero, and if it is not, skip the entire process of making it nonzero.
 
 \chapter{Results}
 \label{ch:results}
-\todo[inline]{Contains the results of the benchmarking of the non-optimized and optimized MEDS implementations.}
-\todo[inline]{Discuss results.}
+In this chapter, we will present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. The code was compiled for the ARMv8 architecture and was ran on a Raspberry Pi 4 Model B with a 64-bit squad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. In all tables and figures, the numbers shown represent the number of megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
+
+We will first look at the performance results of the three algorithms that were optimized specifically for the low-level approach in Section \ref{sec:resultslowlevel}. Next, we will do the same for the high-level approach in Section \ref{sec:resultshighlevel}. Finally, we will compare the overall performance of all implemented variants of the MEDS implementation in Section \ref{sec:overallperformance}.
+
+\section{Low-Level Optimized Algorithms}
+\label{sec:resultslowlevel}
+
+\subsection{Matrix Multiplication}
+
+\subsection{Matrix Systemization}
+
+\subsection{System Solving}
+
+\section{High-Level Optimized Supplemented Algorithms}
+\label{sec:resultshighlevel}
+\todo[inline]{Compare results for the supplemental algorithms that were converted to use vectorized datatypes.}
+
+% This is the final section in which we compare and discuss the performance of all variants of the MEDS implementation (reference, low-level, high-level, low-level with alternative hash structure, high-level with alternative hash structure).
+\section{Overall Performance}
+\label{sec:overallperformance}
+We have benchmarked the performance of the MEDS for all combinations of the three relevant variables to consider:
+\begin{itemize}
+  \item \textbf{MEDS Parameter set}: We analyzed the performance for each of the three considered parameter sets: MEDS-21595, MEDS-55520, and MEDS-122000 (see Section \ref{sec:parametersets}).
+  \item \textbf{Algorithm}: We tested each of the three signature algorithms: key generation, signing, and verification.
+  \item \textbf{Implementation variant}: We tested all implementations: reference, low-level optimized, high-level optimized, low-level optimized with alternative hash structure, and high-level optimized with alternative hash structure.
+\end{itemize}
+MEDS was benchmarked for every possible combination of these variables, resulting in a total of 45 benchmarks. The result for each benchmark was obtained in the following way:
+\begin{enumerate}
+  \item 16 `warmup' runs were executed to ensure that the cache was filled with the necessary data and the branch predictor was optimized.
+  \item 128 measurement runs were executed to obtain 128 measurements of the execution time of the algorithm.
+  \item The final benchmark result was obtained by taking the median of the 128 measurements.
+\end{enumerate}
+
+The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmark_results} in Appendix \ref{app:benchmark_results}. As the relative performance of the implementations is more important than the exact numbers, we depict the results in the form of bar charts in Figures \ref{fig:overal_performance_bar_chart_MEDS-21595} (MEDS-21595), \ref{fig:overal_performance_bar_chart_MEDS-55520} (MEDS-55520), and \ref{fig:overal_performance_bar_chart_MEDS-122000} (MEDS-122000).
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-21595.png}
+  \caption{Overall Performance of MEDS-21595 Variants.}
+  \label{fig:overal_performance_bar_chart_MEDS-21595}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-55520.png}
+  \caption{Overall Performance of MEDS-55520 Variants.}
+  \label{fig:overal_performance_bar_chart_MEDS-55520}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-122000.png}
+  \caption{Overall Performance of MEDS-122000 Variants.}
+  \label{fig:overal_performance_bar_chart_MEDS-122000}
+\end{figure}
+
+\todo[inline]{Somehow depict the new divisions of the time spent on specific functions. Maybe in a subsection?}
 
 \chapter{Future work}
 \label{ch:futurework}
 \todo[inline]{Discuss future work.}
-- Use non-constant time implementations for various functions in the verification phase (both high and low level):
-  * Gaussian elimination 0 checks
-  * GF\_inv: use a lookup table
 - Optimize shake256? See \url{https://eprint.iacr.org/2022/1243} and \url{https://github.com/cothan/NEON-SHA3\_2x}
   * Requires a change to MEDS, but this is not a problem
-  * https://kannwischer.eu/papers/202\_armv8keccak.pdf
+  * https://kannwischer.eu/papers/2022\_armv8keccak.pdf
   * Cite keccak extended code package as well (Armv7)
   * https://gitlab.com/arm-research/security/pqax
   * Better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en
@@ -934,6 +1034,7 @@ Our optimization relies on the observation that two 12-bit values can be convert
 - Check possibilities for 8-wide high-level parllel
 - Optimize solve method using a pure-assembly approach
 - Check possibilities for ignoring bitstream filling and hashing the resulting data directly
+- Memory \& power usage Analysis
 
 \chapter{Conclusion}
 \label{ch:conclusion}
@@ -942,6 +1043,8 @@ Our optimization relies on the observation that two 12-bit values can be convert
 \bibliographystyle{plain}
 \bibliography{bibliofile}
 
-\input{appendix}
+\appendix
+\input{algorithm_appendix.tex}
+\input{results_appendix.tex}
 
 \end{document}
