@@ -1,8 +1,40 @@
 \chapter{MEDS Algorithms}
 \label{app:medsalgs}
 
-\section{Notations}
-\todo[inline]{Add notations here.}
+\section{Notations and Functions}
+
+\subsection{Notations}
+In the algorithms in this appendix, we use the following notations in addition to the notations mentioned in Section \ref{sec:notations}:
+\begin{itemize}
+  \item $\ell_{x}$: The size of the variable $x$ in bytes.
+  \item $\mathcal{B}^{x}$: The set of all byte strings of length $x$.
+  \item $\sigma$: A seed used to generate random values.
+  \item $\text{GL}_k(q)$: The set of all invertible $k \times k$ matrices over $\mathds{F}_q$.
+  \item $b[i,j]$: The $j-i$ byte long substring of byte string $b$ starting at index $i$.
+  \item $\textbf{A}[;i,j]$: The submatrix of $\textbf{A}$ that starts at column $i$ (inclusive) and ends at column $j$ (exclusive), containing all rows.
+  \item $(x~|~y)$: The concatenation of byte strings $x$ and $y$.
+\end{itemize}
+
+\subsection{Functions}
+In the algorithms in this appendix, we use the following functions (in order of appearance):
+\begin{itemize}
+  \item Randombytes($x$): Generates a random byte string of length $x$.
+  \item ExpandSysMat($\sigma$): Generate a random systematic matrix from seed $\sigma$.
+  \item XOF($\sigma$, $x$, $y$): Generates two random byte strings of length $x$ and $y$ from seed $\sigma$.
+  \item ExpandInvMat($\sigma$, $k$): Generates a random invertible matrix of size $k \times k$ from seed $\sigma$.
+  \item Solve($\textbf{G}$): Solves the system of linear equations represented by matrix $\textbf{G}$.
+  \item SF($\textbf{G}$): Converts matrix $\textbf{G}$ to systematic form.
+  \item Compress(G)($\textbf{A}$): Compresses matrix $\textbf{A}$ into a byte string.
+  \item Decompress(G)($x$): Decompresses byte string $x$ into a matrix.
+  \item SeedTree$_t(\rho, \alpha)$: \todo{Add description}
+  \item ToBytes($x$, $y$): Converts $x$ to a byte string of length $y$.
+  \item ExpandRndMat($\sigma$): Generates a random matrix from seed $\sigma$.
+  \item H($x$): Hashes byte string $x$.
+  \item ParseHash$_{s,t,w}(d)$: Parses hash $d$ into $t$ challenges that are smaller than $s$ each, where $w$ challenges are 0.
+  \item SeedTreeToPath$_t(h_0, \ldots, h_{t-1}, \rho, \alpha)$: \todo{Add description}
+  \item ParseSig($m_s$): Parses the signed message $m_s$ into its components.
+  \item PathToSeedTree$_t(h_0, \ldots, h_{t-1}, p, \alpha)$: \todo{Add description}
+\end{itemize}
 
 \section{Key Algorithms}
 \begin{algorithm}[H]
@@ -101,7 +133,7 @@ $\quad\quad\quad\quad\quad\quad\quad\quad\quad~|~\text{Compress}(\textbf{T}_1^{-
 % Generate t commitments from the challenge seeds
 \ForAll{$i \in \{0, \ldots, t - 1\}$}
     % Construct a commitment seed for the current commitment
-    \State $\sigma'_i \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i, 4}))$
+    \State $\sigma'_i \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i}, 4))$
     % Generate seeds based on the current commitment seed
     \State $\sigma_{\tilde{\textbf{M}}_i} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma_i \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{XOF}(\sigma'_i, \ell_\text{pub\_seed}, \ell_\text{tree\_seed})$
     % Generate matrix ~M_i <- c0 and c1 represent the linear combination of codewords
@@ -131,7 +163,7 @@ $\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\tilde{\textbf{G}}_{t-1}[;k,m
 % For each challenge, compute the response
 \ForAll{$i \in \{0, \ldots, t - 1\}$}
     % Only for non-zero challenges
-    \If{$h_i \geq 0$}
+    \If{$h_i > 0$}
         % Compute response
         \State $\kappa_i \in \mathds{F}_q^{2 \times k} \gets \tilde{\textbf{M}}_i T_{h_i}^{-1}$
     \EndIf
@@ -203,7 +235,7 @@ $\quad\quad\quad\quad= (\kappa_0~|~\ldots~|~\kappa_{t-1}~|~p~|~d~|~\alpha~|~m)$
     \Else
         % Zero challenges; we need to re-compute the G_i completely
         % Compute seed for the commitment
-        \State $\sigma_i' \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i, 4}))$
+        \State $\sigma_i' \in \mathcal{B}^{\ell_\text{salt} + \ell_\text{tree\_seed} + 4} \gets (\alpha~|~\sigma_i~|~\text{ToBytes}(2^{1 + \lceil \log_2(t) \rceil + i}, 4))$
         % Generate seeds based on the current commitment seed
         \State $\sigma_{\hat{M}_i} \in \mathcal{B}^{\ell_\text{pub\_seed}}, \sigma_i \in \mathcal{B}^{\ell_\text{tree\_seed}} \gets \text{XOF}(\sigma_i', \ell_\text{pub\_seed}, \ell_\text{tree\_seed})$
         % Generate matrix M_hat_i <- c0 and c1 represent the linear combination of codewords
@@ -246,7 +278,7 @@ The MEDS key generation, signing, and verification algorithms require some addit
   \caption{MEDS Matrix Multiplication}
   \label{alg:medsmatrixmultiplication}
   \begin{algorithmic}
-    \Function{matrix\_mul}{$A^{m \times n}, B^{n \times o}$}
+    \Function{matrix\_mul}{$A \in \mathbb{F}_{4093}^{m \times n}, B \in \mathbb{F}_{4093}^{n \times o}$}
       \State $C \gets \text{zero matrix of size } m \times o$
       \For{$c \gets 0$ to $m$}
         \For{$r \gets 0$ to $o$}
@@ -265,7 +297,7 @@ The MEDS key generation, signing, and verification algorithms require some addit
   \caption{MEDS Matrix Systemizer}
   \label{alg:systemizer}
   \begin{algorithmic}
-    \Function{systemize}{$A^{m \times n}$, $r_\text{max}$, do\_swap, do\_backsub}
+    \Function{systemize}{$A \in \mathbb{F}_{4093}^{m \times n}$, $r_\text{max}$, do\_swap, do\_backsub}
       \State $ret \gets m \cdot \text{do\_swap}$
       \For{$r \gets 0$ to $r_\text{max}$}
         \State \texttt{// Attempt to make the diagonal element non-zero}
@@ -331,8 +363,8 @@ The MEDS key generation, signing, and verification algorithms require some addit
     \Function{pi}{$\textbf{A}^{m \times m}, \textbf{B}^{n \times n}, \textbf{G}^{k \times mn}$}
       \State $G' \gets \text{matrix (array) of size } k \times mn$
       \For{$i \gets 0$ to $k$}
-        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
-        \State $G'[i \cdot mn:(i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
+        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
+        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
       \EndFor
       \State \Return $G'$
     \EndFunction

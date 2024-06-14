@@ -26,7 +26,7 @@
 \usepackage{xcolor}
 \usepackage{xurl}
 
-\newtheorem{theorem}{Theorem}
+\interfootnotelinepenalty=10000
 
 % Define nice pie chart colors
 \definecolor{pie1}{HTML}{03045e}
@@ -48,6 +48,7 @@
     urlcolor=black
 }
 
+\newtheorem{theorem}{Theorem}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \AtBeginEnvironment{definition}{\vspace{1em}}
@@ -164,7 +165,7 @@
 
 \chapter{Introduction}
 \label{ch:introduction}
-As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm\todo{cite} and Grover's algorithm\todo{cite} to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
+As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm \cite{shor1994algorithms} and Grover's algorithm \cite{grover1996fast} to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
 
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
 
@@ -182,7 +183,7 @@ We investigate the following research questions in this thesis (see also Chapter
   \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-In Chapter \ref{ch:background}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. In Chapter \ref{ch:discussion}, we will discuss the results that we have obtained. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
+In Chapter \ref{ch:background}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
 
 \chapter{Background}
 \label{ch:background}
@@ -303,20 +304,100 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 \label{sec:medsalgorithms}
 In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
 
-\subsubsection{Notations and Definitions}
-\todo[inline]{List notations and definitions used in the MEDS algorithms}
+\subsubsection{Notations}
+\label{sec:notations}
+\todo[inline]{This section should go to a more general place in the thesis, but I don't know where yet.}
+In the MEDS scheme and in this thesis, we use the following notations and definitions:
+\begin{itemize}
+  \item $\mathbb{F}_q$: The finite field of size $q$.
+  \item $\mathbb{F}_q^{m \times n}$: The set of matrices of size $m \times n$ ($m$ rows and $n$ columns) over $\mathbb{F}_q$, meaning that each element of the matrix is an element of $\mathbb{F}_q$.
+  \item $\textbf{A} \in \mathbb{F}_q^{m \times n}$: A matrix $\textbf{A}$ of size $m \times n$ over $\mathbb{F}_q$.
+  \item $\textbf{A}[i][j]$: The element in the $i$-th row and $j$-th column of matrix $\textbf{A}$.
+  \item $\textbf{A}^T$: The transpose of matrix $\textbf{A}$.
+  \item $\textbf{A}^{-1}$: The inverse of matrix $\textbf{A}$.
+  \item $\textbf{A} \times \textbf{B}$ or simply $\textbf{AB}$: The matrix product of $\textbf{A}$ and $\textbf{B}$.
+  \item $\textbf{A} + \textbf{B}$: The matrix sum of $\textbf{A}$ and $\textbf{B}$.
+  \item $\textbf{A} \otimes \textbf{B}$: The Kronecker product of $\textbf{A}$ and $\textbf{B}$.
+  \item $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$: Simplified notation for the operation $\textbf{G}(\textbf{A}^T \otimes \textbf{B})$.
+\end{itemize}
 
 \subsubsection{Key Generation}
-The full key generation algorithm for MEDS is shown in Algorithm \ref{alg:medskeygen}.
-\todo[inline]{Give a brief overview of the key generation algorithm.}
+% This section will contain an algorithm that represents key generation. It is not the completely detailed variant (which is shown in the appendix), but a more high-level overview of the algorithm.
+A simplified overview version of the MEDS key generation algorithm is shown in Algorithm \ref{alg:medskeygenoverview}. The full and detailed key generation algorithm for MEDS is shown in Algorithm \ref{alg:medskeygen} (Appendix \ref{app:medsalgs}).
+
+\begin{algorithm}
+  \caption{MEDS Key Generation (Overview)}
+  \label{alg:medskeygenoverview}
+  \begin{algorithmic}[1]
+    \State \textbf{Input:} -
+    \State \textbf{Output:} Public key \textbf{pk}, private key \textbf{sk}
+    \State Generate random matrix $\textbf{G}_0 \in \mathbb{F}_q^{k \times mn}$
+    \For{$i = 1$ to $s$}
+      \State Generate random invertible matrix $\textbf{T}_i \in \mathbb{F}_q^{k \times k}$
+      \State Compute $\textbf{G}'_{0} \in \mathbb{F}_q^{k \times mn} = \textbf{T}_i \times \textbf{G}_0$
+      \State Solve $\textbf{G}'_{0}$ to obtain $\textbf{A}_i \in \mathbb{F}_q^{m \times m}$ and $\textbf{B}_i \in \mathbb{F}_q^{n \times n}$
+      \State Compute $\textbf{G}_i \in \mathbb{F}_q^{k \times mn} = \pi_{\textbf{A}_i, \textbf{B}_i}(\textbf{G}_0)$
+      \State Convert $\textbf{G}_i$ to systematic form
+    \EndFor
+    \State \Return pk $= \textbf{G}_0, \textbf{G}_i$, sk $= \textbf{G}_0, \textbf{A}_i, \textbf{B}_i, \textbf{T}_i$ (for $i = 1$ to $s$)
+  \end{algorithmic}
+\end{algorithm}
 
 \subsubsection{Signature Generation}
-The full signature generation algorithm for MEDS is shown in Algorithm \ref{alg:medssign}.
-\todo[inline]{Give a brief overview of the signature generation algorithm.}
+A simplified overview version of the MEDS signature algorithm is shown in Algorithm \ref{alg:medssignoverview}. The full and detailed signature generation algorithm for MEDS is shown in Algorithm \ref{alg:medssign} (Appendix \ref{app:medsalgs}).
+
+\begin{algorithm}
+  \caption{MEDS Signature Generation (Overview)}
+  \label{alg:medssignoverview}
+  \begin{algorithmic}[1]
+    \State \textbf{Input:} Private key \textbf{sk}, message $m$
+    \State \textbf{Output:} Signature $s$ (contains the tag)
+    \State Parse $\textbf{G}_0$ and $\textbf{T}_i$ from \textbf{sk} for $i = 1$ to $s$
+    \For{$i = 0$ to $t$}
+      \State Generate random matrix $\tilde{\textbf{M}}_i \in \mathbb{F}_q^{2 \times k}$
+      \State Compute $\textbf{C} \in \mathbb{F}_q^{2 \times mn} = \tilde{\textbf{M}}_i \times \textbf{G}_0$
+      \State Solve $\textbf{C}$ to obtain $\textbf{A} \in \mathbb{F}_q^{m \times m}$ and $\textbf{B} \in \mathbb{F}_q^{n \times n}$
+      \State Compute $\tilde{\textbf{G}}_i \in \mathbb{F}_q^{2 \times mn} = \pi_{\textbf{A}, \textbf{B}}(\textbf{G}_0)$
+      \State Convert $\tilde{\textbf{G}}_i$ to systematic form
+    \EndFor
+    \State Hash $m$ and $\tilde{\textbf{G}}_i$ for $i = 0$ to $t$ to obtain $d$
+    \State Parse a set of hashes $h_0, \ldots, h_{t-1}$ from $d$
+    \For{$i = 0$ to $t$}
+      \If{$h_i > 0$}
+        \State Compute $\kappa_i \in \mathbb{F}_q^{2 \times k} = \tilde{\textbf{M}}_i \times \textbf{T}^{-1}_{h_i}$
+      \EndIf
+    \EndFor
+    \State \Return Signature $s = \kappa_0, \ldots, \kappa_{t-1}, h_0, \ldots, h_{t-1}, m$
+  \end{algorithmic}
+\end{algorithm}
 
 \subsubsection{Signature Verification}
-The full signature verification algorithm for MEDS is shown in Algorithm \ref{alg:medsverify}.
-\todo[inline]{Give a brief overview of the signature verification algorithm.}
+A simplified overview version of the MEDS signature verification algorithm is shown in Algorithm \ref{alg:medsverifyoverview}. The full and detailed signature verification algorithm for MEDS is shown in Algorithm \ref{alg:medsverify} (Appendix \ref{app:medsalgs}).
+
+\begin{algorithm}
+  \caption{MEDS Signature Verification (Overview)}
+  \label{alg:medsverifyoverview}
+  \begin{algorithmic}[1]
+    \State \textbf{Input:} Public key \textbf{pk}, signature $s$
+    \State \textbf{Output:} 1 if the signature is valid, 0 otherwise
+    \State Parse $\textbf{G}_0$ and $\textbf{G}_i$ from \textbf{pk} for $i = 0$ to $s$
+    \State Parse $\kappa_i$, $h_i$, $d$ and $m$ from $s$ for $i = 0$ to $t$
+    \For{$i = 0$ to $t$}
+      \If{$h_i > 0$}
+        \State Compute $\textbf{G}'_{0} = \kappa_i \times \textbf{G}_{h_i}$
+        \State Solve $\textbf{G}'_{0}$ to obtain $\textbf{A} \in \mathbb{F}_q^{m \times m}$ and $\textbf{B} \in \mathbb{F}_q^{n \times n}$
+      \Else
+        \State Re-generate matrix $\tilde{\textbf{M}}_i \in \mathbb{F}_q^{2 \times k}$ as in Algorithm \ref{alg:medssignoverview}
+        \State Compute $\textbf{C} \in \mathbb{F}_q^{2 \times mn} = \tilde{\textbf{M}}_i \times \textbf{G}_0$
+        \State Solve $\textbf{C}$ to obtain $\textbf{A} \in \mathbb{F}_q^{m \times m}$ and $\textbf{B} \in \mathbb{F}_q^{n \times n}$
+      \EndIf
+      \State Compute $\hat{\textbf{G}}_i \in \mathbb{F}_q^{2 \times mn} = \pi_{\textbf{A}, \textbf{B}}(\textbf{G}_0)$
+      \State Convert $\hat{\textbf{G}}_i$ to systematic form
+    \EndFor
+    \State Hash $m$ and $\hat{\textbf{G}}_i$ for $i = 0$ to $t$ to obtain $d'$
+    \State \Return 1 if $d = d'$, 0 otherwise
+  \end{algorithmic}
+\end{algorithm}
 
 \subsection{Known Attacks}
 \todo[inline]{Question to Peter and Simona: Should I add a section containing a list of the best known attack(s) on MEDS (or the underlying problem)? Alternatively, I can reference the MEDS paper for this information.}
@@ -476,11 +557,11 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
 Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for 98.76\% of the total number of cycles. For signing and verification, this number is 99.42\% and 99.39\%, respectively. In all three algorithms, the remainder of the cycles is spent on a wide set of functions that take up a small amount of time. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
 
 \subsubsection{Matrix Multiplication}
-For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A^{m \times n}$ and $B^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
+For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A \in \mathbb{F}_q^{m \times n}$ and $B \in \mathbb{F}_q^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
 % This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
 
 \subsubsection{Matrix Systemization}
-The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
+The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
 \todo[inline]{Question to Peter and Simona: Should I perform a complexity analysis of this function? It would probably be quite complex (at least way more complex than matrix multiplication) and I don't directly see a huge benefit.}
 
 \subsubsection{System Solving}
@@ -517,9 +598,9 @@ Because of this, we will need to implement our own modular reduction function th
   \item \textbf{Naive Reduction}\\
   The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. The main problem with this approach is that division is not a constant time operation, which can lead to timing attacks\todo{Reference section}. Furthermore, the division operation is usually relatively slow compared to other operations.
   \item \textbf{Montgomery Reduction}\\
-  Montgomery reduction\todo{Cite} is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input to be converted to a Montgomery representation, after which (for our input sizes) the reduction algorithm can be executed with 2 multiplications, 2 additions/subtractions, and a right shift, followed by a conditional subtraction.
+  Montgomery reduction \cite{montgomery1985modular} is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input to be converted to a Montgomery representation, after which (for our input sizes) the reduction algorithm can be executed with 2 multiplications, 2 additions/subtractions, and a right shift, followed by a conditional subtraction.
   \item \textbf{Barrett Reduction}\\
-  Barrett reduction\todo{Cite} is a modular reduction algorithm that is similar to Montgomery reduction in the sense that it also subtracts a multiple of the modulus from the input. However, it does not require the input to be converted to a different representation. For our input sizes, the algorithm can be executed with 2 multiplications, 1 subtraction, and a right shift (with an optional conditional subtraction, see Section \ref{sec:barrettreduction}).
+  Barrett reduction\cite{barrett1986implementing} is a modular reduction algorithm that is similar to Montgomery reduction in the sense that it also subtracts a multiple of the modulus from the input. However, it does not require the input to be converted to a different representation. For our input sizes, the algorithm can be executed with 2 multiplications, 1 subtraction, and a right shift (with an optional conditional subtraction, see Section \ref{sec:barrettreduction}).
 \end{itemize}
 
 Montgomery reduction is generally very efficient when a large chain of multiplications is required and the overhead of converting to and from Montgomery representation is negligible compared to the number of multiplications/reductions. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we have decided to use Barrett reduction instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
@@ -590,7 +671,7 @@ The low-level optimization approach focuses on optimizing the individual functio
 
 \subsection{Matrix Multiplication}
 \label{sec:matrixmultiplication}
-Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A^{m \times n}$ and $B^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm\todo{Cite} and the Coppersmith-Winograd algorithm\todo{Cite}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
+Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A \in \mathbb{F}_{4093}^{m \times n}$ and $B \in \mathbb{F}_{4093}^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm \cite{strassen1969gaussian} and (generalizations of) the Coppersmith-Winograd algorithm \cite{coppersmith1987matrix}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
 
 \subsubsection{Optimization}
 \label{sec:matrixmultiplicationoptimization}
@@ -598,7 +679,7 @@ We will optimize matrix multiplication by applying vectorization to the naive al
 
 Our first observation lies in the fact that all intermediate values that are computed while calculating the dot product fit into 32 bits.
 \begin{itemize}
-  \item Given $A^{m \times n} \cdot B^{n \times o} = C^{m \times o}$, the maximum value of $n$ for all matrix multiplications in all MEDS parameter sets is 44 (MEDS-122000).
+  \item Given $A \in \mathbb{F}_q^{m \times n} \times B \in \mathbb{F}_q^{n \times o} = C \in \mathbb{F}_q^{m \times o}$, the maximum value of $n$ for all matrix multiplications in all MEDS parameter sets is 44 (MEDS-122000).
   \item The values stored in $A$ and $B$ are field elements that fit into 12 bits. Their value is 4092 at most.
   \item In the computation of a single element of $C$, exactly $n$ multiplications are performed, which are all added together.
   \item This means that $n$ values are added together, which results in a value that fits in $\log_2(n \cdot 4092 \cdot 4092) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits.
@@ -613,7 +694,7 @@ Our optimization approach is to compute 16 dot products at the same time, in the
   \caption{Vectorized Matrix Multiplication for matrices that are multiples of 4 in size}
   \label{alg:vectorizedmatrixmultiplication}
   \begin{algorithmic}
-    \Function{matrix\_mul}{$A^{m \times n}, B^{n \times o}$}
+    \Function{matrix\_mul}{$A \in \mathbb{F}_q^{m \times n}, B \in \mathbb{F}_q^{n \times o}$}
       \State $C \gets \text{zero matrix of size } m \times o$
       \For{$c \gets 0$ to $m$ in steps of 4}
         \For{$r \gets 0$ to $o$ in steps of 4}
@@ -622,10 +703,10 @@ Our optimization approach is to compute 16 dot products at the same time, in the
             \State $A_0, A_1, A_2, A_3 \gets \text{load } 4\times4 \text{ submatrix at } A[r][k]$
             \State $B_0, B_1, B_2, B_3 \gets \text{load } 4\times4 \text{ submatrix at } B[k][c]$
             \For{$i \gets 0$ to $4$}
-              \State $C_i \gets C_i + B_0 \cdot A_i[0]$
-              \State $C_i \gets C_i + B_1 \cdot A_i[1]$
-              \State $C_i \gets C_i + B_2 \cdot A_i[2]$
-              \State $C_i \gets C_i + B_3 \cdot A_i[3]$
+              \State $C_i \gets C_i + B_0 \times A_i[0]$
+              \State $C_i \gets C_i + B_1 \times A_i[1]$
+              \State $C_i \gets C_i + B_2 \times A_i[2]$
+              \State $C_i \gets C_i + B_3 \times A_i[3]$
             \EndFor
           \EndFor
           \State $C_0 \gets \text{reduce}(C_0)$
@@ -662,7 +743,7 @@ Our solution to this problem is threefold, as there are three dimensions that ca
 It is also possible for multiple of these dimension to be non-multiples of 4 at the same time. In this case, we can combine the approaches described above.
 
 \subsubsection{Implementation}
-The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} combined with the handling of non-multiples can be done in multiple ways. As the resulting algorithm becomes quite complex, we figured that the C compiler might not be able to optimize the code as well as we can. Therefore, we have decided to implement a Python script\todo{Footnote to Git} that generates optimized ARMv8 assembly code. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
+The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} combined with the handling of non-multiples can be done in multiple ways. As the resulting algorithm becomes quite complex, we figured that the C compiler might not be able to optimize the code as well as we can. Therefore, we have decided to implement a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/matmul/generate\_matmul\_asm.py}} that generates optimized ARMv8 assembly code. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
 
 \subsubsection{Minimum Cycle Bound}
 In order to understand the performance of our optimized matrix multiplication algorithm, we need to find a minimum bound on the number of cycles that the algorithm will take to execute. In order to do this, we will establish a minimum bound on the number of instructions that the algorithm uses.
@@ -693,7 +774,7 @@ Given that reduction takes 5 cycles and the remaining operations take 1 cycle, w
 \label{sec:matrixsystemization}
 \todo[inline]{Change this section so it first gives a recap of what matrix systemization is, then discusses the optimization approach.}
 \todo[inline]{The systemized forms (REF and RREF) should not be explained in this section but in the background section. Add references to Echelon?}
-Matrix systemization is responsible for converting a matrix $A^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized form. In MEDS, the systemized form $A'^{m \times n}$ of a matrix $A^{m \times n}$ can take two forms:
+Matrix systemization is responsible for converting a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized form. In MEDS, the systemized form $A' \in \mathbb{F}_{4093}^{m \times n}$ of a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ can take two forms:
 \begin{itemize}
   \item \textbf{REF}:\\
   $A'$ is in row-echelon form (REF), with the additional property that the leading coefficient of row $i$ is in column $i$.
@@ -721,7 +802,7 @@ The inner loops that we are optimizing usually do not loop over a dimension that
 \end{enumerate}
 
 \subsubsection{Implementation}
-As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\todo{Footnote to Git}. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
+As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}}. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
 
 \subsubsection{Minimum Cycle Bound}
 \todo[inline]{It's quite difficult to establish a good minimum bound on Matrix Systemization, but I will try to do it.}
@@ -753,7 +834,7 @@ Also like with matrix systemization, the number of elements that need to be proc
 \subsubsection{Implementation}
 As the \texttt{solve\_opt} function is very large, we have decided not to implement the full function in ARMv8 assembly. This presented us with two options: either we use NEON intrinsics to parallelize the two time-consuming loops, or we write (a script that generates) ARMv8 assembly code for the two time-consuming loops. As the loops themselves are not very complex, we have decided to use NEON intrinsics to parallelize them, under the assumption that the assembly variant would not be much faster. Exploring the assembly-based optimization of these loops and the full function is left as future work\todo{Reference to section}.
 
-The optimized C code with NEON intrinsics is quite elaborate, so we will not show it here. Instead, we refer to the code in the code repository\todo{Footnote to Git}.
+The optimized C code with NEON intrinsics is quite elaborate, so we will not show it here. Instead, we refer to the code in the code repository\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/util.c}}.
 
 \subsubsection{Minimum Cycle Bound}
 \todo[inline]{It's not possible to give a good minimum cycle bound on the entire System Solving algorithm, but it should be possible to give a cycle bound on these two loops. I'm not yet sure if this is necessary.}
@@ -782,20 +863,20 @@ In the reference implementation of MEDS, the main datatypes used are defined as 
 \end{verbatim}
 These two datatypes represent a field element and a matrix element, respectively. Matrices are stored as one-dimensional arrays in row-major order, and are passed to functions using pointers to a \texttt{pmod\_mat\_t}.
 
-In order to parallelize the algorithms that use these datatypes, we will adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x4.h} file\todo{Footnote to Git} containing these new datatypes, which are defined as follows:
+In order to parallelize the algorithms that use these datatypes, we will adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x4.h} file\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-high-level/include/vec\_16x4.h}} containing these new datatypes, which are defined as follows:
 \begin{verbatim}
   #define GFq_vec_t uint16x4_t
   #define pmod_mat_vec_t GFq_vec_t
 \end{verbatim}
 These two datatypes represent 4 field elements and 4 matrix elements, respectively. By passing these datatypes to a modified version of a function, we can compute the function output for 4 commitments at the same time.
 
-Additionally, we will define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x4.h}\todo{Footnote to Git} file. Examples of such definitions include:
+Additionally, we will define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x4.h} file. Examples of such definitions include:
 \begin{verbatim}
   #define ADD_VEC(a, b) vaddl_u16(a, b)
   #define MUL_VEC(a, b) vmull_u16(a, b)
   #define OR_VEC(a, b) vorr_u16(a, b)
 \end{verbatim}
-The main advantage of this approach is that the entire high-level-optimized MEDS implementation can easily be converted to use a different CPU architecture (that supports vectorization) such as AVX\todo{cite}\todo{Other architectures?} simply by changing the definitions in the \texttt{vec\_16x4.h} file.
+The main advantage of this approach is that the entire high-level-optimized MEDS implementation can easily be converted to use a different CPU architecture (that supports vectorization) such as AVX512 \cite{intel-avx512} simply by changing the definitions in the \texttt{vec\_16x4.h} file.
 
 \subsubsection{Supplemental Algorithms}
 \label{sec:suppalgorithmsparallelization}
@@ -832,7 +913,7 @@ To give a brief overview of the modifications that need to be made to these algo
   \lstinputlisting[language=C, style=CStyle]{code/matrix_multiplication_vec.c}
 \end{algorithm}
 
-As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x4.h} file. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository\todo{Footnote to Git}.
+As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x4.h} file. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/tree/main/opt-high-level/src}}.
 
 \subsection{Parallelization of Commitment Computations}
 \label{sec:commitmentparallelization}
@@ -885,9 +966,9 @@ After the commitments are computed, the resulting matrices are hashed, after whi
 The main advantage of this approach is that the number of 8-bit values that need to be hashed is reduced by a factor of $\frac{16}{12} = \frac{4}{3}$, lowering the number of calls to the hash function. However, it also comes with the disadvantage that the process of filling the bitstream is more complex and time-consuming than the alternative of changing the pointer type.
 
 \subsection{Optimizing the Existing Approach}
-The reference implementation\todo{Footnote to Git} for filling the bitstream is generalized to work with up to 32 bits per value and therefore has to keep track of and update the current bit position in the bitstream. This means that we can save some time by using a specialized approach for filling bitstreams with 12-bit values.
+The reference implementation\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/ref/src/bitstream.c}} for filling the bitstream is generalized to work with up to 32 bits per value and therefore has to keep track of and update the current bit position in the bitstream. This means that we can save some time by using a specialized approach for filling bitstreams with 12-bit values.
 
-Our optimization relies on the observation that two 12-bit values can be converted to three 8-bit values (which are required by the hash function) using a few simple bitwise operations. A conceptual pseudocode implementation of this approach is shown in Algorithm \ref{alg:bitstreamfilling}. The actual implementation\todo{Footnote to Git} is a bit more complex as the structure of the input data is different and it needs to handle the case where the number of values is not a multiple of 2. The high-level variant is also slightly different as it needs to parallelize this operation.
+Our optimization relies on the observation that two 12-bit values can be converted to three 8-bit values (which are required by the hash function) using a few simple bitwise operations. A conceptual pseudocode implementation of this approach is shown in Algorithm \ref{alg:bitstreamfilling}. The actual implementation\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/meds.c}} is a bit more complex as the structure of the input data is different and it needs to handle the case where the number of values is not a multiple of 2. The high-level variant\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-high-level/src/vec\_16x4.c}} is also slightly different as it needs to parallelize this operation.
 
 \begin{algorithm}
   \label{alg:bitstreamfilling}
@@ -946,7 +1027,7 @@ The resulting structure introduces a small amount of overhead, as stage 2 requir
 Unfortunately, the final state $s_t$ that the optimized structure generates is different from the final state that the original structure generates. This means that the resulting challenges will also be different between the two structures. Although this does not compromise the security of the scheme, it does meen that the optimized and reference implementations are not compatible with each other. Therefore, we leave this optimized hash structure as a suggested change to the MEDS scheme.
 
 \subsection{Implementation}
-The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package\todo{cite} does not contain optimized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer\todo{cite} has resulted in a large set of optimized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
+The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package \cite{xkcp} does not contain optimized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer \cite{becker2022hybrid} has resulted in a large set of optimized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
 
 We have benchmarked these implementations on the Cortex-A72 and found that the \texttt{keccak\_f1600\_x4\_hybrid\_asm\_v3p}\footnote{\url{https://gitlab.com/arm-research/security/pqax/-/blob/master/asm/manual/keccak\_f1600/keccak\_f1600\_x4\_hybrid\_asm\_v3p.s}} optimized permutation (which is able to process 4 states in parallel) requires the lowest amount of cycles per state permutation. As the number of challenges $t$ is a multiple of 4 for all MEDS parameter sets that we consider, this means that we can easily plug this optimized permutation into the new hash structure.
 
@@ -1051,8 +1132,7 @@ The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmar
 
 \chapter{Conclusion}
 \label{ch:conclusion}
-\todo[inline]{Conclude the thesis.}
-
+From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with key generation 
 \bibliographystyle{plain}
 \bibliography{bibliofile}
 
