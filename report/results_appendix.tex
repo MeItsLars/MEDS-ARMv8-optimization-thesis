@@ -2,20 +2,23 @@
 \label{app:benchmark_results}
 \begin{table}[H]
   \centering
-  \resizebox{\textwidth}{!}{%
-    \begin{tabular}{lrrrrrrrrr}
-      \toprule
-      & \multicolumn{3}{c}{\textbf{MEDS-21595}} & \multicolumn{3}{c}{\textbf{MEDS-55520}} & \multicolumn{3}{c}{\textbf{MEDS-122000}} \\
-      & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
-      \midrule
-      Reference & 0.0 & 0.0 & 0.0 & 22.7 & 3623.8 & 3628.2 & 0.0 & 0.0 & 0.0 \\
-      Low-Level & 0.0 & 0.0 & 0.0 & 7.9 & 1120.2 & 1069.0 & 0.0 & 0.0 & 0.0 \\
-      High-Level & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
-      Low-Level (New Hash Structure) & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
-      High-Level (New Hash Structure) & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 & 0.0 \\
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{lrrrrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{MEDS-21595}} & \multicolumn{3}{c}{\textbf{MEDS-55520}} & \multicolumn{3}{c}{\textbf{MEDS-122000}} \\
+    & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+    \midrule
+    Reference & 8.0 & 890.7 & 889.8 & 22.7 & 3623.8 & 3628.2 & 71.0 & 13748.9 & 13731.4 \\
+    Reference (New Hash Structure) & 8.0 & 892.0 & 889.5 & 22.6 & 3622.2 & 3633.0 & 71.0 & 13749.6 & 13723.3 \\
+    Low-Level & 3.1 & 271.3 & 253.4 & 7.9 & 1031.9 & 981.7 & 19.9 & 3349.3 & 3253.1 \\
+    Low-Level (New Hash Structure) & 3.0 & 258.5 & 240.5 & 7.9 & 982.1 & 932.1 & 20.3 & 3218.4 & 3105.1 \\
+    High-Level & 8.0 & 327.5 & 308.4 & 22.6 & 1454.8 & 1397.3 & 71.1 & 5081.7 & 4950.4 \\
+    High-Level (New Hash Structure) & 8.0 & 315.7 & 295.3 & 22.6 & 1407.1 & 1355.3 & 71.1 & 4945.9 & 4815.3 \\
 
-      \bottomrule
-    \end{tabular}%
+    \bottomrule
+  \end{tabular}
+  %
   }
   \caption{Benchmarking results for all variants of MEDS. The values represent the number of megacycles required to execute that algorithm.}
   \label{tab:overall_benchmark_results}

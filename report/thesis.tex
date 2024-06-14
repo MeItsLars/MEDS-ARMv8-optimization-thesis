@@ -6,9 +6,11 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
+\usepackage[english]{babel}
 \usepackage{booktabs}
 \usepackage{dsfont}
 \usepackage{enumitem}
+\usepackage{etoolbox}
 \usepackage[a4paper]{geometry}
 \usepackage{graphics}
 \usepackage{graphicx}
@@ -23,6 +25,8 @@
 \usepackage{url}
 \usepackage{xcolor}
 \usepackage{xurl}
+
+\newtheorem{theorem}{Theorem}
 
 % Define nice pie chart colors
 \definecolor{pie1}{HTML}{03045e}
@@ -46,6 +50,7 @@
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
+\AtBeginEnvironment{definition}{\vspace{1em}}
 
 \lstdefinestyle{CStyle}{
   language=C,
@@ -132,17 +137,17 @@
         \textit{Author:}\\
         Lars Jeurissen\\
         s1022856\\
-        \texttt{lars.jeurissen@ru.nl}
+        \texttt{\href{mailto:lars.jeurissen@ru.nl}{lars.jeurissen@ru.nl}}
       \end{flushleft}
     \end{minipage}
     \begin{minipage}[t]{0.45\textwidth}
       \begin{flushright} \large
         \textit{First supervisor/assessor:}\\
         prof. dr. Peter Schwabe\\
-        \texttt{p.schwabe@cs.ru.nl}\\[1.3cm]
+        \texttt{\href{mailto:p.schwabe@cs.ru.nl}{p.schwabe@cs.ru.nl}}\\[1.3cm]
         \textit{Second supervisor:}\\
         dr. Simona Samardjiska\\
-        \texttt{simonas@cs.ru.nl}
+        \texttt{\href{mailto:simonas@cs.ru.nl}{simonas@cs.ru.nl}}
       \end{flushright}
     \end{minipage}
     \vfill
@@ -196,30 +201,36 @@ A digital signature scheme consists of three algorithms:
   \item \textbf{Signature generation}: Given a message and the private (and sometimes public) key, this algorithm generates a signature for the message.
   \item \textbf{Signature verification}: Given a message, a signature, and the public key, this algorithm verifies the signature.
 \end{itemize}
+The formal definition of a digital signature scheme is given in Definition \ref{def:signaturescheme}.
 
-Formally, a digital signature scheme is defined as a tuple of algorithms $(\text{G}, \text{S}, \text{V})$ \cite{goldwasser2008lecture}, where:
-\begin{itemize}
-  \item $\text{G}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
-  \item $\text{S}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
-  \item $\text{V}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
-\end{itemize}
-Such that, given $(pk, sk) \leftarrow \text{G}(1^n)$:
-\[
-  \text{V}(pk, m, \text{S}(sk, m)) = 1
-\]
-for all $m$.
+\begin{definition}[Signature Scheme, following \cite{goldwasser2008lecture}]~\\
+  \label{def:signaturescheme}
+  A digital signature scheme is a tuple of algorithms $(\text{G}, \text{S}, \text{V})$, where:
+  \begin{itemize}
+    \item $\text{G}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
+    \item $\text{S}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
+    \item $\text{V}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
+  \end{itemize}
+  Such that, given $(pk, sk) \leftarrow \text{G}(1^n)$:
+  \[
+    \text{V}(pk, m, \text{S}(sk, m)) = 1
+  \]
+  for all $m$ (with a negligible probability of error).
+\end{definition}
 
 \subsection{How MEDS Works}
 \label{sec:medsworks}
 Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence, which is closely related to the notion of Code Equivalence that is used in LESS \cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition.
 
 \subsubsection{The Matrix Code Equivalence (MCE) Problem}
-MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) problem. The computational form of this problem is defined as follows \cite{chou2023meds}:
-\begin{center}
-  \textbf{MCE Problem}\\
+MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) problem. The computational form of this problem is shown in Definition \ref{def:mceproblem}.
+
+\begin{definition}[Matrix Code Equivalence Problem, following \cite{chou2023meds}]~\\
+  \label{def:mceproblem}
   Given two rank metric codes $\mathcal{C}, \mathcal{D}$ of size $[m \times n, k]$,\\
   find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$.
-\end{center}
+\end{definition}
+
 where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
 
 \subsubsection{Sigma Protocol}
@@ -498,6 +509,7 @@ In this Chapter, we will start by discussing how we will implement modular reduc
 
 \section{Modular Reduction}
 \label{sec:modularreduction}
+\todo[inline]{Question to Peter and Simona: Should I list the background information on modular reduction in the preliminaries instead of here? Doing that will split the information, but it might be more logical.}
 Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we will use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we can not rely on this operator, as it is not defined for NEON registers and there is no direct alternative in assembly.
 
 Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. There are various algorithms that can be used to perform modular reduction. Especially for large moduli, there are a lot of possible algorithms and optimizations to choose from\todo{Cite or remove}. However, as our modulus is relatively small and fits in just 12 bits, we do not have to consider these more complex algorithms. Instead, we have considered the following well-known algorithms.
@@ -521,7 +533,7 @@ Barrett reduction works by approximating the modular reduction. Given an unsigne
 
 From this, the Barrett reduction formula for unsigned integers can be derived (Definition \ref{def:barrettreduction}).
 
-\begin{definition}[Barrett Reduction for unsigned integers]
+\begin{definition}[Barrett Reduction for unsigned integers]~\\
   \label{def:barrettreduction}
   Let $a$ be an unsigned integer and $n$ be a modulus.
   Let $R$ be a constant such that $R = 2^k > n$ for some $k$.
@@ -947,6 +959,7 @@ We have benchmarked these implementations on the Cortex-A72 and found that the \
 To prevent timing and cache-based side-channel attacks\todo{reference section}, it is important that the MEDS implementation is constant-time. However, this is only the case for the key generation and signing phases of MEDS. The verification phase is not required to be constant-time, as it operates only on public data. This means that we can use non-constant time code for the verification phase. In this section, we will list the functions that can be optimized using non-constant time implementations. The implementation of each optimization is slightly different for the low-level and high-level approach, but the idea is the same.
 
 \subsection{Finite Field Inversion}
+\todo[inline]{Mention the difficulty of speeding up the inversion of field elements in the systemizer algorithm (in some section).}
 MEDS requires the inversion of field elements over the finite field $\mathbb{F}_{4093}$. The constant-time algorithm used in the reference implementation utilizes an optimal addition chain which takes a few hundred cycles to execute. However, as the number of possible field elements is limited to 4093, we can precompute the inverse of each field element and store it in a lookup table. This allows us to invert a field element simply by executing an array lookup, which takes only a few cycles to execute.
 
 \subsection{Matrix Systemization}
