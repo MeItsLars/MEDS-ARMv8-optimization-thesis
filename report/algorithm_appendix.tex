@@ -26,17 +26,17 @@ In the algorithms in this appendix, we use the following functions (in order of 
   \item SF($\textbf{G}$): Converts matrix $\textbf{G}$ to systematic form.
   \item Compress(G)($\textbf{A}$): Compresses matrix $\textbf{A}$ into a byte string.
   \item Decompress(G)($x$): Decompresses byte string $x$ into a matrix.
-  \item SeedTree$_t(\rho, \alpha)$: \todo{Add description}
+  \item SeedTree$_t(\rho, \alpha)$: Constructs a seed tree of height $\log_2(t)$ from root seed $\rho$ and salt $\alpha$ and return the first $t$ leaf nodes.
   \item ToBytes($x$, $y$): Converts $x$ to a byte string of length $y$.
   \item ExpandRndMat($\sigma$): Generates a random matrix from seed $\sigma$.
   \item H($x$): Hashes byte string $x$.
   \item ParseHash$_{s,t,w}(d)$: Parses hash $d$ into $t$ challenges that are smaller than $s$ each, where $w$ challenges are 0.
-  \item SeedTreeToPath$_t(h_0, \ldots, h_{t-1}, \rho, \alpha)$: \todo{Add description}
+  \item SeedTreeToPath$_t(h_0, \ldots, h_{t-1}, \rho, \alpha)$: Reconstructs a seed tree with the same structure as SeedTree$_t(\rho, \alpha)$. Based on the values of $h_0, \ldots, h_{t-1}$, returns a seed-tree path with which the leaf node seeds can be reconstructed.
   \item ParseSig($m_s$): Parses the signed message $m_s$ into its components.
-  \item PathToSeedTree$_t(h_0, \ldots, h_{t-1}, p, \alpha)$: \todo{Add description}
+  \item PathToSeedTree$_t(h_0, \ldots, h_{t-1}, p, \alpha)$: Reconstructs a seed tree with the same structure as SeedTree$_t(\rho, \alpha)$. Based on the values of $h_0, \ldots, h_{t-1}$ and the path $p$, returns the seeds of the leaf nodes.
 \end{itemize}
 
-\section{Key Algorithms}
+\section{Main Algorithms}
 \begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
@@ -294,6 +294,21 @@ The MEDS key generation, signing, and verification algorithms require some addit
 \end{algorithm}
 
 \begin{algorithm}
+  \caption{MEDS `pi' function $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$}
+  \label{alg:medspifunction}
+  \begin{algorithmic}
+    \Function{pi}{$\textbf{A} \in \mathbb{F}_{4093}^{m \times m}, \textbf{B} \in \mathbb{F}_{4093}^{n \times n}, \textbf{G} \in \mathbb{F}_{4093}^{k \times mn}$}
+      \State $G' \gets \text{matrix (array) of size } k \times mn$
+      \For{$i \gets 0$ to $k$}
+        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
+        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
+      \EndFor
+      \State \Return $G'$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
   \caption{MEDS Matrix Systemizer}
   \label{alg:systemizer}
   \begin{algorithmic}
@@ -357,28 +372,13 @@ The MEDS key generation, signing, and verification algorithms require some addit
 \end{algorithm}
 
 \begin{algorithm}
-  \caption{MEDS `pi' function $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$}
-  \label{alg:medspifunction}
-  \begin{algorithmic}
-    \Function{pi}{$\textbf{A}^{m \times m}, \textbf{B}^{n \times n}, \textbf{G}^{k \times mn}$}
-      \State $G' \gets \text{matrix (array) of size } k \times mn$
-      \For{$i \gets 0$ to $k$}
-        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{A}, \textbf{G}[i \cdot mn:(i+1) \cdot mn])$
-        \State $G'[i \cdot mn, (i+1) \cdot mn] \gets \text{matrix\_mul}(\textbf{G}[i \cdot mn:(i+1) \cdot mn], \textbf{B})$
-      \EndFor
-      \State \Return $G'$
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
   \caption{MEDS `SF' function}
   \label{alg:medssffunction}
   \begin{algorithmic}
-    \Function{SF}{$\textbf{G}^{k \times mn}$}
-      \State $M \gets \text{matrix (array) of size } k \times k$
+    \Function{SF}{$\textbf{G} \in \mathbb{F}_{4093}^{k \times mn}$}
+      \State $M \gets \text{matrix of size } k \times k$
       \For{$r \gets 0$ to $k$}
-        \State $M[r \cdot k:(r+1) \cdot k] \gets \textbf{G}[r \cdot mn:r \cdot mn + k]$
+        \State $M[r \cdot k, (r+1) \cdot k] \gets \textbf{G}[r \cdot mn, r \cdot mn + k]$
       \EndFor
       \State $M^{-1} \gets \text{mat\_inv}(M)$
       \If{$M^{-1} = \bot$}

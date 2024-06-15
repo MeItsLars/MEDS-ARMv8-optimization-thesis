@@ -183,10 +183,26 @@ We investigate the following research questions in this thesis (see also Chapter
   \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-In Chapter \ref{ch:background}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
+In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
 
-\chapter{Background}
-\label{ch:background}
+\chapter{Preliminaries}
+\label{ch:preliminaries}
+
+\section{Notations}
+\label{sec:notations}
+In the MEDS scheme and in this thesis, we use the following notations and definitions:
+\begin{itemize}
+  \item $\mathbb{F}_q$: The finite field of size $q$.
+  \item $\mathbb{F}_q^{m \times n}$: The set of matrices of size $m \times n$ ($m$ rows and $n$ columns) over $\mathbb{F}_q$, meaning that each element of the matrix is an element of $\mathbb{F}_q$.
+  \item $\textbf{A} \in \mathbb{F}_q^{m \times n}$: A matrix $\textbf{A}$ of size $m \times n$ over $\mathbb{F}_q$.
+  \item $\textbf{A}[i][j]$: The element in the $i$-th row and $j$-th column of matrix $\textbf{A}$.
+  \item $\textbf{A}^T$: The transpose of matrix $\textbf{A}$.
+  \item $\textbf{A}^{-1}$: The inverse of matrix $\textbf{A}$.
+  \item $\textbf{A} \times \textbf{B}$ or simply $\textbf{AB}$: The matrix product of $\textbf{A}$ and $\textbf{B}$.
+  \item $\textbf{A} + \textbf{B}$: The matrix sum of $\textbf{A}$ and $\textbf{B}$.
+  \item $\textbf{A} \otimes \textbf{B}$: The Kronecker product of $\textbf{A}$ and $\textbf{B}$.
+  \item $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$: Simplified notation for the operation $\textbf{G}(\textbf{A}^T \otimes \textbf{B})$.
+\end{itemize}
 
 \section{Matrix Equivalence Digital Signature (MEDS)}
 \label{sec:meds}
@@ -229,25 +245,30 @@ MEDS bases its security on the hardness of the Matrix Code Equivalence (MCE) pro
 \begin{definition}[Matrix Code Equivalence Problem, following \cite{chou2023meds}]~\\
   \label{def:mceproblem}
   Given two rank metric codes $\mathcal{C}, \mathcal{D}$ of size $[m \times n, k]$,\\
-  find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$.
+  find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$.\\
+  An isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. 
 \end{definition}
 
-where an isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices. For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
+For more information, we refer the reader to \cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
 
 \subsubsection{Sigma Protocol}
 \label{sec:sigmaprotocol}
-The MCE problem is used in MEDS to construct a 3-pass Sigma protocol. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in Section 4.2 of \cite{chou2024reducing}.
+The MCE problem is used in MEDS to construct a 3-pass Sigma protocol \cite{damgaard2002sigma}. A Sigma protocol is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in \cite[Section 4.2]{chou2024reducing}.
 
 \subsubsection{Fiat-Shamir Transform}
 \label{sec:fiatshamir}
-To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. This transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
+To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform \cite{fiat1986prove} is used. The initial Sigma protocol is interactive, meaning that the prover and verifier exchange messages, which is not suitable for a digital signature. The Fiat-Shamir transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier, making it non-interactive. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
 
-In the Fiat-Shamir transform, various techniques and optimizations can be used to increase the security or lower the size of the public key and the signature. The following techniques are considered in the MEDS scheme:
+When working with the Fiat-Shamir transform, various techniques and optimizations can be used to increase the security or lower the size of the public key and the signature. The following techniques are considered in the MEDS scheme:
 \begin{itemize}
-  \item \textbf{Multiple Challenges}: An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme can use $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
-  \item \textbf{Multiple Public Keys}: As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme can use multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, where $s$ is the number of public keys.
-  \item \textbf{Fixed-Weight Challenge Strings}: If a challenge is 0, the response consists of matrices that are generated uniformly at random. In this case, it is sufficient to set the response to the seed that was used to generate the matrices, greatly reducing the size of the signature. By fixing a certain number $w$ of challenges to 0, the average size of a response can be reduced. This technique has a slightly negative impact on the security of the scheme, but this can be compensated by increasing the number of challenges.
-  \item \textbf{Seed Tree}: If a scheme requires sending multiple seeds for the generation of matrices (or other objects), a seed tree can be used to reduce the size of the public key and the signature. This is a structure that allows the prover to transmit a smaller amount of bits than the size of the seeds, at the cost of an increased computational complexity.
+  \item \textbf{Multiple Challenges}:\\
+  An attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme can use $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
+  \item \textbf{Multiple Public Keys}:\\
+  As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme can use multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s$, reducing the probability of impersonation to $\frac{1}{s}$ ($s$ is the number of public keys used in the scheme).
+  \item \textbf{Fixed-Weight Challenge Strings}:\\
+  If a challenge is 0, the response consists of matrices that are generated uniformly at random. In this case, it is sufficient to set the response to the seed that was used to generate the matrices, greatly reducing the size of the signature. By fixing a certain number $w$ of challenges to 0, the average size of a response can be reduced. This technique has a slightly negative impact on the security of the scheme, but this can be compensated by increasing the number of challenges.
+  \item \textbf{Seed Tree}:\\
+  If a scheme requires sending multiple seeds for the generation of matrices (or other objects), a seed tree can be used to reduce the size of the public key and the signature. This is a structure that allows the prover to transmit a smaller amount of bits than the size of the seeds, at the cost of an increased computational complexity.
 \end{itemize}
 
 By selecting $t$, $s$ and $w$ carefully and combining them with other parameters of the scheme, the security of the scheme can be increased to the desired level. Multiple combinations of parameters are used in MEDS to achieve various security levels \cite{chou2023meds}. The selection of these parameters has a big influence on the size of the public key and the signature, as well as the computational performance of the scheme.
@@ -303,23 +324,6 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 \subsection{MEDS Algorithms}
 \label{sec:medsalgorithms}
 In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
-
-\subsubsection{Notations}
-\label{sec:notations}
-\todo[inline]{This section should go to a more general place in the thesis, but I don't know where yet.}
-In the MEDS scheme and in this thesis, we use the following notations and definitions:
-\begin{itemize}
-  \item $\mathbb{F}_q$: The finite field of size $q$.
-  \item $\mathbb{F}_q^{m \times n}$: The set of matrices of size $m \times n$ ($m$ rows and $n$ columns) over $\mathbb{F}_q$, meaning that each element of the matrix is an element of $\mathbb{F}_q$.
-  \item $\textbf{A} \in \mathbb{F}_q^{m \times n}$: A matrix $\textbf{A}$ of size $m \times n$ over $\mathbb{F}_q$.
-  \item $\textbf{A}[i][j]$: The element in the $i$-th row and $j$-th column of matrix $\textbf{A}$.
-  \item $\textbf{A}^T$: The transpose of matrix $\textbf{A}$.
-  \item $\textbf{A}^{-1}$: The inverse of matrix $\textbf{A}$.
-  \item $\textbf{A} \times \textbf{B}$ or simply $\textbf{AB}$: The matrix product of $\textbf{A}$ and $\textbf{B}$.
-  \item $\textbf{A} + \textbf{B}$: The matrix sum of $\textbf{A}$ and $\textbf{B}$.
-  \item $\textbf{A} \otimes \textbf{B}$: The Kronecker product of $\textbf{A}$ and $\textbf{B}$.
-  \item $\pi_{\textbf{A}, \textbf{B}}(\textbf{G})$: Simplified notation for the operation $\textbf{G}(\textbf{A}^T \otimes \textbf{B})$.
-\end{itemize}
 
 \subsubsection{Key Generation}
 % This section will contain an algorithm that represents key generation. It is not the completely detailed variant (which is shown in the appendix), but a more high-level overview of the algorithm.
@@ -408,12 +412,14 @@ A simplified overview version of the MEDS signature verification algorithm is sh
 In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 architecture. To this end, we will use a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU. We will be testing and comparing the performance of the MEDS implementation on this device.
 
 \subsection{ARMv8 Architecture}
-ARMv8 is the architecture that is used in the ARM Cortex-A72 and a lot of other processors. The default instroctuion set for ARMv8 is AArch64, a 64-bit instruction set that has more registers and higher performance than the 32-bit AArch32 instruction set.
+ARMv8 is the architecture that is used in the ARM Cortex-A72 and a lot of other processors. The default instruction set for ARMv8 is AArch64, a 64-bit instruction set that has more registers and higher performance than the 32-bit AArch32 instruction set.
 
 \subsection{Vectorization and SIMD}
 Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on multiple numbers in a time that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to parallelization.
 
 In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
+
+\todo[inline]{Maybe extend this section to give a more detailed explanation of NEON, such as provide lane distribution options and some operation examples, together with graphics.}
 
 \subsection{Assembly Instructions and Latency}
 \todo[inline]{For NEON; add pipeline information and latency for used assembly instructions. Include a reference to the document that provides these values.}
@@ -1106,33 +1112,43 @@ The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmar
   \label{fig:overal_performance_bar_chart_MEDS-122000}
 \end{figure}
 
-\todo[inline]{Question to Peter and Simona: Is it a good idea to include an additional section in which I show profiling results for the optimized implementations? Here, I could show the distribution of cycles over the different functions (matrix multiplication, systemization, etc.) for the optimized implementations.}
+\todo[inline]{Question to Peter and Simona: Is it a good idea to include an additional section in which I show profiling results for the optimized implementations? Here, I could show the distribution of cycles over the different functions (matrix multiplication, systemization, etc.) for the optimized implementations (possibly using piecharts).}
 
 \todo[inline]{Question to Peter and Simona: Should I include a section in which I compare the performance of MEDS to the performance of other (similar) digital signature schemes?}
 
 \chapter{Future work}
 \label{ch:futurework}
-\todo[inline]{Create a proper `Future Work' section with explanations for each future work option.}
-- Optimize shake256? See \url{https://eprint.iacr.org/2022/1243} and \url{https://github.com/cothan/NEON-SHA3\_2x}
-  * Requires a change to MEDS, but this is not a problem
-  * https://kannwischer.eu/papers/2022\_armv8keccak.pdf
-  * Cite keccak extended code package as well (Armv7)
-  * https://gitlab.com/arm-research/security/pqax
-  * Better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en
-- Perform high-level optimizations for keygen
-- Analyze minimum time complexity of low-level systemizer
-- ARM Calling Convention PDF: https://github.com/ARM-software/abi-aa/releases (cite?)
-- Adust the 2 python generation files with an abstract file for clearity
-- Add explanation why high level slower -> data does not fit in cache. Check with toy parameter set.
-- Check possibilities for 8x8 matrix multiplication
-- Check possibilities for 8-wide high-level parllel
-- Optimize solve method using a pure-assembly approach
-- Check possibilities for ignoring bitstream filling and hashing the resulting data directly
-- Memory \& power usage Analysis
+\todo[inline]{The future work section contains all ideas for future work, but they have not yet been nicely formatted and explained.}
+Future Work:
+\begin{itemize}
+  \item Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can possibly utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en}
+  \item Perform high-level optimization for key generation (even though this is hard to do with our current parameter sets, as $s$ is always 2, limiting the parallelization possibilities).
+  \item Optimize the `solve' method (for the low-level approach) using a pure-assembly approach.
+  \item Analyse and optimize memory and power usage of the (optimized) MEDS implementation.
+  \item Implement the optimized MEDS implementation on other CPU architectures that support SIMD instructions, such as AVX512.
+\end{itemize}
+
+Still plan to do myself:
+\begin{itemize}
+  \item Analyze the minimum time complexity of the low-level systemizer algorithm?
+  \item Adust the 2 python generation files with an abstract file for clearity
+  \item Cite ARM Calling Convention PDF \url{https://github.com/ARM-software/abi-aa/releases}
+  \item Check possibilities for low-level matrix multiplication while working on 8x8 submatrices instead of 4x4 submatrices
+  \item Check possibilities for high-level parallelization where 8 commitments are computed at the same time
+  \item Check possibilities for ignoring bitstream setup before hashing into a challenge hash. Instead, we could just pass the entire commitment matrix into the hash function. This will require additional calls to the hash function, but it will skip the bitstream filling process.
+  \item Assuming I get the Apple device in time, I will also benchmark the optimized MEDS implementation on that CPU.
+\end{itemize}
 
 \chapter{Conclusion}
 \label{ch:conclusion}
-From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with key generation 
+From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with MEDS-21595 being sped up by a factor of 2.6, 3.3, and 3.5; MEDS-55520 by a factor of 2.9, 3.5, and 3.7; and MEDS-122000 by a factor of 3.6, 4.1, and 4.2, for key generation, signing, and verification, respectively. The high-level optimization approach (as described in Section \ref{sec:highleveloptimization}) has provided a smaller speedup due to the limitations in the cache size of the ARM Cortex-A72 CPU. This approach might provide a larger speedup on CPUs with larger cache sizes.
+
+We present an alternative hash structure in Section \ref{sec:hashfunctionoptimization} that improves the performance of signing and verification by a small amount, at a negligible cost to the non-parallelized reference implementation. As this alternative hash structure results in different challenges and signatures, we leave it as a suggested change to the MEDS scheme.
+
+We have shown that the MEDS implementation is very suitable for optimization using SIMD instructions. The achieved speedup on ARMv8 is significant, but we expect that future research can achieve even larger speedups on other architectures that support SIMD instructions, such as AVX512 \cite{intel-avx512}, on which 4 times as many field elements can be processed in parallel compared to ARMv8.
+
+\todo[inline]{Add comparison information to other digital signature schemes?}
+
 \bibliographystyle{plain}
 \bibliography{bibliofile}
 
