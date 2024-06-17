@@ -18,22 +18,38 @@ R_T1h = "w10"
 R_T2h = "w11"
 
 # Preserve v8-v15
-RN_A0 = "v0.4h"
-RN_A1 = "v1.4h"
-RN_A2 = "v2.4h"
-RN_A3 = "v3.4h"
-RN_B0 = "v4.4h"
-RN_B1 = "v5.4h"
-RN_B2 = "v6.4h"
-RN_B3 = "v7.4h"
+RN_A0 = "v0.8h"
+RN_A1 = "v1.8h"
+RN_A2 = "v2.8h"
+RN_A3 = "v3.8h"
+RN_A4 = "v4.8h"
+RN_A5 = "v5.8h"
+RN_A6 = "v6.8h"
+RN_A7 = "v7.8h"
+RN_B0 = "v8.8h"
+RN_B1 = "v9.8h"
+RN_B2 = "v10.8h"
+RN_B3 = "v11.8h"
+RN_B4 = "v12.8h"
+RN_B5 = "v13.8h"
+RN_B6 = "v14.8h"
+RN_B7 = "v15.8h"
 RN_C0 = "v16.4s"
 RN_C1 = "v17.4s"
 RN_C2 = "v18.4s"
 RN_C3 = "v19.4s"
+RN_C4 = "v20.4s"
+RN_C5 = "v21.4s"
+RN_C6 = "v22.4s"
+RN_C7 = "v23.4s"
 RN_C0h = "v16.4h"
 RN_C1h = "v17.4h"
 RN_C2h = "v18.4h"
 RN_C3h = "v19.4h"
+RN_C4h = "v20.4h"
+RN_C5h = "v21.4h"
+RN_C6h = "v22.4h"
+RN_C7h = "v23.4h"
 RN_C0T = "v24.4s"
 RN_C1T = "v25.4s"
 RN_C2T = "v26.4s"
@@ -124,7 +140,7 @@ def add_store_row_with_n_cols(asm, rn, rni, rni2, rninc, camount):
     if rninc:
         add_nop(asm, 1, f"add {rni}, {rni}, {rninc}")
 
-def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
+def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rn5, rn6, rn7, rn8, rni, rni2, rninc, ramount, camount):
     if ramount > 0:
         load_row_with_n_cols(asm, rn1, rni, rni2, None if ramount == 1 else rninc, ramount > 1, camount)
     if ramount > 1:
@@ -132,7 +148,15 @@ def add_load_r_rows_c_cols(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, c
     if ramount > 2:
         load_row_with_n_cols(asm, rn3, rni2, rni2, None if ramount == 3 else rninc, ramount > 3, camount)
     if ramount > 3:
-        load_row_with_n_cols(asm, rn4, rni2, rni2, None, False, camount)
+        load_row_with_n_cols(asm, rn4, rni2, rni2, None if ramount == 4 else rninc, ramount > 4, camount)
+    if ramount > 4:
+        load_row_with_n_cols(asm, rn5, rni2, rni2, None if ramount == 5 else rninc, ramount > 5, camount)
+    if ramount > 5:
+        load_row_with_n_cols(asm, rn6, rni2, rni2, None if ramount == 6 else rninc, ramount > 6, camount)
+    if ramount > 6:
+        load_row_with_n_cols(asm, rn7, rni2, rni2, None if ramount == 7 else rninc, ramount > 7, camount)
+    if ramount > 7:
+        load_row_with_n_cols(asm, rn8, rni2, rni2, None, False, camount)
 
 def add_mult(asm, initial, rn_C, rn_A, kamount):
     ins = "umull" if initial else "umlal"
@@ -146,24 +170,34 @@ def add_mult(asm, initial, rn_C, rn_A, kamount):
 
 def add_load_and_mult(asm, context, initial, pad_r, pad_c, pad_k):
     # Load A
-    add_load_r_rows_c_cols(asm, RN_A0, RN_A1, RN_A2, RN_A3, R_Ai, R_T1, R_2o,
-                           context.r_pad_dist if pad_r else 4,
-                           context.k_pad_dist if pad_k else 4)
+    add_load_r_rows_c_cols(asm, RN_A0, RN_A1, RN_A2, RN_A3, RN_A4, RN_A5, RN_A6, RN_A7,
+                           R_Ai, R_T1, R_2o,
+                           context.r_pad_dist if pad_r else 8,
+                           context.k_pad_dist if pad_k else 8)
     # Load B
-    add_load_r_rows_c_cols(asm, RN_B0, RN_B1, RN_B2, RN_B3, R_Bi, R_T1, R_2n,
-                           context.k_pad_dist if pad_k else 4, 
-                           context.c_pad_dist if pad_c else 4)
+    add_load_r_rows_c_cols(asm, RN_B0, RN_B1, RN_B2, RN_B3, RN_B4, RN_B5, RN_B6, RN_B7,
+                           R_Bi, R_T1, R_2n,
+                           context.k_pad_dist if pad_k else 8, 
+                           context.c_pad_dist if pad_c else 8)
     # Add multiplications
     if not pad_r or context.r_pad_dist > 0:
-        add_mult(asm, initial, RN_C0, RN_A0, context.k_pad_dist if pad_k else 4)
+        add_mult(asm, initial, RN_C0, RN_A0, context.k_pad_dist if pad_k else 8)
     if not pad_r or context.r_pad_dist > 1:
-        add_mult(asm, initial, RN_C1, RN_A1, context.k_pad_dist if pad_k else 4)
+        add_mult(asm, initial, RN_C1, RN_A1, context.k_pad_dist if pad_k else 8)
     if not pad_r or context.r_pad_dist > 2:
-        add_mult(asm, initial, RN_C2, RN_A2, context.k_pad_dist if pad_k else 4)
+        add_mult(asm, initial, RN_C2, RN_A2, context.k_pad_dist if pad_k else 8)
     if not pad_r or context.r_pad_dist > 3:
-        add_mult(asm, initial, RN_C3, RN_A3, context.k_pad_dist if pad_k else 4)
+        add_mult(asm, initial, RN_C3, RN_A3, context.k_pad_dist if pad_k else 8)
+    if not pad_r or context.r_pad_dist > 4:
+        add_mult(asm, initial, RN_C4, RN_A4, context.k_pad_dist if pad_k else 8)
+    if not pad_r or context.r_pad_dist > 5:
+        add_mult(asm, initial, RN_C5, RN_A5, context.k_pad_dist if pad_k else 8)
+    if not pad_r or context.r_pad_dist > 6:
+        add_mult(asm, initial, RN_C6, RN_A6, context.k_pad_dist if pad_k else 8)
+    if not pad_r or context.r_pad_dist > 7:
+        add_mult(asm, initial, RN_C7, RN_A7, context.k_pad_dist if pad_k else 8)
 
-def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
+def add_store(asm, rn1, rn2, rn3, rn4, rn5, rn6, rn7, rn8, rni, rni2, rninc, ramount, camount):
     if ramount > 0:
         add_store_row_with_n_cols(asm, rn1, rni, rni2, None if ramount == 1 else rninc, camount)
     if ramount > 1:
@@ -171,7 +205,16 @@ def add_store(asm, rn1, rn2, rn3, rn4, rni, rni2, rninc, ramount, camount):
     if ramount > 2:
         add_store_row_with_n_cols(asm, rn3, rni2, rni2, None if ramount == 3 else rninc, camount)
     if ramount > 3:
-        add_store_row_with_n_cols(asm, rn4, rni2, rni2, None, camount)
+        add_store_row_with_n_cols(asm, rn4, rni2, rni2, None if ramount == 4 else rninc, camount)
+    if ramount > 4:
+        add_store_row_with_n_cols(asm, rn5, rni2, rni2, None if ramount == 5 else rninc, camount)
+    if ramount > 5:
+        add_store_row_with_n_cols(asm, rn6, rni2, rni2, None if ramount == 6 else rninc, camount)
+    if ramount > 6:
+        add_store_row_with_n_cols(asm, rn7, rni2, rni2, None if ramount == 7 else rninc, camount)
+    if ramount > 7:
+        add_store_row_with_n_cols(asm, rn8, rni2, rni2, None, camount)
+        
 
 def add_reduce(asm, rn_src, rn_tmp, rn_dst, GFq_bits, final_shrink):
     # Apply two reductions
@@ -247,7 +290,7 @@ def add_k_loop(asm, context, pad_r, pad_c):
 
         # Check if we are done. Otherwise, jump back to the beginning of the loop
         add(asm, 0, f"{loop_id}_end:")
-        add(asm, 1, f"add {R_k}, {R_k}, #4")
+        add(asm, 1, f"add {R_k}, {R_k}, #8")
         add(asm, 1, f"cmp {R_k}, #{context.k_size}")
         add(asm, 1, f"blt {loop_id}_2")
     
@@ -273,9 +316,10 @@ def add_k_loop(asm, context, pad_r, pad_c):
     # Store C back into memory
     # From C + 2rC_c + 2c, compute Ci = C + 2c (C is incremented with 2rC_c in each iteration)
     add(asm, 1, f"add {R_T1}, {R_C}, {R_c}, lsl #1")
-    add_store(asm, RN_C0h, RN_C1h, RN_C2h, RN_C3h, R_T1, R_T1, R_2n, 
-              context.r_pad_dist if pad_r else 4,
-              context.c_pad_dist if pad_c else 4)
+    add_store(asm, RN_C0h, RN_C1h, RN_C2h, RN_C3h, RN_C4h, RN_C5h, RN_C6h, RN_C7h,
+              R_T1, R_T1, R_2n, 
+              context.r_pad_dist if pad_r else 8,
+              context.c_pad_dist if pad_c else 8)
 
 def add_c_loop(asm, context, pad_r):
     loop_id = f"c_loop{'_pr' if pad_r else ''}"
@@ -285,7 +329,7 @@ def add_c_loop(asm, context, pad_r):
         add(asm, 0, f"{loop_id}:")
         add_k_loop(asm, context, pad_r, False)
         add(asm, 0, f"{loop_id}_end:")
-        add(asm, 1, f"add {R_c}, {R_c}, #4")
+        add(asm, 1, f"add {R_c}, {R_c}, #8")
         add(asm, 1, f"cmp {R_c}, #{context.c_size}")
         add(asm, 1, f"blt {loop_id}")
     if context.c_pad_dist > 0:
@@ -302,7 +346,7 @@ def add_r_loop(asm, context):
         add(asm, 0, f"{loop_id}:")
         add_c_loop(asm, context, False)
         add(asm, 0, f"{loop_id}_end:")
-        add(asm, 1, f"add {R_r}, {R_r}, #4")
+        add(asm, 1, f"add {R_r}, {R_r}, #8")
         # We need Ci = C + 2rC_c; therefore add 2rC_c to C
         add(asm, 1, f"add {R_C}, {R_C}, {R_2n}, lsl #2")
         add(asm, 1, f"cmp {R_r}, #{context.r_size}")
@@ -369,8 +413,7 @@ def generate_matmul_file(name, r, c, k, MEDS_p, GFq_bits, fun_id):
 
 
 def generate_matmul_manually():
-    generate_matmul_file('level3', 4, 4, 4, 4093, 12, 'pmod_mat_mul_asm_4_4_4')
-    generate_matmul_file('level3', 8, 8, 8, 4093, 12, 'pmod_mat_mul_asm_8_8_8')
+    generate_matmul_file('level3', 24, 24, 24, 4093, 12, 'pmod_mat_mul_8_asm_24_24_24')
 
 def parse_params_h(path):
     with open(path, "r") as f:

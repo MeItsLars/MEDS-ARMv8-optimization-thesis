@@ -14,7 +14,7 @@ if (DEBUG)
     add_compile_definitions(DEBUG)
 else()
     message("Building with release flags")
-    set(CMAKE_C_FLAGS "-march=native -O3 -Wall -Wno-unused-function")
+    set(CMAKE_C_FLAGS "-march=native -O3 -Wall -Wno-unused-function -flax-vector-conversions")
 endif()
 
 set(PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -88,6 +88,8 @@ endif()
 
 set(ASM_MATMUL_DIR ${PROJECT_SOURCE_DIR}/asm/matmul/${PARAM})
 file(GLOB_RECURSE ASM_MATMUL_SOURCES ${ASM_MATMUL_DIR}/*.s)
+set(ASM_MATMUL8_DIR ${PROJECT_SOURCE_DIR}/asm/matmul8/${PARAM})
+file(GLOB_RECURSE ASM_MATMUL8_SOURCES ${ASM_MATMUL8_DIR}/*.s)
 
 message("Generating and adding matrix systemizer assembly")
 execute_process(
@@ -122,7 +124,7 @@ foreach(ASM_FILE ${ASM_KECCAK_SOURCES})
 endforeach()
 
 # Create 'asm_sources' library based on generated assembly files
-add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES} ${ASM_MATMUL_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
+add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES} ${ASM_MATMUL_SOURCES} ${ASM_MATMUL8_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
 
 ##########################################################
 # Build common source files

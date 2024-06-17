@@ -33,6 +33,7 @@ extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o
 
 extern void pmod_mat_mul_asm_1_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_8_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_5(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_5_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_67(uint16_t *C, uint16_t *A, uint16_t *B);
@@ -41,6 +42,7 @@ extern void pmod_mat_mul_asm_5_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_6_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_7_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_30_30_30(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_40_40_40(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_50_50_50(uint16_t *C, uint16_t *A, uint16_t *B);
@@ -904,6 +906,114 @@ void pmod_mat_mul_simd_2(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r
     C[i] = tmp[i] % MEDS_p;
 }
 
+#define EXECUTE_ONE_VMLAL(Cl, Ch, A, Ai, B0, B1, B2, B3, B4, B5, B6, B7) \
+  ({                                                                     \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B0), A[Ai + 0]);                   \
+    Ch = vmlal_high_n_u16(Ch, B0, A[Ai + 0]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B1), A[Ai + 1]);                   \
+    Ch = vmlal_high_n_u16(Ch, B1, A[Ai + 1]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B2), A[Ai + 2]);                   \
+    Ch = vmlal_high_n_u16(Ch, B2, A[Ai + 2]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B3), A[Ai + 3]);                   \
+    Ch = vmlal_high_n_u16(Ch, B3, A[Ai + 3]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B4), A[Ai + 4]);                   \
+    Ch = vmlal_high_n_u16(Ch, B4, A[Ai + 4]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B5), A[Ai + 5]);                   \
+    Ch = vmlal_high_n_u16(Ch, B5, A[Ai + 5]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B6), A[Ai + 6]);                   \
+    Ch = vmlal_high_n_u16(Ch, B6, A[Ai + 6]);                            \
+    Cl = vmlal_n_u16(Cl, vget_low_u16(B7), A[Ai + 7]);                   \
+    Ch = vmlal_high_n_u16(Ch, B7, A[Ai + 7]);                            \
+  })
+
+#define REDUCE_ZIP(Cl, Ch, Cout, Ctmp) \
+  ({                                   \
+    Cout = FREEZE_REDUCE_VEC_16x4(Cl); \
+    Ctmp = FREEZE_REDUCE_VEC_16x4(Ch); \
+    Cout = vuzp1q_u16(Cout, Ctmp);     \
+  })
+
+void pmod_mat_mul_simd_v8(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
+{
+  int Ai, Bi, Ci;
+  uint16x8_t B0, B1, B2, B3, B4, B5, B6, B7;
+  uint32x4_t C0l, C0h, C1l, C1h, C2l, C2h, C3l, C3h, C4l, C4h, C5l, C5h, C6l, C6h, C7l, C7h;
+  uint16x8_t C0, C1, C2, C3, C4, C5, C6, C7, Ct;
+
+  for (int r = 0; r < C_r; r += 8)
+    for (int c = 0; c < C_c; c += 8)
+    {
+      C0l = vmovq_n_u32(0);
+      C0h = vmovq_n_u32(0);
+      C1l = vmovq_n_u32(0);
+      C1h = vmovq_n_u32(0);
+      C2l = vmovq_n_u32(0);
+      C2h = vmovq_n_u32(0);
+      C3l = vmovq_n_u32(0);
+      C3h = vmovq_n_u32(0);
+      C4l = vmovq_n_u32(0);
+      C4h = vmovq_n_u32(0);
+      C5l = vmovq_n_u32(0);
+      C5h = vmovq_n_u32(0);
+      C6l = vmovq_n_u32(0);
+      C6h = vmovq_n_u32(0);
+      C7l = vmovq_n_u32(0);
+      C7h = vmovq_n_u32(0);
+
+      for (int k = 0; k < A_c; k += 8)
+      {
+        Ai = r * A_c + k; // Index A[r][k]
+        Bi = k * B_c + c; // Index B[k][c]
+
+        int A0 = Ai;           // A[r + 0][k]
+        int A1 = Ai + A_c;     // A[r + 1][k]
+        int A2 = Ai + 2 * A_c; // A[r + 2][k]
+        int A3 = Ai + 3 * A_c; // A[r + 3][k]
+        int A4 = Ai + 4 * A_c; // A[r + 4][k]
+        int A5 = Ai + 5 * A_c; // A[r + 5][k]
+        int A6 = Ai + 6 * A_c; // A[r + 6][k]
+        int A7 = Ai + 7 * A_c; // A[r + 7][k]
+
+        B0 = vld1q_u16(&B[Bi]);
+        B1 = vld1q_u16(&B[Bi + B_c]);
+        B2 = vld1q_u16(&B[Bi + 2 * B_c]);
+        B3 = vld1q_u16(&B[Bi + 3 * B_c]);
+        B4 = vld1q_u16(&B[Bi + 4 * B_c]);
+        B5 = vld1q_u16(&B[Bi + 5 * B_c]);
+        B6 = vld1q_u16(&B[Bi + 6 * B_c]);
+        B7 = vld1q_u16(&B[Bi + 7 * B_c]);
+
+        EXECUTE_ONE_VMLAL(C0l, C0h, A, A0, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C1l, C1h, A, A1, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C2l, C2h, A, A2, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C3l, C3h, A, A3, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C4l, C4h, A, A4, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C5l, C5h, A, A5, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C6l, C6h, A, A6, B0, B1, B2, B3, B4, B5, B6, B7);
+        EXECUTE_ONE_VMLAL(C7l, C7h, A, A7, B0, B1, B2, B3, B4, B5, B6, B7);
+      }
+
+      REDUCE_ZIP(C0l, C0h, C0, Ct);
+      REDUCE_ZIP(C1l, C1h, C1, Ct);
+      REDUCE_ZIP(C2l, C2h, C2, Ct);
+      REDUCE_ZIP(C3l, C3h, C3, Ct);
+      REDUCE_ZIP(C4l, C4h, C4, Ct);
+      REDUCE_ZIP(C5l, C5h, C5, Ct);
+      REDUCE_ZIP(C6l, C6h, C6, Ct);
+      REDUCE_ZIP(C7l, C7h, C7, Ct);
+
+      Ci = C_c * r + c; // Index C[r][c]
+      vst1q_u16(&C[Ci], C0);
+      vst1q_u16(&C[Ci + C_c], C1);
+      vst1q_u16(&C[Ci + 2 * C_c], C2);
+      vst1q_u16(&C[Ci + 3 * C_c], C3);
+      vst1q_u16(&C[Ci + 4 * C_c], C4);
+      vst1q_u16(&C[Ci + 5 * C_c], C5);
+      vst1q_u16(&C[Ci + 6 * C_c], C6);
+      vst1q_u16(&C[Ci + 7 * C_c], C7);
+    }
+}
+
 float min_cycle_bound(int m, int o, int n)
 {
   // float r_loops = m * 0.25;
@@ -923,7 +1033,7 @@ float min_cycle_bound(int m, int o, int n)
 
   // return 4 * result;
 
-  float result = (1/16.0) * m * n * (6 * o + 24);
+  float result = (1 / 16.0) * m * n * (6 * o + 24);
   return 4 * result;
 
   // float result = 0;
@@ -977,43 +1087,43 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
   for (int i = 0; i < o * n; i++)
     B[i] = rnd_GF(&shake);
 
-  long long systemizer_cycles[ROUNDS + 1];
-  long long intrinsic_systemizer_cycles[ROUNDS + 1];
-  long long asm_systemizer_cycles[ROUNDS + 1];
+  long long matmul_cycles[ROUNDS + 1];
+  long long intrinsic_matmul_cycles[ROUNDS + 1];
+  long long asm_matmul_cycles[ROUNDS + 1];
 
   for (int round = 0; round < ROUNDS; round++)
   {
-    systemizer_cycles[round] = get_cyclecounter();
+    matmul_cycles[round] = get_cyclecounter();
     pmod_mat_mul_1_prime(C1, m, n, A, m, o, B, o, n);
   }
-  systemizer_cycles[ROUNDS] = get_cyclecounter();
+  matmul_cycles[ROUNDS] = get_cyclecounter();
 
   for (int round = 0; round < ROUNDS; round++)
   {
-    intrinsic_systemizer_cycles[round] = get_cyclecounter();
+    intrinsic_matmul_cycles[round] = get_cyclecounter();
     pmod_mat_mul_simd_1_pad(C2, m, n, A, m, o, B, o, n);
   }
-  intrinsic_systemizer_cycles[ROUNDS] = get_cyclecounter();
+  intrinsic_matmul_cycles[ROUNDS] = get_cyclecounter();
 
   for (int round = 0; round < ROUNDS; round++)
   {
-    asm_systemizer_cycles[round] = get_cyclecounter();
+    asm_matmul_cycles[round] = get_cyclecounter();
     function(C3, A, B);
   }
-  asm_systemizer_cycles[ROUNDS] = get_cyclecounter();
+  asm_matmul_cycles[ROUNDS] = get_cyclecounter();
 
   // Calculate results
-  double systemizer_median_cc = median_2(systemizer_cycles, ROUNDS + 1, 0);
-  double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS + 1, 0);
-  double asm_systemizer_median_cc = median_2(asm_systemizer_cycles, ROUNDS + 1, 0);
+  double matmul_median_cc = median_2(matmul_cycles, ROUNDS + 1, 0);
+  double intrinsic_matmul_median_cc = median_2(intrinsic_matmul_cycles, ROUNDS + 1, 0);
+  double asm_matmul_median_cc = median_2(asm_matmul_cycles, ROUNDS + 1, 0);
 
   double min_cycles = (double)min_cycle_bound(m, o, n);
-  double systemizer_cycle_multiplier = systemizer_median_cc / (min_cycles / 4);
-  double intrinsic_cycle_multiplier = intrinsic_systemizer_median_cc / (min_cycles / 4);
-  double asm_cycle_multiplier = asm_systemizer_median_cc / (min_cycles / 4);
+  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 4);
+  double intrinsic_cycle_multiplier = intrinsic_matmul_median_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 4);
 
-  double intrinsic_improvement = (intrinsic_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
-  double asm_improvement = (asm_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+  double intrinsic_improvement = (intrinsic_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
+  double asm_improvement = (asm_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
 
   int intrinsic_inequalities = 0;
   int asm_inequalities = 0;
@@ -1044,11 +1154,118 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
 
   printf("Minimum cycle amount: %f\n", min_cycles);
   printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
-  printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
-  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
-  printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
+  printf("Matmul median: %f\t(x%f)\n", matmul_median_cc, matmul_cycle_multiplier);
+  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_matmul_median_cc, intrinsic_cycle_multiplier);
+  printf("ASM median: %f\t(x%f)\n", asm_matmul_median_cc, asm_cycle_multiplier);
 
   printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
+  printf("Improvement (ASM): %f%%\n", asm_improvement);
+  printf("\n");
+}
+
+void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_mat_t *, pmod_mat_t *, pmod_mat_t *), void (*function8)(pmod_mat_t *, pmod_mat_t *, pmod_mat_t *))
+{
+  uint8_t seed[MEDS_pub_seed_bytes];
+
+  for (int i = 0; i < MEDS_pub_seed_bytes; i++)
+  {
+    seed[i] = i;
+  }
+  keccak_state shake;
+  shake256_absorb_once(&shake, seed, MEDS_pub_seed_bytes);
+
+  __attribute__((aligned(16))) pmod_mat_t A[m * o];
+  __attribute__((aligned(16))) pmod_mat_t B[o * n];
+  __attribute__((aligned(16))) pmod_mat_t C1[m * n];
+  __attribute__((aligned(16))) pmod_mat_t C2[m * n];
+  __attribute__((aligned(16))) pmod_mat_t C3[m * n];
+
+  for (int i = 0; i < m * o; i++)
+    A[i] = rnd_GF(&shake);
+  for (int i = 0; i < o * n; i++)
+    B[i] = rnd_GF(&shake);
+
+  long long matmul_cycles[ROUNDS + 1];
+  long long asm_matmul8_cycles[ROUNDS + 1];
+  long long asm_matmul_cycles[ROUNDS + 1];
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    matmul_cycles[round] = get_cyclecounter();
+    pmod_mat_mul_1_prime(C1, m, n, A, m, o, B, o, n);
+  }
+  matmul_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    asm_matmul8_cycles[round] = get_cyclecounter();
+    // function8(C2, A, B);
+    // pmod_mat_mul_simd_1_pad(C2, m, n, A, m, o, B, o, n);
+    pmod_mat_mul_simd_v8(C2, m, n, A, m, o, B, o, n);
+  }
+  asm_matmul8_cycles[ROUNDS] = get_cyclecounter();
+
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    asm_matmul_cycles[round] = get_cyclecounter();
+    function(C3, A, B);
+  }
+  asm_matmul_cycles[ROUNDS] = get_cyclecounter();
+
+  // Calculate results
+  double matmul_median_cc = median_2(matmul_cycles, ROUNDS + 1, 0);
+  double asm_matmul8_median_cc = median_2(asm_matmul8_cycles, ROUNDS + 1, 0);
+  double asm_matmul_median_cc = median_2(asm_matmul_cycles, ROUNDS + 1, 0);
+
+  double min_cycles = (double)min_cycle_bound(m, o, n);
+  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 4);
+  double asm8_cycle_multiplier = asm_matmul8_median_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 4);
+
+  double asm8_improvement = (asm_matmul8_median_cc - matmul_median_cc) / matmul_median_cc * 100;
+  double asm_improvement = (asm_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
+
+  int asm8_inequalities = 0;
+  int asm_inequalities = 0;
+  for (int i = 0; i < m * n; i++)
+  {
+    if (C1[i] != C2[i])
+    {
+      asm8_inequalities++;
+    }
+    if (C1[i] != C3[i])
+    {
+      asm_inequalities++;
+    }
+  }
+
+  printf("C0\n");
+  pmod_mat_fprint(stdout, C1, m, n);
+  printf("C1\n");
+  pmod_mat_fprint(stdout, C2, m, n);
+  printf("C2\n");
+  pmod_mat_fprint(stdout, C3, m, n);
+
+  // Print results
+  printf("-----------------------------------\n");
+  printf("=== %s ===\n", name);
+  printf("-----------------------------------\n");
+  if (asm_inequalities == 0)
+    printf("> ASM EQUAL\n");
+  else
+    printf("> ASM INEQUALITIES: %d/%d\n", asm_inequalities, m * n);
+  if (asm8_inequalities == 0)
+    printf("> ASM-8 EQUAL\n");
+  else
+    printf("> ASM-8 INEQUALITIES: %d/%d\n", asm8_inequalities, m * n);
+
+  printf("Minimum cycle amount: %f\n", min_cycles);
+  printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
+  printf("Matmul median: %f\t(x%f)\n", matmul_median_cc, matmul_cycle_multiplier);
+  printf("ASM-8 median: %f\t(x%f)\n", asm_matmul8_median_cc, asm8_cycle_multiplier);
+  printf("ASM median: %f\t(x%f)\n", asm_matmul_median_cc, asm_cycle_multiplier);
+
+  printf("Improvement (ASM-8): %f%%\n", asm8_improvement);
   printf("Improvement (ASM): %f%%\n", asm_improvement);
   printf("\n");
 }
@@ -1185,11 +1402,13 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
-  test_performance("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k);
-  test_performance("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k);
-  test_performance("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k);
-  test_performance("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m);
-  test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n);
-  test_performance("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24);
+  // test_performance("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k);
+  // test_performance("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k);
+  // test_performance("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k);
+  // test_performance("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m);
+  // test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n);
+  // test_performance("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24);
+  // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
+  test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
   disable_cyclecounter();
 }
