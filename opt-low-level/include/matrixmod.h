@@ -48,11 +48,11 @@ void pmod_mat_fprint(FILE *stream, pmod_mat_t *M, int M_r, int M_c);
 void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c);
 
 // Assembly matrix multiplication functions
-extern void pmod_mat_mul_asm_2_k_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
-extern void pmod_mat_mul_asm_2_mn_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
-extern void pmod_mat_mul_asm_k_mn_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
-extern void pmod_mat_mul_asm_m_n_m(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
-extern void pmod_mat_mul_asm_m_n_n(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
+extern void pmod_mat_mul_8_asm_2_k_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
+extern void pmod_mat_mul_8_asm_2_mn_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
+extern void pmod_mat_mul_8_asm_k_mn_k(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
+extern void pmod_mat_mul_8_asm_m_n_m(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
+extern void pmod_mat_mul_8_asm_m_n_n(pmod_mat_t *C, pmod_mat_t *A, pmod_mat_t *B);
 
 // Assembly matrix systemization functions (and non-constant time variants for verification)
 extern int pmod_mat_syst_k_k_k_0_0(pmod_mat_t *M);

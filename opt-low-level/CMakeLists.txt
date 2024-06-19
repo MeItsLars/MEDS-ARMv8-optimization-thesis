@@ -76,14 +76,14 @@ message("Adding keccak assembly")
 set(ASM_KECCAK_DIR ${PROJECT_SOURCE_DIR}/keccak)
 file(GLOB_RECURSE ASM_KECCAK_SOURCES ${ASM_KECCAK_DIR}/*.s)
 
-message("Generating and adding matmul assembly")
+message("Generating and adding matmul8 assembly")
 execute_process(
-    COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/matmul/generate_matmul_asm.py ${PARAM_INCLUDE_DIR}/params.h"
+    COMMAND bash "-c" "python ${PROJECT_SOURCE_DIR}/asm/matmul8/generate_matmul8_asm.py ${PARAM_INCLUDE_DIR}/params.h"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE ASM_MATMUL_GEN_RESULT
+    RESULT_VARIABLE ASM_MATMUL8_GEN_RESULT
 )
-if (NOT ${ASM_MATMUL_GEN_RESULT} EQUAL 0)
-    message(FATAL_ERROR "Failed to generate matmul assembly files")
+if (NOT ${ASM_MATMUL8_GEN_RESULT} EQUAL 0)
+    message(FATAL_ERROR "Failed to generate matmul8 assembly files")
 endif()
 
 set(ASM_MATMUL_DIR ${PROJECT_SOURCE_DIR}/asm/matmul/${PARAM})
@@ -124,7 +124,7 @@ foreach(ASM_FILE ${ASM_KECCAK_SOURCES})
 endforeach()
 
 # Create 'asm_sources' library based on generated assembly files
-add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES} ${ASM_MATMUL_SOURCES} ${ASM_MATMUL8_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
+add_library(asm_sources STATIC ${PREPROCESSED_ASM_KECCAK_SOURCES} ${ASM_MATMUL8_SOURCES} ${ASM_SYSTEMIZER_SOURCES})
 
 ##########################################################
 # Build common source files

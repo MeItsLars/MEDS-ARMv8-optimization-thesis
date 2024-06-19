@@ -101,7 +101,7 @@ int crypto_sign_keypair(
 
       PROFILER_START("pmod_mat_mul");
       PROFILER_START("pmod_mat_mul_asm_k_mn_k");
-      pmod_mat_mul_asm_k_mn_k(G0prime, Ti, G[0]);
+      pmod_mat_mul_8_asm_k_mn_k(G0prime, Ti, G[0]);
       PROFILER_STOP("pmod_mat_mul_asm_k_mn_k");
       PROFILER_STOP("pmod_mat_mul");
 
@@ -390,7 +390,7 @@ int crypto_sign(
 
       PROFILER_START("pmod_mat_mul");
       PROFILER_START("pmod_mat_mul_asm_2_mn_k");
-      pmod_mat_mul_asm_2_mn_k(C, M_tilde[i], G_0);
+      pmod_mat_mul_8_asm_2_mn_k(C, M_tilde[i], G_0);
       PROFILER_STOP("pmod_mat_mul_asm_2_mn_k");
       PROFILER_STOP("pmod_mat_mul");
 
@@ -554,7 +554,7 @@ int crypto_sign(
 
         PROFILER_START("pmod_mat_mul");
         PROFILER_START("pmod_mat_mul_asm_2_k_k");
-        pmod_mat_mul_asm_2_k_k(kappa, M_tilde[i], T_inv[h[i]]);
+        pmod_mat_mul_8_asm_2_k_k(kappa, M_tilde[i], T_inv[h[i]]);
         PROFILER_STOP("pmod_mat_mul_asm_2_k_k");
         PROFILER_STOP("pmod_mat_mul");
 
@@ -693,7 +693,7 @@ int crypto_sign_open(
 
       PROFILER_START("pmod_mat_mul");
       PROFILER_START("pmod_mat_mul_asm_2_mn_k");
-      pmod_mat_mul_asm_2_mn_k(G0_prime, kappa, G[h[i]]);
+      pmod_mat_mul_8_asm_2_mn_k(G0_prime, kappa, G[h[i]]);
       PROFILER_STOP("pmod_mat_mul_asm_2_mn_k");
       PROFILER_STOP("pmod_mat_mul");
 
@@ -782,7 +782,7 @@ int crypto_sign_open(
 
         PROFILER_START("pmod_mat_mul");
         PROFILER_START("pmod_mat_mul_asm_2_mn_k");
-        pmod_mat_mul_asm_2_mn_k(C_hat, M_hat_i, G[0]);
+        pmod_mat_mul_8_asm_2_mn_k(C_hat, M_hat_i, G[0]);
         PROFILER_STOP("pmod_mat_mul_asm_2_mn_k");
         PROFILER_STOP("pmod_mat_mul");
 

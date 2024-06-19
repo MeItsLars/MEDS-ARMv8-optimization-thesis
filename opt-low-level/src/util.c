@@ -708,12 +708,12 @@ void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G)
   {
     PROFILER_START("pmod_mat_mul");
     PROFILER_START("pmod_mat_mul_asm_m_n_m");
-    pmod_mat_mul_asm_m_n_m(&Gtmp[i * MEDS_m * MEDS_n], A, &G[i * MEDS_m * MEDS_n]);
+    pmod_mat_mul_8_asm_m_n_m(&Gtmp[i * MEDS_m * MEDS_n], A, &G[i * MEDS_m * MEDS_n]);
     PROFILER_STOP("pmod_mat_mul_asm_m_n_m");
     PROFILER_STOP("pmod_mat_mul");
     PROFILER_START("pmod_mat_mul");
     PROFILER_START("pmod_mat_mul_asm_m_n_n");
-    pmod_mat_mul_asm_m_n_n(&Gout[i * MEDS_m * MEDS_n], &Gtmp[i * MEDS_m * MEDS_n], B);
+    pmod_mat_mul_8_asm_m_n_n(&Gout[i * MEDS_m * MEDS_n], &Gtmp[i * MEDS_m * MEDS_n], B);
     PROFILER_STOP("pmod_mat_mul_asm_m_n_n");
     PROFILER_STOP("pmod_mat_mul");
   }
@@ -738,7 +738,7 @@ int SF(pmod_mat_t *Gprime, pmod_mat_t *G)
   {
     PROFILER_START("pmod_mat_mul");
     PROFILER_START("pmod_mat_mul_asm_k_mn_k");
-    pmod_mat_mul_asm_k_mn_k(Gprime, M, Gtmp);
+    pmod_mat_mul_8_asm_k_mn_k(Gprime, M, Gtmp);
     PROFILER_STOP("pmod_mat_mul_asm_k_mn_k");
     PROFILER_STOP("pmod_mat_mul");
 

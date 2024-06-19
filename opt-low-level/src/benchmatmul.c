@@ -33,7 +33,7 @@ extern void pmod_mat_mul_asm(uint16_t *C, uint16_t *A, uint16_t *B, int m, int o
 
 extern void pmod_mat_mul_asm_1_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
-extern void pmod_mat_mul_asm_8_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_5(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_5_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_4_4_67(uint16_t *C, uint16_t *A, uint16_t *B);
@@ -41,21 +41,33 @@ extern void pmod_mat_mul_asm_24_4_67(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_5_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_6_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_7_4_4(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_13_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_13_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_8_13(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_13_13_13(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_asm_16_16_16(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
-extern void pmod_mat_mul_8_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_30_30_30(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_40_40_40(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_50_50_50(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_55_55_55(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_60_60_60(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_70_70_70(uint16_t *C, uint16_t *A, uint16_t *B);
-extern void pmod_mat_mul_asm_80_80_80(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm0_80_80(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_120_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_168_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_192_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_240_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_24_576_24(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_29_103_65(uint16_t *C, uint16_t *A, uint16_t *B);
+
+extern void pmod_mat_mul_8_asm_8_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_13_8_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_8_13_8(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_8_8_13(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_13_13_13(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_16_16_16(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
 
 extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
@@ -64,6 +76,12 @@ extern void pmod_mat_mul_asm_2_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_k_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_m_n_m(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_asm_m_n_n(uint16_t *C, uint16_t *A, uint16_t *B);
+
+extern void pmod_mat_mul_8_asm_2_k_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_2_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_k_mn_k(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_m_n_m(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_m_n_n(uint16_t *C, uint16_t *A, uint16_t *B);
 
 // Default matrix multiplication implementation
 void pmod_mat_mul_1(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
@@ -1180,10 +1198,17 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
   __attribute__((aligned(16))) pmod_mat_t C2[m * n];
   __attribute__((aligned(16))) pmod_mat_t C3[m * n];
 
+
   for (int i = 0; i < m * o; i++)
     A[i] = rnd_GF(&shake);
   for (int i = 0; i < o * n; i++)
     B[i] = rnd_GF(&shake);
+  for (int i = 0; i < m * n; i++)
+  {
+    C1[i] = 0;
+    C2[i] = 0;
+    C3[i] = 0;
+  }
 
   long long matmul_cycles[ROUNDS + 1];
   long long asm_matmul8_cycles[ROUNDS + 1];
@@ -1199,9 +1224,9 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
   for (int round = 0; round < ROUNDS; round++)
   {
     asm_matmul8_cycles[round] = get_cyclecounter();
-    // function8(C2, A, B);
+    function8(C2, A, B);
     // pmod_mat_mul_simd_1_pad(C2, m, n, A, m, o, B, o, n);
-    pmod_mat_mul_simd_v8(C2, m, n, A, m, o, B, o, n);
+    // pmod_mat_mul_simd_v8(C2, m, n, A, m, o, B, o, n);
   }
   asm_matmul8_cycles[ROUNDS] = get_cyclecounter();
 
@@ -1239,12 +1264,12 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
     }
   }
 
-  printf("C0\n");
-  pmod_mat_fprint(stdout, C1, m, n);
-  printf("C1\n");
-  pmod_mat_fprint(stdout, C2, m, n);
-  printf("C2\n");
-  pmod_mat_fprint(stdout, C3, m, n);
+  // printf("C0\n");
+  // pmod_mat_fprint(stdout, C1, m, n);
+  // printf("C1\n");
+  // pmod_mat_fprint(stdout, C2, m, n);
+  // printf("C2\n");
+  // pmod_mat_fprint(stdout, C3, m, n);
 
   // Print results
   printf("-----------------------------------\n");
@@ -1409,6 +1434,19 @@ int main(int argc, char *argv[])
   // test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n);
   // test_performance("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24);
   // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
+  // test_performance2("pmod_mat_mul_8_8_8", 8, 8, 8, pmod_mat_mul_8_asm_8_8, pmod_mat_mul_8_asm_8_8_8);
+  // test_performance2("pmod_mat_mul_13_8_8", 13, 8, 8, pmod_mat_mul_asm_13_8_8, pmod_mat_mul_8_asm_13_8_8);
+  // test_performance2("pmod_mat_mul_8_8_13", 8, 8, 13, pmod_mat_mul_8_asm_8_13, pmod_mat_mul_8_asm_8_8_13);
+  // test_performance2("pmod_mat_mul_13_13_13", 13, 13, 13, pmod_mat_mul_asm_13_13_13, pmod_mat_mul_8_asm_13_13_13);
+  // test_performance2("pmod_mat_mul_8_13_8", 8, 13, 8, pmod_mat_mul_8_asm_13_8, pmod_mat_mul_8_asm_8_13_8);
+  // test_performance2("pmod_mat_mul_13_13_13", 13, 13, 13, pmod_mat_mul_asm_13_13_13, pmod_mat_mul_8_asm_13_13_13);
+  // test_performance2("pmod_mat_mul_16_16_16", 16, 16, 16, pmod_mat_mul_asm_16_16_16, pmod_mat_mul_8_asm_16_16_16);
+  // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
+  test_performance2("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k, pmod_mat_mul_8_asm_2_k_k);
+  test_performance2("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k, pmod_mat_mul_8_asm_2_mn_k);
+  test_performance2("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k, pmod_mat_mul_8_asm_k_mn_k);
+  test_performance2("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m, pmod_mat_mul_8_asm_m_n_m);
+  test_performance2("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n, pmod_mat_mul_8_asm_m_n_n);
   test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
   disable_cyclecounter();
 }

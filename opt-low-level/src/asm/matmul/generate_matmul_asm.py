@@ -370,7 +370,12 @@ def generate_matmul_file(name, r, c, k, MEDS_p, GFq_bits, fun_id):
 
 def generate_matmul_manually():
     generate_matmul_file('level3', 4, 4, 4, 4093, 12, 'pmod_mat_mul_asm_4_4_4')
-    generate_matmul_file('level3', 8, 8, 8, 4093, 12, 'pmod_mat_mul_asm_8_8_8')
+    generate_matmul_file('level3', 8, 8, 8, 4093, 12, 'pmod_mat_mul_8_asm_8_8')
+    generate_matmul_file('level3', 13, 8, 8, 4093, 12, 'pmod_mat_mul_asm_13_8_8')
+    generate_matmul_file('level3', 8, 13, 8, 4093, 12, 'pmod_mat_mul_8_asm_13_8')
+    generate_matmul_file('level3', 8, 8, 13, 4093, 12, 'pmod_mat_mul_8_asm_8_13')
+    generate_matmul_file('level3', 13, 13, 13, 4093, 12, 'pmod_mat_mul_asm_13_13_13')
+    generate_matmul_file('level3', 16, 16, 16, 4093, 12, 'pmod_mat_mul_asm_16_16_16')
 
 def parse_params_h(path):
     with open(path, "r") as f:
@@ -407,5 +412,4 @@ if __name__ == "__main__":
         generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_k_k')
         generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_m')
         generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_n')
-        generate_matmul_file(name, 24, 24, 24, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_24_24_24')
     

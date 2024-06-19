@@ -337,7 +337,7 @@ def generate_matmul_manually():
     generate_matmul_file('oldlevel341711', 55, 55, 55, 4093, 12, 'pmod_mat_mul_asm_55_55_55')
     generate_matmul_file('oldlevel341711', 60, 60, 60, 4093, 12, 'pmod_mat_mul_asm_60_60_60')
     generate_matmul_file('oldlevel341711', 70, 70, 70, 4093, 12, 'pmod_mat_mul_asm_70_70_70')
-    generate_matmul_file('oldlevel341711', 80, 80, 80, 4093, 12, 'pmod_mat_mul_asm_80_80_80')
+    generate_matmul_file('oldlevel341711', 80, 80, 80, 4093, 12, 'pmod_mat_mul_8_asm0_80_80')
 
 def parse_params_h(path):
     with open(path, "r") as f:

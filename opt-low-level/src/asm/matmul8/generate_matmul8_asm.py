@@ -16,49 +16,10 @@ R_Ai = "x8"
 R_Bi = "x9"
 R_T1 = "x10"
 R_T1h = "w10"
+R_T2 = "x11"
 R_T2h = "w11"
-
-# Preserve v8-v15
-# RN_A0 = "v0.8h"
-# RN_A1 = "v1.8h"
-# RN_A2 = "v2.8h"
-# RN_A3 = "v3.8h"
-# RN_A4 = "v4.8h"
-# RN_A5 = "v5.8h"
-# RN_A6 = "v6.8h"
-# RN_A7 = "v7.8h"
-# RN_B0 = "v8.8h"
-# RN_B1 = "v9.8h"
-# RN_B2 = "v10.8h"
-# RN_B3 = "v11.8h"
-# RN_B4 = "v12.8h"
-# RN_B5 = "v13.8h"
-# RN_B6 = "v14.8h"
-# RN_B7 = "v15.8h"
-# RN_C0 = "v16.4s"
-# RN_C1 = "v17.4s"
-# RN_C2 = "v18.4s"
-# RN_C3 = "v19.4s"
-# RN_C4 = "v20.4s"
-# RN_C5 = "v21.4s"
-# RN_C6 = "v22.4s"
-# RN_C7 = "v23.4s"
-# RN_C0h = "v16.4h"
-# RN_C1h = "v17.4h"
-# RN_C2h = "v18.4h"
-# RN_C3h = "v19.4h"
-# RN_C4h = "v20.4h"
-# RN_C5h = "v21.4h"
-# RN_C6h = "v22.4h"
-# RN_C7h = "v23.4h"
-# RN_C0T = "v24.4s"
-# RN_C1T = "v25.4s"
-# RN_C2T = "v26.4s"
-# RN_C3T = "v27.4s"
-# RN_MEDSp = "v28.4s"
-# RN_MAGIC_w = "v29.4s"
-# RN_T1_w = "v30.4s"
-# RN_T2_w = "v31.4s"
+R_T3 = "x12"
+R_T3h = "w12"
 
 class ARMNeonRegister:
     registers = []
@@ -75,6 +36,9 @@ class ARMNeonRegister:
     def release(self):
         self.id = None
         self.available = True
+    
+    def _h(self):
+        return f"v{self.index}.h"
     
     def _2d(self):
         return f"v{self.index}.2d"
@@ -119,7 +83,7 @@ def add_nop(asm, indentation, s):
 
 def load_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, overflow, camount):
     """
-    Adds assembly that loads a single matrix row consisting of 0 < n <= 4 elements into a NEON register.
+    Adds assembly that loads a single matrix row consisting of 0 < n <= 8 elements into a NEON register.
 
     Parameters:
     - asm: The list of assembly instructions to add to
@@ -128,10 +92,10 @@ def load_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, overflow, c
     - rni2: The name of the memory address to increment to after loading the row
     - rninc: The amount to increment the memory address by after loading the row
              or None if the memory address should not be incremented
-    - overflow: Whether it is okay to load 4 elements from memory, even if n < 4
+    - overflow: Whether it is okay to load 8 elements from memory, even if n < 8
     - camount: The number of elements in the row to load (n)
     """
-    if camount > 3 or overflow:
+    if camount > 7 or overflow:
         if rninc:
             if rni == rni2:
                 add_nop(asm, 1, f"ld1 {{{rn._8h()}}}, [{rni}], {rninc}")
@@ -143,13 +107,20 @@ def load_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, overflow, c
         return
 
     # Fill the register with 0 first
-    add_nop(asm, 1, f"dup {rn}, wzr")
-    # Load the elements one by one
-    for i in range(camount):
+    add_nop(asm, 1, f"dup {rn._8h()}, wzr")
+
+    start = 0
+    if camount > 3:
+        # Load the first 4 elements in parallel
+        add_nop(asm, 1, f"ld1 {{{rn._4h()}}}, [{rni}]")
+        start = 4
+    
+    # Load the remaining elements one by one
+    for i in range(start, camount):
         # Load the i-th lane of rn
         rn_p = rn._8h()[:-3]
-        add_nop(asm, 1, f"ldrh {R_T2h}, [{rni}, #{i * 2}]")
-        add_nop(asm, 1, f"ins {rn_p}.h[{i}], {R_T2h}")
+        add_nop(asm, 1, f"ldrh {R_T3h}, [{rni}, #{i * 2}]")
+        add_nop(asm, 1, f"ins {rn_p}.h[{i}], {R_T3h}")
     
     # Increment the memory address
     if rninc:
@@ -157,7 +128,7 @@ def load_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, overflow, c
 
 def add_store_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, camount):
     """
-    Adds assembly that stores a single matrix row consisting of 0 < n <= 4 elements from a NEON register into memory.
+    Adds assembly that stores a single matrix row consisting of 0 < n <= 8 elements from a NEON register into memory.
 
     Parameters:
     - asm: The list of assembly instructions to add to
@@ -168,7 +139,7 @@ def add_store_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, camoun
              or None if the memory address should not be incremented
     - camount: The number of elements in the row to store (n)
     """
-    if camount > 3:
+    if camount > 7:
         if rninc:
             if rni == rni2:
                 add_nop(asm, 1, f"st1 {{{rn._8h()}}}, [{rni}], {rninc}")
@@ -178,33 +149,42 @@ def add_store_row_with_n_cols(asm, rn: ARMNeonRegister, rni, rni2, rninc, camoun
         else:
             add_nop(asm, 1, f"st1 {{{rn._8h()}}}, [{rni}]")
         return
+    
+    start = 0
+    if camount > 3:
+        # Store the first 4 elements in parallel
+        add_nop(asm, 1, f"st1 {{{rn._4h()}}}, [{rni}]")
+        start = 4
 
-    for i in range(camount):
+    for i in range(start, camount):
         # Extract the i-th lane of rn   
         rn_p = rn._8h()[:-3]
-        add_nop(asm, 1, f"mov {R_T2h}, {rn_p}.s[{i}]")
+        add_nop(asm, 1, f"umov {R_T3h}, {rn_p}.h[{i}]")
         # Store the i-th lane of rn
-        add_nop(asm, 1, f"strh {R_T2h}, [{rni}, #{i * 2}]")
+        add_nop(asm, 1, f"strh {R_T3h}, [{rni}, #{i * 2}]")
     
     # Increment the memory address
     if rninc:
         add_nop(asm, 1, f"add {rni}, {rni}, {rninc}")
+
+def add_load_row(asm, id, i, neon_register, rni, rni2, rninc, ramount, camount):
+    if i == 0:
+        load_row_with_n_cols(asm, neon_register, rni, rni2, None if ramount == i + 1 else rninc, ramount > i + 1, camount)
+    elif i == 7:
+        load_row_with_n_cols(asm, neon_register, rni2, rni2, None, False, camount)
+    else:
+        load_row_with_n_cols(asm, neon_register, rni2, rni2, None if ramount == i + 1 else rninc, ramount > i + 1, camount)
 
 def add_load_r_rows_c_cols(asm, id, rni, rni2, rninc, ramount, camount):
     used_registers = []
     for i in range(0, 8):
         if ramount <= i:
             break
-
+        
         neon_register = ARMNeonRegister.request(f"{id}{i}")
         used_registers.append(neon_register)
+        add_load_row(asm, id, i, neon_register, rni, rni2, rninc, ramount, camount)
         
-        if i == 0:
-            load_row_with_n_cols(asm, neon_register, rni, rni2, None if ramount == i + 1 else rninc, ramount > i + 1, camount)
-        elif i == 7:
-            load_row_with_n_cols(asm, neon_register, rni2, rni2, None, False, camount)
-        else:
-            load_row_with_n_cols(asm, neon_register, rni2, rni2, None if ramount == i + 1 else rninc, ramount > i + 1, camount)
     return used_registers
 
 def add_mult(asm, initial, rn_Cl: ARMNeonRegister, rn_Ch: ARMNeonRegister, rn_A: ARMNeonRegister, B: List[ARMNeonRegister], kamount):
@@ -213,28 +193,25 @@ def add_mult(asm, initial, rn_Cl: ARMNeonRegister, rn_Ch: ARMNeonRegister, rn_A:
             break
         
         if i == 0 and initial:
-            add_nop(asm, 1, f"umull {rn_Cl._4s()}, {B[i]._4s()}, {rn_A._8h()}[{i}]")
-            add_nop(asm, 1, f"umull2 {rn_Ch._4s()}, {B[i]._8h()}, {rn_A._8h()}[{i}]")
+            add_nop(asm, 1, f"umull {rn_Cl._4s()}, {B[i]._4h()}, {rn_A._h()}[{i}]")
+            add_nop(asm, 1, f"umull2 {rn_Ch._4s()}, {B[i]._8h()}, {rn_A._h()}[{i}]")
         else:
-            add_nop(asm, 1, f"umlal {rn_Cl._4s()}, {B[i]._4s()}, {rn_A._8h()}[{i}]")
-            add_nop(asm, 1, f"umlal2 {rn_Ch._4s()}, {B[i]._8h()}, {rn_A._8h()}[{i}]")
-    
-    # Release the A register
-    rn_A.release()
+            add_nop(asm, 1, f"umlal {rn_Cl._4s()}, {B[i]._4h()}, {rn_A._h()}[{i}]")
+            add_nop(asm, 1, f"umlal2 {rn_Ch._4s()}, {B[i]._8h()}, {rn_A._h()}[{i}]")
 
 def add_load_and_mult(asm, context, initial, Cl: List[ARMNeonRegister], Ch: List[ARMNeonRegister], pad_r, pad_c, pad_k):
-    # Load A
-    A = add_load_r_rows_c_cols(asm, "A", R_Ai, R_T1, R_2o,
-                           context.r_pad_dist if pad_r else 8,
-                           context.k_pad_dist if pad_k else 8)
     # Load B
-    B = add_load_r_rows_c_cols(asm, "B", R_Bi, R_T1, R_2n,
+    B = add_load_r_rows_c_cols(asm, "B", R_Bi, R_T2, R_2n,
                            context.k_pad_dist if pad_k else 8, 
                            context.c_pad_dist if pad_c else 8)
     # Add multiplications
+    rn_Ai = ARMNeonRegister.get("Ai")
     for i in range(0, 8):
         if not pad_r or context.r_pad_dist > i:
-            add_mult(asm, initial, Cl[i], Ch[i], A[i], B, context.k_pad_dist if pad_k else 8)
+            add_load_row(asm, "A", i, rn_Ai, R_Ai, R_T1, R_2o,
+                              context.r_pad_dist if pad_r else 8,
+                              context.k_pad_dist if pad_k else 8)
+            add_mult(asm, initial, Cl[i], Ch[i], rn_Ai, B, context.k_pad_dist if pad_k else 8)
     
     # Release the B registers (A is released during mult)
     for register in B:
@@ -247,7 +224,7 @@ def add_store(asm, rn: List[ARMNeonRegister], rni, rni2, rninc, ramount, camount
         
         if i == 0:
             add_store_row_with_n_cols(asm, rn[i], rni, rni2, None if ramount == i + 1 else rninc, camount)
-        if i == 7:
+        elif i == 7:
             add_store_row_with_n_cols(asm, rn[i], rni2, rni2, None, camount)
         else:
             add_store_row_with_n_cols(asm, rn[i], rni2, rni2, None if ramount == i + 1 else rninc, camount)
@@ -313,9 +290,9 @@ def add_k_loop(asm, context, pad_r, pad_c):
     if context.k_size > 1:
         add(asm, 0, f"{loop_id}_2:")
         # Add 2k to Ai
-        add(asm, 1, f"add {R_Ai}, {R_Ai}, #8")
+        add(asm, 1, f"add {R_Ai}, {R_Ai}, #16")
         # Add 2kB_c to Bi
-        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #2")
+        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #3")
         # Multiply
         add_load_and_mult(asm, context, False, Cl, Ch, pad_r, pad_c, False)
 
@@ -329,9 +306,9 @@ def add_k_loop(asm, context, pad_r, pad_c):
     if context.k_pad_dist > 0:
         add(asm, 0, f"{loop_id}_pk:")
         # Add 2k to Ai
-        add(asm, 1, f"add {R_Ai}, {R_Ai}, #8")
+        add(asm, 1, f"add {R_Ai}, {R_Ai}, #16")
         # Add 2kB_c to Bi
-        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #2")
+        add(asm, 1, f"add {R_Bi}, {R_Bi}, {R_2n}, lsl #3")
         # Multiply
         add_load_and_mult(asm, context, False, Cl, Ch, pad_r, pad_c, True)
 
@@ -380,8 +357,8 @@ def add_r_loop(asm, context):
         add_c_loop(asm, context, False)
         add(asm, 0, f"{loop_id}_end:")
         add(asm, 1, f"add {R_r}, {R_r}, #8")
-        # We need Ci = C + 2rC_c; therefore add 2rC_c to C
-        add(asm, 1, f"add {R_C}, {R_C}, {R_2n}, lsl #2")
+        # We need Ci = C + 2C_c; therefore add 2rC_c to C (r is incremented by 8, so lsl #3)
+        add(asm, 1, f"add {R_C}, {R_C}, {R_2n}, lsl #3")
         add(asm, 1, f"cmp {R_r}, #{context.r_size}")
         add(asm, 1, f"blt {loop_id}")
     if context.r_pad_dist > 0:
@@ -401,6 +378,12 @@ def generate_mat_mul_asm(context, fun_id):
     add(asm, 0, ".arch armv8-a")
     add(asm, 0, f".global {fun_id}")
     add(asm, 0, f"{fun_id}:")
+    # Store v8-v15
+    # Preserve v8-v15? Does not seem to be necessary
+    # add(asm, 1, "stp q8, q9, [sp, #-32]!")
+    # add(asm, 1, "stp q10, q11, [sp, #-32]!")
+    # add(asm, 1, "stp q12, q13, [sp, #-32]!")
+    # add(asm, 1, "stp q14, q15, [sp, #-32]!")
     # Initialize magic value (0x8018_0481 = -2145909631) into RN_MAGIC registers
     rn_magic = ARMNeonRegister.request("magic")
     add(asm, 1, f"mov {R_T1h}, 0x0481")
@@ -410,11 +393,20 @@ def generate_mat_mul_asm(context, fun_id):
     rn_medsp = ARMNeonRegister.request("medsp")
     add(asm, 1, f"mov {R_T1h}, #{context.MEDS_p}")
     add(asm, 1, f"dup {rn_medsp._4s()}, {R_T1h}")
+    # Claim a neon register below 16 for loading values of A[i]. This is required by the assembler.
+    rn_Ai = ARMNeonRegister.request("Ai")
     # Store widened versions of m, o, and n
     add(asm, 1, f"mov {R_2o}, #{context.k * 2}")
     add(asm, 1, f"mov {R_2n}, #{context.c * 2}")
     add_r_loop(asm, context)
+    # Restore v8-v15
+    # add(asm, 1, "ldp q14, q15, [sp], #32")
+    # add(asm, 1, "ldp q12, q13, [sp], #32")
+    # add(asm, 1, "ldp q10, q11, [sp], #32")
+    # add(asm, 1, "ldp q8, q9, [sp], #32")
+    # Return
     add(asm, 1, "ret")
+    rn_Ai.release()
     rn_medsp.release()
     rn_magic.release()
     return asm
@@ -427,9 +419,9 @@ class Context:
         self.r = r
         self.c = c
         self.k = k
-        self.r_size = 4 * (r // 4)
-        self.c_size = 4 * (c // 4)
-        self.k_size = 4 * (k // 4)
+        self.r_size = 8 * (r // 8)
+        self.c_size = 8 * (c // 8)
+        self.k_size = 8 * (k // 8)
         self.r_pad_dist = r - self.r_size
         self.c_pad_dist = c - self.c_size
         self.k_pad_dist = k - self.k_size
@@ -452,6 +444,12 @@ def generate_matmul_file(name, r, c, k, MEDS_p, GFq_bits, fun_id):
             print(f"Warning: NEON register {register.index} is still in use")
 
 def generate_matmul_manually():
+    generate_matmul_file('level3', 8, 8, 8, 4093, 12, 'pmod_mat_mul_8_asm_8_8_8')
+    generate_matmul_file('level3', 13, 8, 8, 4093, 12, 'pmod_mat_mul_8_asm_13_8_8')
+    generate_matmul_file('level3', 8, 13, 8, 4093, 12, 'pmod_mat_mul_8_asm_8_13_8')
+    generate_matmul_file('level3', 8, 8, 13, 4093, 12, 'pmod_mat_mul_8_asm_8_8_13')
+    generate_matmul_file('level3', 13, 13, 13, 4093, 12, 'pmod_mat_mul_8_asm_13_13_13')
+    generate_matmul_file('level3', 16, 16, 16, 4093, 12, 'pmod_mat_mul_8_asm_16_16_16')
     generate_matmul_file('level3', 24, 24, 24, 4093, 12, 'pmod_mat_mul_8_asm_24_24_24')
 
 def parse_params_h(path):
@@ -484,10 +482,9 @@ if __name__ == "__main__":
     else:
         name, m, n, k, MEDS_p, GFq_bits = parse_params_h(params_h_path)
         # Generate the 6 different multiplications required for MEDS
-        generate_matmul_file(name, k, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_k_mn_k')
-        generate_matmul_file(name, 2, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_mn_k')
-        generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_2_k_k')
-        generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_m')
-        generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_m_n_n')
-        generate_matmul_file(name, 24, 24, 24, MEDS_p, GFq_bits, f'pmod_mat_mul_asm_24_24_24')
+        generate_matmul_file(name, k, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_k_mn_k')
+        generate_matmul_file(name, 2, m*n, k, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_2_mn_k')
+        generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_2_k_k')
+        generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_m_n_m')
+        generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_m_n_n')
     
