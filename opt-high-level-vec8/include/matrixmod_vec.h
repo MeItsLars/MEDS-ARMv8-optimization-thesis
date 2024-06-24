@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "vec_16x4.h"
+#include "vec_16x8.h"
 #include "matrixmod.h"
 #include "profiler.h"
 

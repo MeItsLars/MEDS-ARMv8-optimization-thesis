@@ -18,7 +18,7 @@
 #include "matrixmod_vec.h"
 #include "bitstream.h"
 #include "meds_vec.h"
-#include "vec_16x4.h"
+#include "vec_16x8.h"
 
 #define solve solve_opt
 

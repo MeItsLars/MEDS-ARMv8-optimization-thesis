@@ -1,4 +1,4 @@
-#include "vec_16x4.h"
+#include "vec_16x8.h"
 
 /**
  * Loads an element at a certain position from 4 matrices into a vector.
@@ -15,13 +15,13 @@ pmod_mat_vec_t load_vec(GFq_t *M[], int M_r, int M_c, int r, int c)
   {
     buf[i] = (uint16_t)M[i][r * M_c + c];
   }
-  return vld1_u16(buf);
+  return vld1q_u16(buf);
 }
 
 void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, int amount)
 {
   uint16_t buf[BATCH_SIZE] = {0};
-  vst1_u16(buf, val);
+  vst1q_u16(buf, val);
   for (int i = 0; i < amount; i++)
   {
     M[i][r * M_c + c] = (GFq_t)buf[i];

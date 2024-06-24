@@ -10,12 +10,16 @@ void pmod_mat_mul_vec(pmod_mat_vec_t *C, int C_r, int C_c, pmod_mat_vec_t *A, in
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
     {
-      pmod_mat_vec_w_t val = ZERO_VEC_W;
+      pmod_mat_vec_w_t val_low = ZERO_VEC_W;
+      pmod_mat_vec_w_t val_high = ZERO_VEC_W;
 
       for (int i = 0; i < A_c; i++)
-        val = MUL_ACC_VEC(val, pmod_mat_entry(A, A_r, A_c, r, i), pmod_mat_entry(B, B_r, B_c, i, c));
+      {
+        val_low = MUL_ACC_VEC_LOW(val_low, pmod_mat_entry(A, A_r, A_c, r, i), pmod_mat_entry(B, B_r, B_c, i, c));
+        val_high = MUL_ACC_VEC_HIGH(val_high, pmod_mat_entry(A, A_r, A_c, r, i), pmod_mat_entry(B, B_r, B_c, i, c));
+      }
 
-      tmp[r * C_c + c] = FREEZE_REDUCE_VEC(val);
+      tmp[r * C_c + c] = COMBINE_VEC(FREEZE_REDUCE_VEC(val_low), FREEZE_REDUCE_VEC(val_high));
     }
 
   for (int c = 0; c < C_c; c++)
@@ -116,8 +120,13 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
           pmod_mat_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
           pmod_mat_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-          uint16x4_t tmp = FREEZE_REDUCE_VEC(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
-          pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
+          // Ignore widening? It should fit theoretically?
+          // pmod_mat_vec_t and = AND_VEC(val, EQ0_VEC(Mrr));
+          // pmod_mat_vec_w_t add_low = ADD_LOW_VEC(Mrc, and);
+          // pmod_mat_vec_w_t add_high = ADD_HIGH_VEC(Mrc, and);
+
+          // uint16x4_t tmp = FREEZE_REDUCE_VEC(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
+          // pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
         }
       }
     }
