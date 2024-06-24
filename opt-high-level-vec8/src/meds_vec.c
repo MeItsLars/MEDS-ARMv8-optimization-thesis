@@ -218,6 +218,13 @@ int crypto_sign_vec(
     const unsigned char *m, unsigned long long mlen,
     const unsigned char *sk)
 {
+  // If MEDS_t is not 8, this optimized version of MEDS cannot be used.
+  if (MEDS_t < 8)
+  {
+    fprintf(stderr, "ERROR: This high-level optimized version of MEDS requires MEDS_t >= 8\n");
+    return -1;
+  }
+
   // skip secret seed
   sk += MEDS_sec_seed_bytes;
 
@@ -541,24 +548,18 @@ int crypto_sign_vec(
   return 0;
 }
 
-void print_mat_vec(pmod_mat_vec_t *M, int rows, int cols, int size)
-{
-  for (int t = 0; t < size; t++)
-  {
-    pmod_mat_t M_non_vec[rows * cols];
-    for (int r = 0; r < rows; r++)
-      for (int c = 0; c < cols; c++)
-        M_non_vec[r * cols + c] = M[r * cols + c][t];
-    printf("t=%d\n", t);
-    pmod_mat_fprint(stdout, M_non_vec, rows, cols);
-  }
-}
-
 int crypto_sign_open_vec(
     unsigned char *m, unsigned long long *mlen,
     const unsigned char *sm, unsigned long long smlen,
     const unsigned char *pk)
 {
+  // If MEDS_t is not 8, this optimized version of MEDS cannot be used.
+  if (MEDS_t < 8)
+  {
+    fprintf(stderr, "ERROR: This high-level optimized version of MEDS requires MEDS_t >= 8\n");
+    return -1;
+  }
+  
   LOG_HEX(pk, MEDS_PK_BYTES);
   LOG_HEX(sm, smlen);
 

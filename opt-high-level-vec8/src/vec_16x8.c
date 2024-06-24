@@ -30,12 +30,12 @@ void store_vec(GFq_t *M[], int M_r, int M_c, int r, int c, pmod_mat_vec_t val, i
 
 static inline void buf_set_12bit_pair(uint8_t **buf, int *buf_idx, int batch_size, pmod_mat_vec_t v0, pmod_mat_vec_t v1)
 {
-  uint16x4_t r0_wide = vand_u16(v0, vdup_n_u16(0xff));
-  uint16x4_t r1_wide = vorr_u16(vshr_n_u16(v0, 8), vshl_n_u16(vand_u16(v1, vdup_n_u16(0xf)), 4));
-  uint16x4_t r2_wide = vshr_n_u16(v1, 4);
-  uint8x8_t r0 = vqmovn_u16(vcombine_u16(r0_wide, vdup_n_u16(0)));
-  uint8x8_t r1 = vqmovn_u16(vcombine_u16(r1_wide, vdup_n_u16(0)));
-  uint8x8_t r2 = vqmovn_u16(vcombine_u16(r2_wide, vdup_n_u16(0)));
+  uint16x8_t r0_wide = vandq_u16(v0, vdupq_n_u16(0xff));
+  uint16x8_t r1_wide = vorrq_u16(vshrq_n_u16(v0, 8), vshlq_n_u16(vandq_u16(v1, vdupq_n_u16(0xf)), 4));
+  uint16x8_t r2_wide = vshrq_n_u16(v1, 4);
+  uint8x8_t r0 = vqmovn_u16(r0_wide);
+  uint8x8_t r1 = vqmovn_u16(r1_wide);
+  uint8x8_t r2 = vqmovn_u16(r2_wide);
   uint8_t r0_buf[3][8];
   vst1_u8(r0_buf[0], r0);
   vst1_u8(r0_buf[1], r1);
@@ -51,10 +51,10 @@ static inline void buf_set_12bit_pair(uint8_t **buf, int *buf_idx, int batch_siz
 
 static inline void buf_set_12bit_element(uint8_t **buf, int *buf_idx, int batch_size, pmod_mat_vec_t v0)
 {
-  uint16x4_t r0_wide = vand_u16(v0, vdup_n_u16(0xff));
-  uint16x4_t r1_wide = vorr_u16(vshr_n_u16(v0, 8), vdup_n_u16(0));
-  uint8x8_t r0 = vqmovn_u16(vcombine_u16(r0_wide, vdup_n_u16(0)));
-  uint8x8_t r1 = vqmovn_u16(vcombine_u16(r1_wide, vdup_n_u16(0)));
+  uint16x8_t r0_wide = vandq_u16(v0, vdupq_n_u16(0xff));
+  uint16x8_t r1_wide = vorrq_u16(vshrq_n_u16(v0, 8), vdupq_n_u16(0));
+  uint8x8_t r0 = vqmovn_u16(r0_wide);
+  uint8x8_t r1 = vqmovn_u16(r1_wide);
   uint8_t r0_buf[2][8];
   vst1_u8(r0_buf[0], r0);
   vst1_u8(r0_buf[1], r1);

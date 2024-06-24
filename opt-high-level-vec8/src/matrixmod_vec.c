@@ -19,7 +19,7 @@ void pmod_mat_mul_vec(pmod_mat_vec_t *C, int C_r, int C_c, pmod_mat_vec_t *A, in
         val_high = MUL_ACC_VEC_HIGH(val_high, pmod_mat_entry(A, A_r, A_c, r, i), pmod_mat_entry(B, B_r, B_c, i, c));
       }
 
-      tmp[r * C_c + c] = COMBINE_VEC(FREEZE_REDUCE_VEC(val_low), FREEZE_REDUCE_VEC(val_high));
+      tmp[r * C_c + c] = COMBINE_VEC(REDUCE_VEC_32BIT(val_low), REDUCE_VEC_32BIT(val_high));
     }
 
   for (int c = 0; c < C_c; c++)
@@ -120,13 +120,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
           pmod_mat_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
           pmod_mat_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-          // Ignore widening? It should fit theoretically?
-          // pmod_mat_vec_t and = AND_VEC(val, EQ0_VEC(Mrr));
-          // pmod_mat_vec_w_t add_low = ADD_LOW_VEC(Mrc, and);
-          // pmod_mat_vec_w_t add_high = ADD_HIGH_VEC(Mrc, and);
-
-          // uint16x4_t tmp = FREEZE_REDUCE_VEC(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
-          // pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
+          pmod_mat_vec_t tmp = REDUCE_VEC_13BIT(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
+          pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
         }
       }
     }
@@ -141,7 +136,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
     // normalize
     for (int c = r; c < M_c; c++)
     {
-      pmod_mat_vec_t tmp = FREEZE_REDUCE_VEC(MUL_VEC(val, pmod_mat_entry(M, M_r, M_c, r, c)));
+      pmod_mat_vec_t tmp = MUL_REDUCE_VEC(val, pmod_mat_entry(M, M_r, M_c, r, c));
       pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
     }
 
@@ -155,8 +150,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-        pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
-        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+        pmod_mat_vec_t val = MUL_REDUCE_VEC(tmp0, factor);
+        val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, tmp1), val));
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
     }
@@ -177,8 +172,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
       pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
       pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-      pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
-      val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+      pmod_mat_vec_t val = MUL_REDUCE_VEC(tmp0, factor);
+      val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, tmp1), val));
 
       pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
 
@@ -187,8 +182,8 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
         pmod_mat_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         pmod_mat_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
-        pmod_mat_vec_t val = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, factor));
-        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp1), val));
+        pmod_mat_vec_t val = MUL_REDUCE_VEC(tmp0, factor);
+        val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, tmp1), val));
 
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
@@ -203,24 +198,24 @@ GFq_vec_t GF_inv_vec(GFq_vec_t val, int ct)
   if (ct)
   {
     // Use an optimal addition chain for MEDS_p = 4093
-    GFq_vec_t tmp_0 = val;                                  // 1
-    GFq_vec_t tmp_1 = REDUCE_VEC(MUL_VEC(tmp_0, tmp_0));    // 2
-    GFq_vec_t tmp_2 = REDUCE_VEC(MUL_VEC(tmp_1, tmp_1));    // 4
-    GFq_vec_t tmp_3 = REDUCE_VEC(MUL_VEC(tmp_2, tmp_0));    // 5
-    GFq_vec_t tmp_4 = REDUCE_VEC(MUL_VEC(tmp_3, tmp_3));    // 10
-    GFq_vec_t tmp_5 = REDUCE_VEC(MUL_VEC(tmp_4, tmp_3));    // 15
-    GFq_vec_t tmp_6 = REDUCE_VEC(MUL_VEC(tmp_5, tmp_5));    // 30
-    GFq_vec_t tmp_7 = REDUCE_VEC(MUL_VEC(tmp_6, tmp_6));    // 60
-    GFq_vec_t tmp_8 = REDUCE_VEC(MUL_VEC(tmp_7, tmp_7));    // 120
-    GFq_vec_t tmp_9 = REDUCE_VEC(MUL_VEC(tmp_8, tmp_8));    // 240
-    GFq_vec_t tmp_10 = REDUCE_VEC(MUL_VEC(tmp_9, tmp_5));   // 255
-    GFq_vec_t tmp_11 = REDUCE_VEC(MUL_VEC(tmp_10, tmp_10)); // 510
-    GFq_vec_t tmp_12 = REDUCE_VEC(MUL_VEC(tmp_11, tmp_11)); // 1020
-    GFq_vec_t tmp_13 = REDUCE_VEC(MUL_VEC(tmp_12, tmp_12)); // 2040
-    GFq_vec_t tmp_14 = REDUCE_VEC(MUL_VEC(tmp_13, tmp_3));  // 2045
-    GFq_vec_t tmp_15 = REDUCE_VEC(MUL_VEC(tmp_14, tmp_14)); // 4090
-    GFq_vec_t tmp_16 = REDUCE_VEC(MUL_VEC(tmp_15, tmp_0));  // 4091
-    return FREEZE_VEC(tmp_16);
+    GFq_vec_t tmp_0 = val;                             // 1
+    GFq_vec_t tmp_1 = MUL_REDUCE_VEC(tmp_0, tmp_0);    // 2
+    GFq_vec_t tmp_2 = MUL_REDUCE_VEC(tmp_1, tmp_1);    // 4
+    GFq_vec_t tmp_3 = MUL_REDUCE_VEC(tmp_2, tmp_0);    // 5
+    GFq_vec_t tmp_4 = MUL_REDUCE_VEC(tmp_3, tmp_3);    // 10
+    GFq_vec_t tmp_5 = MUL_REDUCE_VEC(tmp_4, tmp_3);    // 15
+    GFq_vec_t tmp_6 = MUL_REDUCE_VEC(tmp_5, tmp_5);    // 30
+    GFq_vec_t tmp_7 = MUL_REDUCE_VEC(tmp_6, tmp_6);    // 60
+    GFq_vec_t tmp_8 = MUL_REDUCE_VEC(tmp_7, tmp_7);    // 120
+    GFq_vec_t tmp_9 = MUL_REDUCE_VEC(tmp_8, tmp_8);    // 240
+    GFq_vec_t tmp_10 = MUL_REDUCE_VEC(tmp_9, tmp_5);   // 255
+    GFq_vec_t tmp_11 = MUL_REDUCE_VEC(tmp_10, tmp_10); // 510
+    GFq_vec_t tmp_12 = MUL_REDUCE_VEC(tmp_11, tmp_11); // 1020
+    GFq_vec_t tmp_13 = MUL_REDUCE_VEC(tmp_12, tmp_12); // 2040
+    GFq_vec_t tmp_14 = MUL_REDUCE_VEC(tmp_13, tmp_3);  // 2045
+    GFq_vec_t tmp_15 = MUL_REDUCE_VEC(tmp_14, tmp_14); // 4090
+    GFq_vec_t tmp_16 = MUL_REDUCE_VEC(tmp_15, tmp_0);  // 4091
+    return tmp_16;
   }
   else
   {
