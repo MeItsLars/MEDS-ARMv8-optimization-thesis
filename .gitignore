@@ -24,4 +24,5 @@ build
 *.order
 *.symvers
 pmod_mat_mul_asm_*.s
+pmod_mat_mul_8_asm_*.s
 pmod_mat_syst_*.s

@@ -161,6 +161,7 @@ int crypto_sign_keypair(
 
     bitstream_t bs;
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -171,6 +172,7 @@ int crypto_sign_keypair(
 
       bs_finalize(&bs);
     }
+    PROFILER_STOP("bs_fill");
 
     LOG_VEC(tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes, "G[1:] (pk)");
     tmp_pk += MEDS_PK_BYTES - MEDS_pub_seed_bytes;
@@ -192,6 +194,7 @@ int crypto_sign_keypair(
 
     bitstream_t bs;
 
+    PROFILER_START("bs_fill");
     bs_init(&bs, sk + MEDS_sec_seed_bytes + MEDS_pub_seed_bytes, MEDS_SK_BYTES - MEDS_sec_seed_bytes - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -217,6 +220,7 @@ int crypto_sign_keypair(
 
       bs_finalize(&bs);
     }
+    PROFILER_STOP("bs_fill");
 
     LOG_HEX(sk, MEDS_SK_BYTES);
   }
