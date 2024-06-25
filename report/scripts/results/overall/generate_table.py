@@ -48,11 +48,7 @@ def load_csv():
         data = list(reader)
     return data
 
-def main():
-    data = load_csv()
-    parsed_data = parse_data(data)
-    table = generate_table(parsed_data)
-    print(table)
-
-if __name__ == "__main__":
-    main()
+data = load_csv()
+parsed_data = parse_data(data)
+table = generate_table(parsed_data)
+print(table)

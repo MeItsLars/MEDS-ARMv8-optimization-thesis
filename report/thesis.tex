@@ -1,5 +1,16 @@
 \documentclass[11pt,a4paper]{report}
 
+% - Make more clear which version of MEDS we optimized (the one after optimization) and discuss how these optimizations could also be applied to the original one
+% - 'Optimizing Cryptographic Schemes' section is relevant
+% - Related Work: show landscape, elliptic curve optimization. other signature schemes. Other fiat shamir (and what is important in such schemes, such as keccak). Maybe cite other optimizations from the same NIST competition (other fiat shamir signatures maybe, if something interesting is there; LESS/uv-based/code-based/with fields). Additionally, maybe look at other techniques such as AVX2/AVX512 that are used nowadays.
+% - Research goals before preliminaries. Need full chapter probably. Make sure you explain everything without too much knowledge required.
+% - Start every chapter with a small summary (but no forward references)
+% - Definitely do include complexity for matrix systemization
+% - If you don't include a complexity, give an operation count
+% - All referneces to 'solve' need to be altered a bit. Give pseudocode/algorithm for 'solve' in the appendix and explain what it does.
+% - In every figure and table, give references in the caption to all the sources.
+% - Definitely include comparison to other schemes; Dilithium(?), Falcon(?), Sphinx(?), traditional ECC(?), SELF REPORTED!!
+
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{algpseudocode}
@@ -486,14 +497,14 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
     \toprule
     \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-      \texttt{pmod\_mat\_mul} & 15.97 & 69.81 & 70 \\
-      \texttt{pmod\_mat\_syst} & 2.07 & 9.07 & 6 \\
-      \texttt{rnd\_sys\_mat} & 2.07 & 9.06 & 1 \\
-      \texttt{solve\_opt} & 1.41 & 6.18 & 3 \\
-      \texttt{bs\_fill} & 1.06 & 4.64 & 2 \\
+      \texttt{pmod\_mat\_mul} & 15.98 & 69.78 & 70 \\
+      \texttt{pmod\_mat\_syst} & 2.08 & 9.07 & 6 \\
+      \texttt{solve\_opt} & 2.06 & 8.97 & 1 \\
+      \texttt{rnd\_sys\_mat} & 1.42 & 6.20 & 1 \\
+      \texttt{bs\_fill} & 1.06 & 4.63 & 1 \\
     \midrule
-      Cumulative & 22.59 & 98.76 & \\
-      Remaining & 0.28 & 1.24 & \\
+      Cumulative & 22.60 & 98.65 & \\
+      Remaining & 0.31 & 1.35 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-55520 Keygen Profiling Results}
@@ -1141,7 +1152,7 @@ Still plan to do myself:
 
 \chapter{Conclusion}
 \label{ch:conclusion}
-From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with MEDS-21595 being sped up by a factor of 2.6, 3.3, and 3.5; MEDS-55520 by a factor of 2.9, 3.5, and 3.7; and MEDS-122000 by a factor of 3.6, 4.1, and 4.2, for key generation, signing, and verification, respectively. The high-level optimization approach (as described in Section \ref{sec:highleveloptimization}) has provided a smaller speedup due to the limitations in the cache size of the ARM Cortex-A72 CPU. This approach might provide a larger speedup on CPUs with larger cache sizes.
+From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with MEDS-21595 being sped up by a factor of 2.8, 3.5, and 3.7; MEDS-55520 by a factor of 3.1, 3.8, and 4.0; and MEDS-122000 by a factor of 4.2, 4.8, and 4.9, for key generation, signing, and verification, respectively. The high-level optimization approach (as described in Section \ref{sec:highleveloptimization}) has provided a smaller speedup due to the limitations in the cache size of the ARM Cortex-A72 CPU. This approach might provide a larger speedup on CPUs with larger cache sizes.
 
 We present an alternative hash structure in Section \ref{sec:hashfunctionoptimization} that improves the performance of signing and verification by a small amount, at a negligible cost to the non-parallelized reference implementation. As this alternative hash structure results in different challenges and signatures, we leave it as a suggested change to the MEDS scheme.
 

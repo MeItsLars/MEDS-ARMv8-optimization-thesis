@@ -55,7 +55,7 @@ def generate_barplot(parsed_data, filename):
     fig.legend(handles=handles, labels=parsed_data.keys(), loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=3)
 
     # Export images
-    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "imgs", "plots", filename), bbox_inches='tight')
+    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "..", "imgs", "plots", filename), bbox_inches='tight')
     # plt.show()
 
 def parse_data(data):
@@ -78,12 +78,8 @@ def load_csv():
         data = list(reader)
     return data
 
-def main():
-    data = load_csv()
-    parsed_data = parse_data(data)
-    generate_barplot(parsed_data["MEDS-21595"], "barplot_MEDS-21595.png")
-    generate_barplot(parsed_data["MEDS-55520"], "barplot_MEDS-55520.png")
-    generate_barplot(parsed_data["MEDS-122000"], "barplot_MEDS-122000.png")
-
-if __name__ == "__main__":
-    main()
+data = load_csv()
+parsed_data = parse_data(data)
+generate_barplot(parsed_data["MEDS-21595"], "barplot_MEDS-21595.png")
+generate_barplot(parsed_data["MEDS-55520"], "barplot_MEDS-55520.png")
+generate_barplot(parsed_data["MEDS-122000"], "barplot_MEDS-122000.png")
