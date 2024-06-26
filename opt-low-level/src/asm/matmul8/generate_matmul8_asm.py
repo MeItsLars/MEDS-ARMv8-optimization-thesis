@@ -487,4 +487,5 @@ if __name__ == "__main__":
         generate_matmul_file(name, 2, k, k, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_2_k_k')
         generate_matmul_file(name, m, n, m, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_m_n_m')
         generate_matmul_file(name, m, n, n, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_m_n_n')
+        generate_matmul_file(name, 32, 32, 32, MEDS_p, GFq_bits, f'pmod_mat_mul_8_asm_32_32_32')
     
