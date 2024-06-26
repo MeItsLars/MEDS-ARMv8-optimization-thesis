@@ -11,21 +11,21 @@ THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 def generate_barplot(measurements, filename):
     # Create figure and axis
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
     
     subcategories = [function["function_name"] for function in measurements[0]["functions"]]
     x = np.arange(len(subcategories))
     num_variants = len(measurements)
     
-    width = 0.1
-    subcategory_closeness = 3
+    width = 0.09
+    subcategory_closeness = 2.5
     
     for j, measurement in enumerate(measurements):
         function_cycle_values = [function["cycles"] for function in measurement["functions"]]
         ax.bar(x + (j - num_variants / 2 + 0.5) * width * subcategory_closeness, function_cycle_values, width * subcategory_closeness)
             
     # Set x-axis labels
-    ax.set_ylabel("Megacycles (x1e6)")
+    ax.set_ylabel("MCycles")
     ax.set_xticks(x)
     ax.set_xticklabels(subcategories)
         
@@ -38,11 +38,11 @@ def generate_barplot(measurements, filename):
     
     # Create a legend
     handles = [plt.Rectangle((0, 0), 1, 1, color=plt.cm.tab10(i)) for i in range(num_variants)]
-    fig.legend(handles=handles, labels=[f"{measurement['variant']}" for measurement in measurements], loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=2)
+    fig.legend(handles=handles, labels=[f"{measurement['variant']}" for measurement in measurements], loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=3)
 
     # Export images
-    # plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "..", "imgs", "plots", filename), bbox_inches='tight')
-    plt.show()
+    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "..", "imgs", "plots", filename), bbox_inches='tight')
+    # plt.show()
 
 def load_csv(file):
     with open(os.path.join(THIS_FILE_PATH, file), 'r') as file:
@@ -87,16 +87,22 @@ def compute_remaining(variant: str) -> tuple:
     remaining_percentage = 100 - total_percentage
     return remaining_cycles, remaining_percentage
 
-def generate(file: str, paramset: str) -> str:
+def generate(file: str, paramset: str, output_file: str) -> str:
     data = load_csv(file)
     parsed_data = parse_algorithm_data(data)
     
     # Find the JSON objects in 'parsed_data' list that has correct 'paramset'
     relevant_variants = [entry for entry in parsed_data if entry["paramset"] == paramset]
     for variant in relevant_variants:
-        variant["remaining_cycles"] = compute_remaining(variant)[0]
-    generate_barplot(relevant_variants, f"{paramset}.png")
+        remaining_cycles, remaining_percentage = compute_remaining(variant)
+        variant["functions"].append({
+            "function_name": "remaining",
+            "cycles": remaining_cycles,
+            "percentage": remaining_percentage,
+            "calls": 0
+        })
+    generate_barplot(relevant_variants, output_file)
 
-# print(generate('results_keygen.csv', 'MEDS-55520'))
-print(generate('results_sign.csv', 'MEDS-55520'))
-# print(generate('results_verify.csv', 'MEDS-55520'))
+generate('results_keygen.csv', 'MEDS-55520', 'barplot_MEDS-55520_profile_keygen.png')
+generate('results_sign.csv', 'MEDS-55520', 'barplot_MEDS-55520_profile_sign.png')
+generate('results_verify.csv', 'MEDS-55520', 'barplot_MEDS-55520_profile_verify.png')

@@ -39,7 +39,7 @@ def generate_barplot(parsed_data, filename):
         ax2.bar(x2 + (i - num_techniques2 / 2 + 0.5) * width * 1.3, values[1:], width * 1.3)
 
     # Add labels
-    ax2.set_ylabel('Megacycles (x1e6)')
+    ax2.set_ylabel('MCycles')
     ax2.set_xticks(x2)
     ax2.set_xticklabels(subcategories2)
 

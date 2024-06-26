@@ -777,15 +777,15 @@ A more accurate minimum cycle bound can be established by looking at the number 
   \item The NEON unit is able to perform operations in parallel.
   \item As we compute the result for a $4\times4$ submatrix of $C$ at the same time, we are able to use the same input value 4 times, reducing the number of loads required.
 \end{itemize}
-The number of instructions required for the vectorized algorithm can be calculated as follows:
+The number of instructions required for the vectorized algorithm can be calculated as follows:\todo{Explain why times 2}
 \begin{itemize}
-  \item $\frac{1}{4}m \cdot \frac{1}{4}o \cdot \frac{1}{4}n \cdot 4$ loads of $A$
-  \item $\frac{1}{4}m \cdot \frac{1}{4}o \cdot \frac{1}{4}n \cdot 4$ loads of $B$
-  \item $\frac{1}{4}m \cdot \frac{1}{4}o \cdot \frac{1}{4}n \cdot 4 \cdot 4$ multiply-accumulate operations
-  \item $\frac{1}{4}m \cdot \frac{1}{4}o \cdot 4$ reductions
-  \item $\frac{1}{4}m \cdot \frac{1}{4}o \cdot 4$ stores
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8$ loads of $A$
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8$ loads of $B$
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot 8 \cdot 2$ multiply-accumulate operations
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot 2$ reductions
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8$ stores
 \end{itemize}
-Given that reduction takes 5 cycles and the remaining operations take 1 cycle, we establish a minimum bound of $\frac{1}{4}m \cdot \frac{1}{4}o \cdot \frac{1}{4}n \cdot 4 \cdot (1 + 1 + 4) + \frac{1}{4}m \cdot \frac{1}{4}o \cdot 4 \cdot (1 + 5) = \frac{1}{16}mo(6n + 24)$ cycles.
+Given that reduction takes 5 cycles and the other operations take 1 cycle, we establish a minimum bound of $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot (1 + 1 + 8 \cdot 2) + \frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot (1 + 5 \cdot 2) = \frac{1}{64}mo(18n + 88)$ cycles.
 
 \subsection{Matrix Systemization}
 \label{sec:matrixsystemization}
@@ -1065,25 +1065,61 @@ During matrix systemization (shown in Algorithm \ref{alg:systemizer}), the algor
 
 \chapter{Results}
 \label{ch:results}
-In this chapter, we will present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. The code was compiled for the ARMv8 architecture and was ran on a Raspberry Pi 4 Model B with a 64-bit squad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. In all tables and figures, the numbers shown represent the number of megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
+In this chapter, we will present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. The code was compiled for the ARMv8 architecture and was ran on a Raspberry Pi 4 Model B with a 64-bit squad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. In all tables and figures, the numbers shown represent the number of cycles or megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
 
 We will first look at the performance results of the three algorithms that were optimized specifically for the low-level approach in Section \ref{sec:resultslowlevel}. Next, we will do the same for the high-level approach in Section \ref{sec:resultshighlevel}. Finally, we will compare the overall performance of all implemented variants of the MEDS implementation in Section \ref{sec:overallperformance}.
+\todo{fix}
 
-\section{Low-Level Optimized Algorithms}
+\section{Low-Level Optimizations}
 \label{sec:resultslowlevel}
+In our low-level optimization approach (see Section \ref{sec:lowleveloptimization}), we optimized matrix multiplication, matrix systemization, and system solving. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. In order to determine how close we got to this lower bound, we benchmarked the optimized functions for each of the three MEDS parameter sets. Together with the calculated minimum bound for each function (part), this gives us an understanding of how close we got to a perfect optimization. The results for these optimizations are shown in Table \ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the median of the timing results.
 
-\subsection{Matrix Multiplication}
-\todo[inline]{Put bar plots in this section showing comparisons of the performance of traditional, optimized, and minimum cycle count matrix multiplication. Explain the results.}
+\begin{table}
+  \centering
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{llrrr}
+    \toprule
+    \textbf{Function} & \textbf{Input Size} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
+    \toprule
+    Matrix Mult. & $A$: $2 \times k \quad B$: $k \times k$ & 1325 & 743.75 & $\times 1.78$\\
+    Matrix Mult. & $A$: $n \times k \quad B$: $k \times m$ & x & x & x\\
+    \midrule
+    Matrix Syst. & $A$: $m \times m$ & x & x & x\\
+    \midrule
+    System Solving & $G$: $nm \times 2m$ & x & x & x\\
+    \bottomrule
+  \end{tabular}
+  %
+  }
+  \caption{Low-Level Optimization Results.}
+  \label{tab:lowleveloptimizationresults}
+\end{table}
 
-\subsection{Matrix Systemization}
-\todo[inline]{Put bar plots in this section showing comparisons of the performance of traditional, optimized, and minimum cycle count matrix systemization. Explain the results.}
+\section{Profiling Implementation Variants}
+\label{sec:profilingoptimizations}
+The results of profiling the reference implementation were shown earlier in Section \ref{sec:medsprofilingresults}. In this section, we profile the optimized implementations (both low-level and high-level) for parameter set MEDS-55520 to obtain an understanding of how much impact each optimization had. The relative results for the other two parameter sets are very similar and are therefore omitted. As the main goal of profiling does not revolve around getting accurate measurements but rather around understanding the relative performance of (functions within) the different implementations, we will not show the exact numbers here. We will instead depict the results through bar charts. It should be noted that the results are not completely accurate, as we only ran one profiling iteration for each of the three algorithms. The profiling results are shown in Figures \ref{fig:results_profile_keygen_MEDS-55520} (key generation), \ref{fig:results_profile_signing_MEDS-55520} (signing), and \ref{fig:results_profile_verify_MEDS-55520} (verification).
 
-\subsection{System Solving}
-\todo[inline]{Put bar plots in this section showing comparisons of the performance of traditional, optimized, and minimum cycle count system solving. Explain the results.}
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-55520_profile_keygen.png}
+  \caption{MEDS-55520 profiling results for functions used in key generation}
+  \label{fig:results_profile_keygen_MEDS-55520}
+\end{figure}
 
-\section{High-Level Optimized Supplemented Algorithms}
-\label{sec:resultshighlevel}
-\todo[inline]{Compare results for the various algorithms that were optimized in the high-level approach with their reference implementations. Explain the results.}
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-55520_profile_sign.png}
+  \caption{MEDS-55520 profiling results for functions used in signing}
+  \label{fig:results_profile_signing_MEDS-55520}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{plots/barplot_MEDS-55520_profile_verify.png}
+  \caption{MEDS-55520 profiling results for functions used in verification}
+  \label{fig:results_profile_verify_MEDS-55520}
+\end{figure}
 
 \section{Overall Performance}
 \label{sec:overallperformance}
@@ -1123,8 +1159,7 @@ The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmar
   \label{fig:overal_performance_bar_chart_MEDS-122000}
 \end{figure}
 
-\todo[inline]{Question to Peter and Simona: Is it a good idea to include an additional section in which I show profiling results for the optimized implementations? Here, I could show the distribution of cycles over the different functions (matrix multiplication, systemization, etc.) for the optimized implementations (possibly using piecharts).}
-
+\section{Comparison to Similar Schemes}
 \todo[inline]{Question to Peter and Simona: Should I include a section in which I compare the performance of MEDS to the performance of other (similar) digital signature schemes?}
 
 \chapter{Future work}
