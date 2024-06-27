@@ -25,7 +25,7 @@ int number_of_profileresults = 0;
 int profiler_enabled = 0;
 
 #define MATMUL_ROUNDS 500
-#define ROUNDS 100
+#define ROUNDS 128
 
 extern void nop_test();
 
@@ -68,6 +68,7 @@ extern void pmod_mat_mul_8_asm_8_8_13(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_8_asm_13_13_13(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_8_asm_16_16_16(uint16_t *C, uint16_t *A, uint16_t *B);
 extern void pmod_mat_mul_8_asm_24_24_24(uint16_t *C, uint16_t *A, uint16_t *B);
+extern void pmod_mat_mul_8_asm_32_32_32(uint16_t *C, uint16_t *A, uint16_t *B);
 
 extern void pmod_mat_reduce_asm(uint16_t *C, int C_r, int C_c, uint16_t *tmp);
 
@@ -1034,25 +1035,28 @@ void pmod_mat_mul_simd_v8(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_
 
 float min_cycle_bound(int m, int o, int n)
 {
-  // float r_loops = m * 0.25;
-  // float c_loops = n * 0.25;
-  // float k_loops = o * 0.25;
+  // float r_loops = m / 8.0;
+  // float c_loops = n / 8.0;
+  // float k_loops = o / 8.0;
 
   // float result = 0;
-  // // result += r_loops;                             // R loop add and compare
-  // // result += r_loops * c_loops;                   // C loop add and compare
-  // // result += r_loops * c_loops * k_loops;         // K loop add and compare
-  // // result += r_loops * c_loops * k_loops * 2;     // K loop address calculation
-  // result += r_loops * c_loops * k_loops * 4;     // Load A
-  // result += r_loops * c_loops * k_loops * 4;     // Load B
-  // result += r_loops * c_loops * k_loops * 4 * 4; // Compute C
-  // result += r_loops * c_loops * 4 * 5;           // Reduce C
-  // result += r_loops * c_loops * 4;               // Store C
+  // result += r_loops;                             // R loop add and compare
+  // result += r_loops * c_loops;                   // C loop add and compare
+  // result += r_loops * c_loops * k_loops;         // K loop add and compare
+  // result += r_loops * c_loops * k_loops * 2;     // K loop address calculation
+  // result += r_loops * c_loops * k_loops * 8;         // Load A
+  // result += r_loops * c_loops * k_loops * 8;         // Load B
+  // result += r_loops * c_loops * k_loops * 8 * 8 * 2; // Compute C
+  // result += r_loops * c_loops * 8 * 5 * 2 + 1;       // Reduce C
+  // result += r_loops * c_loops * 8;                   // Store C
 
-  // return 4 * result;
+  // return 8 * result;
 
-  float result = (1 / 16.0) * m * n * (6 * o + 24);
-  return 4 * result;
+  // float result = (1 / 16.0) * m * n * (6 * o + 24);
+
+  float result = (1 / 64.0) * m * n * (18 * o + 88);
+  // result += (1 / 64.0) * m * n * 1;
+  return 8 * result;
 
   // float result = 0;
   // result += m * n * o * 1; // Arithmetic
@@ -1136,9 +1140,9 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
   double asm_matmul_median_cc = median_2(asm_matmul_cycles, ROUNDS + 1, 0);
 
   double min_cycles = (double)min_cycle_bound(m, o, n);
-  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 4);
-  double intrinsic_cycle_multiplier = intrinsic_matmul_median_cc / (min_cycles / 4);
-  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 4);
+  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 8);
+  double intrinsic_cycle_multiplier = intrinsic_matmul_median_cc / (min_cycles / 8);
+  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 8);
 
   double intrinsic_improvement = (intrinsic_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
   double asm_improvement = (asm_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
@@ -1171,7 +1175,7 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
     printf("> INTRINSIC INEQUALITIES: %d/%d\n", intrinsic_inequalities, m * n);
 
   printf("Minimum cycle amount: %f\n", min_cycles);
-  printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
+  printf("Minimum cycle amount (8-way) parallel: %f\n", min_cycles / 8);
   printf("Matmul median: %f\t(x%f)\n", matmul_median_cc, matmul_cycle_multiplier);
   printf("Intrinsic median: %f\t(x%f)\n", intrinsic_matmul_median_cc, intrinsic_cycle_multiplier);
   printf("ASM median: %f\t(x%f)\n", asm_matmul_median_cc, asm_cycle_multiplier);
@@ -1197,7 +1201,6 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
   __attribute__((aligned(16))) pmod_mat_t C1[m * n];
   __attribute__((aligned(16))) pmod_mat_t C2[m * n];
   __attribute__((aligned(16))) pmod_mat_t C3[m * n];
-
 
   for (int i = 0; i < m * o; i++)
     A[i] = rnd_GF(&shake);
@@ -1427,12 +1430,12 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
 int main(int argc, char *argv[])
 {
   enable_cyclecounter();
-  // test_performance("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k);
-  // test_performance("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k);
-  // test_performance("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k);
-  // test_performance("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m);
-  // test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n);
-  // test_performance("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24);
+  test_performance("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_8_asm_2_k_k);
+  test_performance("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_8_asm_2_mn_k);
+  test_performance("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_8_asm_k_mn_k);
+  test_performance("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_8_asm_m_n_m);
+  test_performance("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_8_asm_m_n_n);
+  test_performance("pmod_mat_mul_32_32_32", 32, 32, 32, pmod_mat_mul_8_asm_32_32_32);
   // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
   // test_performance2("pmod_mat_mul_8_8_8", 8, 8, 8, pmod_mat_mul_8_asm_8_8, pmod_mat_mul_8_asm_8_8_8);
   // test_performance2("pmod_mat_mul_13_8_8", 13, 8, 8, pmod_mat_mul_asm_13_8_8, pmod_mat_mul_8_asm_13_8_8);
@@ -1442,11 +1445,11 @@ int main(int argc, char *argv[])
   // test_performance2("pmod_mat_mul_13_13_13", 13, 13, 13, pmod_mat_mul_asm_13_13_13, pmod_mat_mul_8_asm_13_13_13);
   // test_performance2("pmod_mat_mul_16_16_16", 16, 16, 16, pmod_mat_mul_asm_16_16_16, pmod_mat_mul_8_asm_16_16_16);
   // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
-  test_performance2("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k, pmod_mat_mul_8_asm_2_k_k);
-  test_performance2("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k, pmod_mat_mul_8_asm_2_mn_k);
-  test_performance2("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k, pmod_mat_mul_8_asm_k_mn_k);
-  test_performance2("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m, pmod_mat_mul_8_asm_m_n_m);
-  test_performance2("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n, pmod_mat_mul_8_asm_m_n_n);
-  test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
+  // test_performance2("pmod_mat_mul_2_k_k", 2, MEDS_k, MEDS_k, pmod_mat_mul_asm_2_k_k, pmod_mat_mul_8_asm_2_k_k);
+  // test_performance2("pmod_mat_mul_2_mn_k", 2, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_2_mn_k, pmod_mat_mul_8_asm_2_mn_k);
+  // test_performance2("pmod_mat_mul_k_mn_k", MEDS_k, MEDS_m * MEDS_n, MEDS_k, pmod_mat_mul_asm_k_mn_k, pmod_mat_mul_8_asm_k_mn_k);
+  // test_performance2("pmod_mat_mul_m_n_m", MEDS_m, MEDS_n, MEDS_m, pmod_mat_mul_asm_m_n_m, pmod_mat_mul_8_asm_m_n_m);
+  // test_performance2("pmod_mat_mul_m_n_n", MEDS_m, MEDS_n, MEDS_n, pmod_mat_mul_asm_m_n_n, pmod_mat_mul_8_asm_m_n_n);
+  // test_performance2("pmod_mat_mul_24_24_24", 24, 24, 24, pmod_mat_mul_asm_24_24_24, pmod_mat_mul_8_asm_24_24_24);
   disable_cyclecounter();
 }

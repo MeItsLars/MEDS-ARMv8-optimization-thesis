@@ -657,9 +657,9 @@ void shake256_finalize(keccak_state *state)
 **************************************************/
 void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 {
-  PROFILER_START("shake256_squeeze");
+  // PROFILER_START("shake256_squeeze");
   state->pos = keccak_squeeze(out, outlen, state->s, state->pos, SHAKE256_RATE);
-  PROFILER_STOP("shake256_squeeze");
+  // PROFILER_STOP("shake256_squeeze");
 }
 
 /*************************************************
