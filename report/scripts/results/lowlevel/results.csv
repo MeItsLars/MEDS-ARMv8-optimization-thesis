@@ -1,0 +1,12 @@
+pmod_mat_mul_2_k_k,1343
+pmod_mat_mul_2_mn_k,39105
+pmod_mat_mul_m_n_m,16024
+pmod_mat_mul_m_n_n,16845
+pmod_mat_mul_32_32_32,10795
+pmod_mat_syst_k_k_k_0_0,105571
+pmod_mat_syst_n_2n_n_0_1,329936
+pmod_mat_syst_m_2m_m_0_1,295878
+pmod_mat_syst_k_2k_k_0_1,295632
+pmod_mat_syst_n_2m_nr1_0_1,306502
+pmod_mat_syst_mr1_m_mr1_1_1,133584
+pmod_mat_syst_k_2k_k_0_0,209888

@@ -1082,12 +1082,12 @@ In our low-level optimization approach (see Section \ref{sec:lowleveloptimizatio
     \toprule
     \textbf{Function} & \textbf{Input Size} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
     \toprule
-    Matrix Mult. & $A$: $2 \times k \quad B$: $k \times k$ & 1325 & 743.75 & $\times 1.78$\\
-    Matrix Mult. & $A$: $n \times k \quad B$: $k \times m$ & x & x & x\\
-    \midrule
-    Matrix Syst. & $A$: $m \times m$ & x & x & x\\
-    \midrule
-    System Solving & $G$: $nm \times 2m$ & x & x & x\\
+    Matrix Mult. & $A$: $2 \times 34 \quad B$: $34 \times 34$ & 1343 & 744 & 1.81\\
+\midrule
+    Matrix Mult. & $A$: $2 \times 1190 \quad B$: $1190 \times 34$ & 39105 & 22852 & 1.71\\
+    Matrix Mult. & $A$: $34 \times 35 \quad B$: $35 \times 34$ & 16024 & 12969 & 1.24\\
+    Matrix Mult. & $A$: $34 \times 35 \quad B$: $35 \times 35$ & 16845 & 13350 & 1.26\\
+    Matrix Mult. & $A$: $32 \times 32 \quad B$: $32 \times 32$ & 10795 & 10624 & 1.02\\
     \bottomrule
   \end{tabular}
   %
