@@ -722,7 +722,6 @@ if __name__ == "__main__":
     
     name, m, n, k, MEDS_p, GFq_bits = parse_params_h(sys.argv[1])
     # Generate the 6 different systemizations (nct and ct) required for MEDS
-    generate_systemizer_file(name, Context(5, 5, 5, False, False, MEDS_p, GFq_bits, True), 'pmod_mat_syst_5_5_5_0_0')
     generate_systemizer_file(name, Context(k, k, k, False, False, MEDS_p, GFq_bits, True), 'pmod_mat_syst_k_k_k_0_0')
     generate_systemizer_file(name, Context(n, 2*n, n, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_n_2n_n_0_1')
     generate_systemizer_file(name, Context(m, 2*m, m, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_m_2m_m_0_1')
@@ -730,7 +729,7 @@ if __name__ == "__main__":
     generate_systemizer_file(name, Context(k, 2*k, k, False, False, MEDS_p, GFq_bits, True), 'pmod_mat_syst_k_2k_k_0_0')
     generate_systemizer_file(name, Context(n, 2*m, n-1, False, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_n_2m_nr1_0_1')
     generate_systemizer_file(name, Context(m-1, m, m-1, True, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_mr1_m_mr1_1_1')
-    generate_systemizer_file(name, Context(5, 5, 5, False, False, MEDS_p, GFq_bits, False), 'pmod_mat_syst_5_5_5_0_0_nct')
+    generate_systemizer_file(name, Context(32, 32, 32, True, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_32_32_32_1_1')
     generate_systemizer_file(name, Context(k, k, k, False, False, MEDS_p, GFq_bits, False), 'pmod_mat_syst_k_k_k_0_0_nct')
     generate_systemizer_file(name, Context(n, 2*n, n, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_n_2n_n_0_1_nct')
     generate_systemizer_file(name, Context(m, 2*m, m, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_m_2m_m_0_1_nct')
@@ -738,3 +737,4 @@ if __name__ == "__main__":
     generate_systemizer_file(name, Context(k, 2*k, k, False, False, MEDS_p, GFq_bits, False), 'pmod_mat_syst_k_2k_k_0_0_nct')
     generate_systemizer_file(name, Context(n, 2*m, n-1, False, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_n_2m_nr1_0_1_nct')
     generate_systemizer_file(name, Context(m-1, m, m-1, True, True, MEDS_p, GFq_bits, False), 'pmod_mat_syst_mr1_m_mr1_1_1_nct')
+    generate_systemizer_file(name, Context(32, 32, 32, True, True, MEDS_p, GFq_bits, True), 'pmod_mat_syst_32_32_32_1_1_nct')
