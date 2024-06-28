@@ -208,3 +208,11 @@ message("Adding target: benchsystemizer")
 add_executable(benchsystemizer ${PROJECT_SOURCE_DIR}/benchsystemizer.c)
 target_include_directories(benchsystemizer PRIVATE ${INCLUDE_DIRECTORIES})
 target_link_libraries(benchsystemizer PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
+
+##########################################################
+# Build target: benchsolve
+##########################################################
+message("Adding target: benchsolve")
+add_executable(benchsolve ${PROJECT_SOURCE_DIR}/benchsolve.c)
+target_include_directories(benchsolve PRIVATE ${INCLUDE_DIRECTORIES})
+target_link_libraries(benchsolve PRIVATE common_sources asm_sources ${OPENSSL_LIBRARIES})
