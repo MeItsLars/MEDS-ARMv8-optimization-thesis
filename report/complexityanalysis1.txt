@@ -1,0 +1,42 @@
+for r = 0 to m:
+    O(1)
+    for r2 = r to m:
+        for c = r to n:
+            O(1)
+    O(1)
+    for c = r to n:
+        O(1)
+    for r2 = r to m:
+        for c = r to n:
+            O(1)
+
+for r = m to 0:
+    for r2 = 0 to r:
+        O(1)
+        for c = m to n:
+            O(1)
+
+SUM(r=0,m)(m - r)(n - r)
+SUM(r=0,m)(n - r)
+SUM(r=0,m)(m - r)(n - r)
+SUM(r=m-1,0)(r)(n - m)
+
+SUM_a^b(a) = (a + 1)(a) / 2
+SUM_a^b(b - a) = (b - a + 1)(b - a) / 2
+
+SUM_a^b(bx - ba)
+
+
+SUM(r=0,m)(m - r) + SUM(r=0,m)(r)
+= SUM(r=0,m)(m) - SUM(r=0,m)(r) + SUM(r=0,m)(r)
+= SUM(r=0,m)(m)
+= m(m + 1) / 2
+
+SUM(r=0,m)SUM(r2=0,r)O(1) + SUM(r=0,m)SUM(r2=0,r)SUM(c=m,n)O(1)
+
+SUM(r=0,m)O(r) + SUM(r=0,m)SUM(r2=0,r)O(n - m)
+SUM(r=0,m)O(r) + SUM(r=0,m)O((r)(n-m))
+SUM(r=0,m)O(r) + SUM(r=0,m)O(rn-rm)
+= O(SUM(r=0,m)(r) + nSUM(r=0,m)(r) - mSUM(r=0,m)(r))
+= O(m(m + 1) / 2 + nm(m + 1) / 2 - mm(m + 1) / 2)
+= O(m^2 + nm^2 - m^2)

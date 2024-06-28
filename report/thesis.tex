@@ -194,7 +194,7 @@ We investigate the following research questions in this thesis (see also Chapter
   \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this Chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
+In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
 
 \chapter{Preliminaries}
 \label{ch:preliminaries}
@@ -574,15 +574,16 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
 Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for 98.76\% of the total number of cycles. For signing and verification, this number is 99.42\% and 99.39\%, respectively. In all three algorithms, the remainder of the cycles is spent on a wide set of functions that take up a small amount of time. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
 
 \subsubsection{Matrix Multiplication}
-For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A \in \mathbb{F}_q^{m \times n}$ and $B \in \mathbb{F}_q^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. The time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
+For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A \in \mathbb{F}_q^{m \times n}$ and $B \in \mathbb{F}_q^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. As will be shown in Section \ref{sec:matrixmultiplicationcomplexity}, the time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
 % This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
 
 \subsubsection{Matrix Systemization}
 The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
-\todo[inline]{Question to Peter and Simona: Should I perform a complexity analysis of this function? It would probably be quite complex (at least way more complex than matrix multiplication) and I don't directly see a huge benefit.}
+\todo[inline]{Complexity}
 
 \subsubsection{System Solving}
 The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time.
+\todo[inline]{Complexity}
 
 \subsubsection{Bitstream Filling}
 The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to make the resulting keys and signatures more compact.\todo[inline]{This is true for the keys and signatures, but most of the time for `bitstream filling' is spent on converting the commitments before they are hashed. This still needs to be mentioned here somehow.}
@@ -603,7 +604,7 @@ We have established two approaches to optimize the MEDS implementation. These ap
   \item \textbf{High-Level Optimization}:\\
   This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the exact same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
 \end{itemize}
-In this Chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}, respectively. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
+In this chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}, respectively. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
 
 \section{Modular Reduction}
 \label{sec:modularreduction}
@@ -688,7 +689,11 @@ The low-level optimization approach focuses on optimizing the individual functio
 
 \subsection{Matrix Multiplication}
 \label{sec:matrixmultiplication}
-Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A \in \mathbb{F}_{4093}^{m \times n}$ and $B \in \mathbb{F}_{4093}^{n \times o}$ over the finite field $\mathbb{F}_{4093}$. Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. The time complexity of this algorithm is $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm \cite{strassen1969gaussian} and (generalizations of) the Coppersmith-Winograd algorithm \cite{coppersmith1987matrix}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
+Matrix multiplication is by far the most time-consuming function in MEDS, taking up almost 70\% of the total number of cycles in key generation, signing, and verification. The function is responsible for the simple task of multiplying two matrices $A \in \mathbb{F}_{4093}^{m \times n}$ and $B \in \mathbb{F}_{4093}^{n \times o}$ over the finite field $\mathbb{F}_{4093}$.
+
+\subsubsection{Complexity Analysis}
+\label{sec:matrixmultiplicationcomplexity}
+Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. There are three nested loops that loop over the $m$ rows of $A$, the $o$ columns of $B$, and the $n$ columns of $A$ and rows of $B$. The resulting time complexity of this algorithm is therefore $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm \cite{strassen1969gaussian} and (generalizations of) the Coppersmith-Winograd algorithm \cite{coppersmith1987matrix}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
 
 \subsubsection{Optimization}
 \label{sec:matrixmultiplicationoptimization}
@@ -799,7 +804,65 @@ Matrix systemization is responsible for converting a matrix $A \in \mathbb{F}_{4
   $A'$ is in reduced row-echelon form (RREF), with the additional property that the first $m \times m$ submatrix of $A'$ is the identity matrix.
 \end{itemize}
 
-The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains some functionality that swaps rows and/or columns of the matrix to ensure that the leading coefficient of a row is not 0. The algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
+The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains three optional features that can be used (based in the input arguments):
+\begin{enumerate}
+  \item $r_{\text{max}}$: Set the number of rows of the input matrix that need to be systemized. If not specified, the entire matrix is systemized.
+  \item do\_swap: Allow the algorithm to swap columns of the matrix to ensure that the leading coefficient of a row is not 0.
+  \item do\_backsub: Whether or not to perform back substitution after the matrix has been systemized.
+\end{enumerate}
+The complete algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
+
+\subsubsection{Complexity Analysis}
+\label{sec:matrixsystemizationcomplexity}
+We analyze the complexity of the matrix systemization algorithm used in the reference implementation (see Algorithm \ref{alg:systemizer}). We will first consider the basic algorithm where $r_\text{max} = m$ and do\_swap and do\_backsub are set to false. We can then compute the complexity of the algorithm as follows:
+
+\resizebox{\textwidth}{!}{
+\begin{minipage}{\textwidth}
+  \begin{align*}
+    & \sum_{r=0}^{m} \left( \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1) + \mathcal{O}(1) + \sum_{c=r}^{n} \mathcal{O}(1) + \sum_{r_2=r+1}^m \sum_{c=r}^{n} \mathcal{O}(1) \right) \\
+    & =
+    2 \cdot \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1)\right)
+    + \left( \sum_{r=0}^{m} \sum_{c=r}^{n} \mathcal{O}(1) \right)
+    + \left( \sum_{r=0}^{m} \mathcal{O}(1) \right) \\
+    & =
+    2 \cdot \left( \sum_{r=0}^{m} O((m-r)(n-r)) \right)
+    + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
+    + O(m) \\
+    & =
+    2 \cdot \left( \sum_{r=0}^{m} O(mn - mr - nr + r^2) \right)
+    + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
+    + O(m) \\
+    & = \mathcal{O} \left( mn \sum_{r=0}^{m} 1 - m \sum_{r=0}^{m} r - n \sum_{r=0}^{m} r + \sum_{r=0}^{m} r^2 + \sum_{r=0}^{m} n - \sum_{r=0}^{m} r + m \right) \\
+    & = \mathcal{O} \left( 
+    \begin{aligned}
+      mn \cdot m - m \cdot \frac{m(m+1)}{2} - n \cdot \frac{m(m+1)}{2} + \\
+      \frac{m(m+1)(2m+1)}{6} + n \cdot m - \frac{m(m+1)}{2} + m 
+    \end{aligned}
+    \right) \\
+    &= \mathcal{O} \left( m^2n - \frac{m^3 + m^2}{2} - \frac{m^2n + mn}{2} + \frac{m^3 + 3m^2 + 2m}{6} + mn - \frac{m^2 + m}{2} + m \right) \\
+    &= \mathcal{O} \left( m^2n - \frac{m^3}{2} - \frac{m^2}{2} - \frac{m^2n}{2} - \frac{mn}{2} + \frac{m^3}{6} + \frac{3m^2}{6} + \frac{2m}{6} + mn - \frac{m^2}{2} - \frac{m}{2} + m \right) \\
+    &= \mathcal {O} (m^2n)
+  \end{align*}
+\end{minipage}
+}
+
+We are able to replace the sums with closed-form expressions because of known arithmetic series. In the final step, as $n \geq m$ and therefore $m^2n \geq m^3$, we find that the complexity of the basic algorithm is $\mathcal{O}(m^2n)$.
+
+We consider the changes that the three optional features of the algorithm bring to the complexity:
+\begin{enumerate}
+  \item As $r_\text{max}$ is only ever $m$ or $m-1$, we can see that the complexity of the algorithm does not change based on the value of $r_\text{max}$.
+  \item When do\_swap is set to true, an additional loop is added to the algorithm which adds the following complexity:
+  \begin{align*}
+    & \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{i=0}^{r} \mathcal{O}(1) \right)
+  \end{align*}
+  Following a similar approach as above, we find that this results in a complexity of $\mathcal{O}(m^2)$, which does not change the complexity of the algorithm.
+  \item When do\_backsub is set to true, we perform another tripple-nested loop to perform back substitution. This loop has the following complexity:
+  \begin{align*}
+    & \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \sum_{c=m}^{n} \mathcal{O}(1) \right)
+  \end{align*}
+  Again, following a similar approach as above, we find that this results in a complexity of $\mathcal{O}(m^2 + nm^2 - m^2) = \mathcal{O}(nm^2)$, which does not change the complexity of the algorithm.
+\end{enumerate}
+From this, we can conclude that the complexity of the matrix systemization algorithm is $\mathcal{O}(m^2n)$.
 
 \subsubsection{Optimization}
 \label{sec:matrixsystemizationoptimization}
@@ -822,7 +885,20 @@ The inner loops that we are optimizing usually do not loop over a dimension that
 As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}}. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
 
 \subsubsection{Minimum Cycle Bound}
-\todo[inline]{It's quite difficult to establish a good minimum bound on Matrix Systemization, but I will try to do it.}
+Finding a minimum cycle bound for the optimized systemization algorithm is very similar to determining its complexity. As we can follow the same structure as in Section \ref{sec:matrixsystemizationcomplexity}, we will omit some of the steps taken and refer the reader to that section for a more detailed explanation.
+
+For the basic algorithm, the number of instructions required can be calculated as follows:
+\begin{itemize}
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add and freeze instructions
+  \item $\sum_{r=0}^{r\_\text{max}} 1$ finite field inversions
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
+  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add, subtract, and freeze instructions
+\end{itemize}
+Combining these results (using the same technique as for the complexity analysis), we obtain $1$.
 
 \subsection{System Solving}
 \label{sec:systemsolving}
@@ -837,9 +913,12 @@ Unfortunately, the function is also extremely large, with the reference code con
   \lstinputlisting[language=C, style=CStyle]{code/solve_opt_loop1.c}
 \end{algorithm}
 
+\subsubsection{Complexity Analysis}
+\todo[inline]{ezpz}
+
 \subsubsection{Optimization}
 \label{sec:systemsolvingoptimization}
-Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we will try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$.
+Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we will try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$ ($\texttt{MEDS\_n}$ for the second loop).
 
 As the field elements are stored in 16 bits, we are able to compute 8 elements at the same time using 128-bit NEON registers. Therefore, we will compute the results for 8 values of $r$ at the same time. We start by loading \texttt{tmp1}, which gives us a small problem, as these 8 values are not stored next to each other in memory. Therefore, we load these values using normal load instructions and store them in a 128-bit NEON register. The remaining loads and stores can be done using vectorized instructions as those values are stored next to each other in memory.
 
@@ -854,7 +933,21 @@ As the \texttt{solve\_opt} function is very large, we have decided not to implem
 The optimized C code with NEON intrinsics is quite elaborate, so we will not show it here. Instead, we refer to the code in the code repository\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/util.c}}.
 
 \subsubsection{Minimum Cycle Bound}
-\todo[inline]{It's not possible to give a good minimum cycle bound on the entire System Solving algorithm, but it should be possible to give a cycle bound on these two loops. I'm not yet sure if this is necessary.}
+We will establish a minimum cycle bound for the part of the \texttt{solve\_opt} function that we optimized: the two time-consuming loops. As they share the same structure, we will show a general approach for establishing a minimum cycle bound for these loops, which we will then apply to both loops to obtain a minimum cycle bound for the combined loops.
+
+We call $x$ the number of iterations of the outermost loop, $y$ the number of iterations of the middle loop, and $z$ the number of iterations of the innermost loop. The minimum number of instructions for the tripple-nested loop can be calculated as follows:
+\begin{itemize}
+  \item $x \cdot y$ loads of \texttt{tmp2} (it is loaded once per iteration of the innermost loop)
+  \item $x \cdot y \cdot \frac{1}{8}z \cdot 8$ loads to load the 8 values of \texttt{tmp1}
+  \item $x \cdot y \cdot \frac{1}{8}z \cdot 2$ multiplications and reductions to compute \texttt{prod\_low/high}
+  \item $x \cdot y \cdot \frac{1}{8}z$ combinations of \texttt{prod\_low} and \texttt{prod\_high} to compute \texttt{prod}
+  \item $x \cdot y \cdot \frac{1}{8}z$ loads to load \texttt{val}
+  \item $x \cdot y \cdot \frac{1}{8}z$ additions, subtractions, and final reductions to compute \texttt{val}
+  \item $x \cdot y \cdot \frac{1}{8}z$ stores of \texttt{val}
+\end{itemize}
+Given that reductions takes 5 cycles, final reductions take 3 cycles\todo{Check and reference}, and all other operations take 1 cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
+
+We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table \ref{tab:medsparametersets}). This gives us a total of $\frac{1}/{8}(m-3)(m-1)(28m + 8)$ cycles for loop 1 and $\frac{1}{8}(m-2)(m-1)(28n + 8)$ cycles for loop 2, giving a combined total of $\frac{1}{8}(m-3)(m-1)(28m + 28n + 16)$ cycles.
 
 \section{High-Level Optimization}
 \label{sec:highleveloptimization}
@@ -1078,21 +1171,30 @@ In our low-level optimization approach (see Section \ref{sec:lowleveloptimizatio
   \centering
   \resizebox{\textwidth}{!}{
   %
-  \begin{tabular}{llrrr}
+  \begin{tabular}{lllrrr}
     \toprule
-    \textbf{Function} & \textbf{Input Size} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
+    \textbf{Function} & \multicolumn{2}{c}{\textbf{Input Size}} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
     \toprule
-    Matrix Mult. & $A$: $2 \times 34 \quad B$: $34 \times 34$ & 1343 & 744 & 1.81\\
+    Matrix Multiplication & $A$: $2 \times k$ & $B$: $k \times k$ & 1343 & 744 & 1.81\\
+    Matrix Multiplication & $A$: $2 \times mn$ & $B$: $mn \times k$ & 39105 & 22852 & 1.71\\
+    Matrix Multiplication & $A$: $m \times n$ & $B$: $n \times m$ & 16024 & 12969 & 1.24\\
+    Matrix Multiplication & $A$: $m \times n$ & $B$: $n \times n$ & 16845 & 13350 & 1.26\\
+    Matrix Multiplication & $A$: $32 \times 32$ & $B$: $32 \times 32$ & 10795 & 10624 & 1.02\\
 \midrule
-    Matrix Mult. & $A$: $2 \times 1190 \quad B$: $1190 \times 34$ & 39105 & 22852 & 1.71\\
-    Matrix Mult. & $A$: $34 \times 35 \quad B$: $35 \times 34$ & 16024 & 12969 & 1.24\\
-    Matrix Mult. & $A$: $34 \times 35 \quad B$: $35 \times 35$ & 16845 & 13350 & 1.26\\
-    Matrix Mult. & $A$: $32 \times 32 \quad B$: $32 \times 32$ & 10795 & 10624 & 1.02\\
+    Matrix Syst. & $A$: $k \times k$& & 105571 & 100 & 1055.71\\
+    Matrix Systemization & $A$: $k \times 2k$& & 209888 & 100 & 2098.88\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $n \times 2n$& & 329936 & 100 & 3299.36\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $m \times 2m$& & 295878 & 100 & 2958.78\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $k \times 2k$& & 295632 & 100 & 2956.32\\
+    Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $A$: $n \times 2m$& & 306502 & 100 & 3065.02\\
+    Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $A$: $m-1 \times m$& & 133584 & 100 & 1335.84\\
+\midrule
+    System Solving & $C$: $2 \times mn$ & & 350968 & 249100 & 1.41\\
     \bottomrule
   \end{tabular}
   %
   }
-  \caption{Low-Level Optimization Results.}
+  \caption{Results of Low-Level algorithm optimizations. `Cycles' represents the number of cycles that the optimized function (part) took to execute. `Bound' represents the lower bound (as calculated in the relevant section in Chapter \ref{ch:methodology}) on the number of cycles that the function (part) should take to execute. For Matrix Systemization, the arguments (as explained in Section \ref{sec:matrixsystemization}) are represented by $^*$ (apply back substitution), $^{**}$ (apply systemization to a limited number of rows), and $^{***}$ (swap columns to ensure non-zero leading coefficients).}
   \label{tab:lowleveloptimizationresults}
 \end{table}
 
@@ -1170,8 +1272,11 @@ Future Work:
   \item Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can possibly utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en}
   \item Perform high-level optimization for key generation (even though this is hard to do with our current parameter sets, as $s$ is always 2, limiting the parallelization possibilities).
   \item Optimize the `solve' method (for the low-level approach) using a pure-assembly approach.
+  \item Explore additional multiplication techniques for matrices with very specific dimensions, such as $2 \cdot x$.
   \item Analyse and optimize memory and power usage of the (optimized) MEDS implementation.
   \item Implement the optimized MEDS implementation on other CPU architectures that support SIMD instructions, such as AVX512.
+  \item In low-level systemizer, add 8-way parallelization to all loops.
+  \item In high level-v8, change 13-bit reduction to a simple freeze.
 \end{itemize}
 
 Still plan to do myself:

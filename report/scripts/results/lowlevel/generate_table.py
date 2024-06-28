@@ -4,9 +4,9 @@ import os
 THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 TABLE_TEMPLATE = """
-  \\begin{tabular}{llrrr}
+  \\begin{tabular}{lllrrr}
     \\toprule
-    \\textbf{Function} & \\textbf{Input Size} & \\textbf{Cycles} & \\textbf{Bound} & \\textbf{Ratio}\\\\
+    \\textbf{Function} & \\multicolumn{2}{c}{\\textbf{Input Size}} & \\textbf{Cycles} & \\textbf{Bound} & \\textbf{Ratio}\\\\
     \\toprule
 %s
     \\bottomrule
@@ -38,36 +38,105 @@ def evaluate(value):
     except:
         return PARAMSET_MAPPINGS[value]
 
+def replace_minus(value):
+    return value.replace('r', '-')
+
 def matmul_cycles(m, o, n):
     return (1 / 64.0) * m * n * (18 * o + 88)
 
+def matsyst_cycles(m, n, r_max, do_swap, do_backsub):
+    result = 0
+    # 1
+    result = result + r_max * 200
+    # 2
+    result = result + (15/8) * n * r_max
+    result = result - (15/8) * r_max * (r_max + 1) / 2
+    # 3
+    result = result + (22/8) * m * n * r_max
+    result = result - (22/8) * n * r_max * (r_max + 1) / 2
+    result = result - (22/8) * n * r_max
+    result = result + (22/8) * m * r_max
+    result = result + (22/8) * r_max * (r_max + 1) * (2 * r_max + 1) / 6
+    result = result + (22/8) * r_max * (r_max + 1) / 2
+    
+    return result
+
+def solve_cycles():
+    meds_n = evaluate('n')
+    meds_m = evaluate('m')
+    return (1 / 8) * (meds_m - 3) * (meds_m - 1) * (28 * meds_m + 28 * meds_n + 16)
+
 def parse_matmul(function, cycles):
     function_parts = function.split('_')
-    m = evaluate(function_parts[3])
-    o = evaluate(function_parts[4])
-    n = evaluate(function_parts[5])
+    m = function_parts[3]
+    o = function_parts[4]
+    n = function_parts[5]
+    cycle_bound = matmul_cycles(evaluate(m), evaluate(o), evaluate(n))
     return {
-        "name": "Matrix Mult.",
-        "input": f"$A$: ${m} \\times {o} \\quad B$: ${o} \\times {n}$",
+        "name": "Matrix Multiplication",
+        "input": f"$A$: ${m} \\times {o}$ & $B$: ${o} \\times {n}$",
         "cycles": int(cycles),
-        "bound": matmul_cycles(m, o, n),
-        "ratio": int(cycles) / matmul_cycles(m, o, n)
+        "bound": cycle_bound,
+        "ratio": int(cycles) / cycle_bound
+    }
+
+def parse_matsyst(function, cycles, first):
+    function_parts = function.split('_')
+    m = function_parts[3]
+    n = function_parts[4]
+    max_r = function_parts[5]
+    do_swap = int(function_parts[6])
+    do_backsub = int(function_parts[7])
+    cycle_bound = matsyst_cycles(evaluate(m), evaluate(n), evaluate(max_r), do_swap, do_backsub)
+    fun_name = "Matrix Systemization" if first else "Matrix Syst."
+    name = f"{fun_name}{' (' + replace_minus(max_r) + '$^{**}$)' if max_r != m else ''}{' (swap$^{***}$)' if do_swap == 1 else ''}{' (bsub$^{*}$)' if do_backsub == 1 else ''}"
+    return {
+        "name": name,
+        "input": f"$A$: ${replace_minus(m)} \\times {replace_minus(n)}$&",
+        "cycles": int(cycles),
+        "bound": cycle_bound,
+        "ratio": int(cycles) / cycle_bound
+    }
+
+def parse_solve(function, cycles):
+    function_parts = function.split('_')
+    m = function_parts[3]
+    n = function_parts[4]
+    cycle_bound = solve_cycles()
+    return {
+        "name": "System Solving",
+        "input": f"$C$: ${m} \\times {n}$ &",
+        "cycles": int(cycles),
+        "bound": cycle_bound,
+        "ratio": int(cycles) / cycle_bound
     }
 
 def parse_data(data):
     result = []
     new_stage = None
     stage = None
+    first_in_stage = True
     for row in data:
         function = row[0]
         cycles = row[1]
         if function.startswith('pmod_mat_mul'):
-            result.append(parse_matmul(function, cycles))
+            new_line = parse_matmul(function, cycles)
             new_stage = 'matmul'
+        if function.startswith('pmod_mat_syst'):
+            new_line = parse_matsyst(function, cycles, first_in_stage)
+            new_stage = 'matsyst'
+        if function.startswith('solve_opt_part'):
+            new_line = parse_solve(function, cycles)
+            new_stage = 'solve'
         
         if new_stage != stage:
-            result.append('rule')
+            if stage is not None:
+                result.append('rule')
             stage = new_stage
+            first_in_stage = True
+        else:
+            first_in_stage = False
+        result.append(new_line)
     return result
 
 def generate_table(file: str) -> str:

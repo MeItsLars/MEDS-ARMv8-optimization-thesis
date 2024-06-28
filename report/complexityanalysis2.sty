@@ -1,0 +1,39 @@
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add and freeze instructions
+$\sum_{r=0}^{r\_\text{max}} 1$ finite field inversions
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add, subtract, and freeze instructions
+
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{4}{8}$
+$\sum_{r=0}^{r\_\text{max}} 200$
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{12}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{1}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{12}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{12}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{5}{8}$
+
+$\sum_{r=0}^{r\_\text{max}} 200$
+$\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{15}{8}$
+$\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{22}{8}$
+
+1: r_max * 200
+$\sum_{r=0}^{r\_\text{max}} (n - r) \frac{15}{8}$
+$\sum_{r=0}^{r\_\text{max}} (m - (r+1)) (n - r) \frac{22}{8}$
+
+$\sum_{r=0}^{r\_\text{max}} (15n/8 - 15r/8)$
+$\sum_{r=0}^{r\_\text{max}} (m - (r+1)) (22n/8 - 22r/8)$
+
+$15n/8 \sum_{r=0}^{r\_\text{max}} 1 - 15/8 \sum_{r=0}^{r\_\text{max}} r$
+$\sum_{r=0}^{r\_\text{max}} (22mn/8 - 22n(r+1)/8 - 22mr/8 + 22r(r+1)/8)$
+
+$15n/8 \sum_{r=0}^{r\_\text{max}} 1 - 15/8 \sum_{r=0}^{r\_\text{max}} r$
+$\sum_{r=0}^{r\_\text{max}} (22mn/8 - 22nr/8 + 22n/8 - 22mr/8 + 22rr/8 + 22r/8)$
+
+2: 15n/8 * r_max - 15/8 * r_max * (r_max + 1)/2
+$22mn/8 \sum_{r=0}^{r\_\text{max}} 1 - 22n/8 \sum_{r=0}^{r\_\text{max}} r - 22n/8 \sum_{r=0}^{r\_\text{max}} 1 + 22m/8 \sum_{r=0}^{r\_\text{max}} r + 22/8 \sum_{r=0}^{r\_\text{max}} r^2 + 22/8 \sum_{r=0}^{r\_\text{max}} r$
+
+3: 22mn/8 * r_max - 22n/8 * r_max * (r_max + 1)/2 - 22n/8 * r_max + 22m/8 * r_max + 22/8 * r_max * (r_max + 1) * (2 * r_max + 1)/6 + 22/8 * r_max * (r_max + 1)/2
