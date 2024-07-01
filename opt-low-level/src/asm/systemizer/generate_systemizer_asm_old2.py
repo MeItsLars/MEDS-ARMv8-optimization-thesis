@@ -383,20 +383,6 @@ def add_compute_inverse(context, asm):
         # Use the precomputed inverse
         add(asm, 1, f"ldrh {R_Mrr_h}, [{R_IT}, {R_inv_tmp0}, lsl #1]")
 
-def add_normalize_row_neon_16x8(context, asm):
-    # Load M[r][c] into RN_Mrc
-    add_nop(asm, 1, f"ld1 {{{RN_Mrc_8h}}}, [{R_Mrc_l}]") # + #16 is done at the store in the end of this loop
-    # Compute RN_T1 = Mrc * Mrr
-    add_nop(asm, 1, f"umull {RN_T1_w}, {RN_Mrc}, {RN_Mrr}")
-    add_nop(asm, 1, f"umull2 {RN_T2_w}, {RN_Mrc_8h}, {RN_Mrr_8h}")
-    # Reduce RN_T1 and RN_T2
-    add_freeze_reduce_neon_16x4(context, asm, RN_T1_w, RN_T3_w, RN_T4_w)
-    add_freeze_reduce_neon_16x4(context, asm, RN_T2_w, RN_T3_w, RN_T4_w)
-    # Zip results
-    add_nop(asm, 1, f"uzp1 {RN_Mrc_8h}, {RN_T1_8h}, {RN_T2_8h}")
-    # Store the result into M[r][c]
-    add_nop(asm, 1, f"st1 {{{RN_Mrc_8h}}}, [{R_Mrc_l}], #16")
-
 def add_normalize_row_neon_16x4(context, asm):
     # Load M[r][c] into RN_Mrc
     add_nop(asm, 1, f"ld1 {{{RN_Mrc}}}, [{R_Mrc_l}]") # + #8 is done at the store in the end of this loop
@@ -422,13 +408,6 @@ def add_normalize_loop(context, asm):
     add_nop(asm, 1, f"add {R_Mrc_l}, {R_M}, {R_Mrr_i}, lsl #1")
 
     add(asm, 1, f"mov {R_loop3}, {R_loop1}")
-    add(asm, 0, "elimination_normalize_row_loop_neon_16x8:")
-    add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
-    add(asm, 1, f"cmp {R_T1}, #8")
-    add(asm, 1, f"b.lt elimination_normalize_row_loop_neon_16x4")
-    add_normalize_row_neon_16x8(context, asm)
-    add(asm, 1, f"add {R_loop3}, {R_loop3}, #8")
-    add(asm, 1, f"b elimination_normalize_row_loop_neon_16x8")
     add(asm, 0, "elimination_normalize_row_loop_neon_16x4:")
     add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
     add(asm, 1, f"cmp {R_T1}, #4")
@@ -443,25 +422,6 @@ def add_normalize_loop(context, asm):
     add(asm, 1, f"add {R_loop3}, {R_loop3}, #1")
     add(asm, 1, f"b elimination_normalize_row_loop_scalar")
     add(asm, 0, "elimination_normalize_row_loop_end:")
-
-def add_elimination_row_eliminate_inner_loop_neon_16x8(context, asm):
-    # Load Mrc = M[r][c] and Mr2c = M[r2][c]
-    add_nop(asm, 1, f"ld1 {{{RN_Mrc_8h}}}, [{R_Mrc_l}], #16")
-    add_nop(asm, 1, f"ld1 {{{RN_Mr2c_8h}}}, [{R_Mr2c_l}]") # + #16 is done at the store in the end of this loop
-    # Compute T1 = Mrc * Mr2r
-    add_nop(asm, 1, f"umull {RN_T1_w}, {RN_Mrc}, {RN_Mr2r}")
-    add_nop(asm, 1, f"umull2 {RN_T2_w}, {RN_Mrc_8h}, {RN_Mr2r_8h}")
-    # Reduce T1
-    add_freeze_reduce_neon_16x4(context, asm, RN_T1_w, RN_T3_w, RN_T4_w)
-    add_freeze_reduce_neon_16x4(context, asm, RN_T2_w, RN_T3_w, RN_T4_w)
-    # Zip together
-    add_nop(asm, 1, f"uzp1 {RN_T1_8h}, {RN_T1_8h}, {RN_T2_8h}")
-    # Compute val=(MEDS_p + tmp1 - val) % MEDS_p;
-    add_nop(asm, 1, f"add {RN_T3_8h}, {RN_Mr2c_8h}, {RN_MEDSp_8h}")
-    add_nop(asm, 1, f"sub {RN_T3_8h}, {RN_T3_8h}, {RN_T1_8h}")
-    add_freeze_neon_16x8(asm, RN_T3_8h, RN_T1_8h, RN_Mr2c_8h)
-    # Store the result into M[r][c]
-    add_nop(asm, 1, f"st1 {{{RN_Mr2c_8h}}}, [{R_Mr2c_l}], #16")
 
 def add_elimination_row_eliminate_inner_loop_neon_16x4(context, asm):
     # Load Mrc = M[r][c] and Mr2c = M[r2][c]
@@ -504,20 +464,10 @@ def add_elimination_row_eliminate_outer_loop(context, asm):
     add_nop(asm, 1, f"add {R_Mrc_l}, {R_M}, {R_Mrr_i}, lsl #1")
     # Load Mrr and Mr2r into NEON lanes
     add_nop(asm, 1, f"dup {RN_Mrr}, {R_Mrr_h}")
-    add_nop(asm, 1, f"dup {RN_Mrr_8h}, {R_Mrr_h}")
     add_nop(asm, 1, f"dup {RN_Mr2r}, {R_Mr2r_h}")
-    add_nop(asm, 1, f"dup {RN_Mr2r_8h}, {R_Mr2r_h}")
 
     ## PERFORM LOOP
     add(asm, 1, f"mov {R_loop3}, {R_loop1}")
-    # Step 0: Do 16x8 NEON if there are at least 8 lanes left
-    add(asm, 0, f"elimination_row_eliminate_inner_loop_neon_16x8:")
-    add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
-    add(asm, 1, f"cmp {R_T1}, #8")
-    add(asm, 1, f"b.lt elimination_row_eliminate_inner_loop_neon_16x4")
-    add_elimination_row_eliminate_inner_loop_neon_16x8(context, asm)
-    add(asm, 1, f"add {R_loop3}, {R_loop3}, #8")
-    add(asm, 1, f"b elimination_row_eliminate_inner_loop_neon_16x8")
     # Step 1: Do 16x4 NEON if there are at least 4 lanes left
     add(asm, 0, f"elimination_row_eliminate_inner_loop_neon_16x4:")
     add(asm, 1, f"sub {R_T1}, {R_Mc}, {R_loop3}")
@@ -566,7 +516,6 @@ def add_elimination_loop(context, asm):
     # Normalize the current row of M by multiplying it by the inverse of M[r][r] (causing M[r][r] to become 1)
     # Load R_Mrr into RN_Mrr
     add_nop(asm, 1, f"dup {RN_Mrr}, {R_Mrr_h}")
-    add_nop(asm, 1, f"dup {RN_Mrr_8h}, {R_Mrr_h}")
     add_normalize_loop(context, asm)
 
     # Eliminate the rows below the current one (so that M[r + x][c] becomes 0)
