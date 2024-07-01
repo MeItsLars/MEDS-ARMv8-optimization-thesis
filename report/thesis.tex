@@ -765,7 +765,7 @@ Our solution to this problem is threefold, as there are three dimensions that ca
 It is also possible for multiple of these dimension to be non-multiples of 4 at the same time. In this case, we can combine the approaches described above.
 
 \subsubsection{Implementation}
-The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} combined with the handling of non-multiples can be done in multiple ways. As the resulting algorithm becomes quite complex, we figured that the C compiler might not be able to optimize the code as well as we can. Therefore, we have decided to implement a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/matmul/generate\_matmul\_asm.py}} that generates optimized ARMv8 assembly code. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
+The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} combined with the handling of non-multiples can be done in multiple ways. As the resulting algorithm becomes quite complex, we figured that the C compiler might not be able to optimize the code as well as we can. Therefore, we have decided to implement a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/matmul/generate\_matmul\_asm.py}} that generates optimized ARMv8 assembly code. The script generates a specialized assembly function for each set of input dimensions that is used in MEDS.
 
 \subsubsection{Minimum Cycle Bound}
 In order to understand the performance of our optimized matrix multiplication algorithm, we need to find a minimum bound on the number of cycles that the algorithm will take to execute. In order to do this, we will establish a minimum bound on the number of instructions that the algorithm uses.
@@ -816,41 +816,57 @@ The complete algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendi
 \label{sec:matrixsystemizationcomplexity}
 We analyze the complexity of the matrix systemization algorithm used in the reference implementation (see Algorithm \ref{alg:systemizer}). We will first consider the basic algorithm where $r_\text{max} = m$ and do\_swap and do\_backsub are set to false. We can then compute the complexity of the algorithm as follows:
 
+% \resizebox{\textwidth}{!}{
+% \begin{minipage}{\textwidth}
+%   \begin{align*}
+%     & \sum_{r=0}^{m} \left( \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1) + \mathcal{O}(1) + \sum_{c=r}^{n} \mathcal{O}(1) + \sum_{r_2=r+1}^m \sum_{c=r}^{n} \mathcal{O}(1) \right) \\
+%     & =
+%     2 \cdot \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1)\right)
+%     + \left( \sum_{r=0}^{m} \sum_{c=r}^{n} \mathcal{O}(1) \right)
+%     + \left( \sum_{r=0}^{m} \mathcal{O}(1) \right) \\
+%     & =
+%     2 \cdot \left( \sum_{r=0}^{m} O((m-r)(n-r)) \right)
+%     + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
+%     + O(m) \\
+%     & =
+%     2 \cdot \left( \sum_{r=0}^{m} O(mn - mr - nr + r^2) \right)
+%     + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
+%     + O(m) \\
+%     & = \mathcal{O} \left( mn \sum_{r=0}^{m} 1 - m \sum_{r=0}^{m} r - n \sum_{r=0}^{m} r + \sum_{r=0}^{m} r^2 + \sum_{r=0}^{m} n - \sum_{r=0}^{m} r + m \right) \\
+%     & = \mathcal{O} \left( 
+%     \begin{aligned}
+%       mn \cdot m - m \cdot \frac{m(m+1)}{2} - n \cdot \frac{m(m+1)}{2} + \\
+%       \frac{m(m+1)(2m+1)}{6} + n \cdot m - \frac{m(m+1)}{2} + m 
+%     \end{aligned}
+%     \right) \\
+%     &= \mathcal{O} \left( m^2n - \frac{m^3 + m^2}{2} - \frac{m^2n + mn}{2} + \frac{m^3 + 3m^2 + 2m}{6} + mn - \frac{m^2 + m}{2} + m \right) \\
+%     &= \mathcal{O} \left( m^2n - \frac{m^3}{2} - \frac{m^2}{2} - \frac{m^2n}{2} - \frac{mn}{2} + \frac{m^3}{6} + \frac{3m^2}{6} + \frac{2m}{6} + mn - \frac{m^2}{2} - \frac{m}{2} + m \right) \\
+%     &= \mathcal {O} (m^2n)
+%   \end{align*}
+% \end{minipage}
+% }
+
 \resizebox{\textwidth}{!}{
 \begin{minipage}{\textwidth}
   \begin{align*}
-    & \sum_{r=0}^{m} \left( \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1) + \mathcal{O}(1) + \sum_{c=r}^{n} \mathcal{O}(1) + \sum_{r_2=r+1}^m \sum_{c=r}^{n} \mathcal{O}(1) \right) \\
-    & =
-    2 \cdot \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1)\right)
-    + \left( \sum_{r=0}^{m} \sum_{c=r}^{n} \mathcal{O}(1) \right)
-    + \left( \sum_{r=0}^{m} \mathcal{O}(1) \right) \\
-    & =
-    2 \cdot \left( \sum_{r=0}^{m} O((m-r)(n-r)) \right)
-    + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
-    + O(m) \\
-    & =
-    2 \cdot \left( \sum_{r=0}^{m} O(mn - mr - nr + r^2) \right)
-    + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
-    + O(m) \\
-    & = \mathcal{O} \left( mn \sum_{r=0}^{m} 1 - m \sum_{r=0}^{m} r - n \sum_{r=0}^{m} r + \sum_{r=0}^{m} r^2 + \sum_{r=0}^{m} n - \sum_{r=0}^{m} r + m \right) \\
-    & = \mathcal{O} \left( 
-    \begin{aligned}
-      mn \cdot m - m \cdot \frac{m(m+1)}{2} - n \cdot \frac{m(m+1)}{2} + \\
-      \frac{m(m+1)(2m+1)}{6} + n \cdot m - \frac{m(m+1)}{2} + m 
-    \end{aligned}
-    \right) \\
-    &= \mathcal{O} \left( m^2n - \frac{m^3 + m^2}{2} - \frac{m^2n + mn}{2} + \frac{m^3 + 3m^2 + 2m}{6} + mn - \frac{m^2 + m}{2} + m \right) \\
-    &= \mathcal{O} \left( m^2n - \frac{m^3}{2} - \frac{m^2}{2} - \frac{m^2n}{2} - \frac{mn}{2} + \frac{m^3}{6} + \frac{3m^2}{6} + \frac{2m}{6} + mn - \frac{m^2}{2} - \frac{m}{2} + m \right) \\
-    &= \mathcal {O} (m^2n)
+    & \sum_{r=0}^{m-1} \left( \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \mathcal{O}(1) + \mathcal{O}(1) + \sum_{c=r}^{n-1} \mathcal{O}(1) + \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \mathcal{O}(1) \right) \\
+    & = 2 \cdot \left( \sum_{r=0}^{m-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \mathcal{O}(1)\right) + \left( \sum_{r=0}^{m-1} \sum_{c=r}^{n-1} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m-1} \mathcal{O}(1) \right) \\
+    & = 2 \cdot \left( \sum_{r=0}^{m-1} \mathcal{O}((m-r-1)(n-r)) \right) + \left( \sum_{r=0}^{m-1} \mathcal{O}(n-r) \right) + \mathcal{O}(m) \\
+    & = 2 \cdot \left( \sum_{r=0}^{m-1} \mathcal{O}(mn - mr - nr + r^2 - n + r) \right) + \left( \sum_{r=0}^{m-1} \mathcal{O}(n-r) \right) + \mathcal{O}(m) \\
+    & = \mathcal{O} \left( mn \sum_{r=0}^{m-1} 1 - m \sum_{r=0}^{m-1} r - n \sum_{r=0}^{m-1} r + \sum_{r=0}^{m-1} r^2 - n \sum_{r=0}^{m-1} 1 + \sum_{r=0}^{m-1} r + n \sum_{r=0}^{m-1} 1 - \sum_{r=0}^{m-1} r + m \right) \\
+    & = \mathcal{O} \left( mn \cdot m - m \cdot \frac{(m-1)m}{2} - n \cdot \frac{(m-1)m}{2} + \frac{(m-1)m(2m-1)}{6} + m \right) \\
+    & = \mathcal{O} \left( m^2n - \frac{m^3 - m^2}{2} - \frac{m^2n - mn}{2} + \frac{2m^3 - 3m^2 + m}{6} + m \right) \\
+    & = \mathcal{O} \left( m^2n - \frac{m^3}{2} + \frac{m^2}{2} - \frac{m^2n}{2} + \frac{mn}{2} + \frac{2m^3}{6} - \frac{3m^2}{6} + \frac{m}{6} + m \right) \\
+    & = \mathcal{O} (m^2n)
   \end{align*}
 \end{minipage}
 }
 
-We are able to replace the sums with closed-form expressions because of known arithmetic series. In the final step, as $n \geq m$ and therefore $m^2n \geq m^3$, we find that the complexity of the basic algorithm is $\mathcal{O}(m^2n)$.
+We are able to use arithmetic series to replace sums with closed-form expressions. In the final step, as $n \geq m$ and therefore $m^2n \geq m^3$, we find that the complexity of the basic algorithm is $\mathcal{O}(m^2n)$.
 
 We consider the changes that the three optional features of the algorithm bring to the complexity:
 \begin{enumerate}
-  \item As $r_\text{max}$ is only ever $m$ or $m-1$, we can see that the complexity of the algorithm does not change based on the value of $r_\text{max}$.
+  \item Using $r_\text{max}$ will change the dimentions of the outer loop of the algorithm to $r_\text{max}$ instead of $m$. This will change the complexity of the algorithm to $\mathcal{O}(r_\text{max}mn)$. As $r_\text{max}$ is only ever $m$ or $m-1$, this has no drastic effect on the complexity of the algorithm.
   \item When do\_swap is set to true, an additional loop is added to the algorithm which adds the following complexity:
   \begin{align*}
     & \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{i=0}^{r} \mathcal{O}(1) \right)
@@ -868,7 +884,7 @@ From this, we can conclude that the complexity of the matrix systemization algor
 \label{sec:matrixsystemizationoptimization}
 We will optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the (changing) value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we will optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
 
-For all nested loops, we will apply parallelization to the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored next to each other in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
+For all nested loops, we will apply parallelization to the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored sequentially in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
 
 Unfortunately, we are unable to use a full 8-way vectorization for all loops, as the algorithm uses multiplication operations. When multiplying two 16-bit values, the result is a 32-bit value, of which we can not store 8 in a 128-bit NEON register. We can work around this issue by using the \texttt{umull} instruction to multiply the lower 4 16-bit values of two registers and the \texttt{umull2} instruction to multiply the upper 4 16-bit values of two registers. After reducing both results, we can use the \texttt{uzp1} operation to combine the results back into a single 128-bit register.
 
@@ -882,23 +898,50 @@ The inner loops that we are optimizing usually do not loop over a dimension that
 \end{enumerate}
 
 \subsubsection{Implementation}
-As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}}. The script generates a specialized assembly function for each set of input dimensions that are used in MEDS.
+As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}}. The script generates a specialized assembly function for each set of input dimensions that is used in MEDS.
 
 \subsubsection{Minimum Cycle Bound}
 Finding a minimum cycle bound for the optimized systemization algorithm is very similar to determining its complexity. As we can follow the same structure as in Section \ref{sec:matrixsystemizationcomplexity}, we will omit some of the steps taken and refer the reader to that section for a more detailed explanation.
 
-For the basic algorithm, the number of instructions required can be calculated as follows:
+For the basic algorithm, the number of instructions required is as follows:
 \begin{itemize}
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add and freeze instructions
-  \item $\sum_{r=0}^{r\_\text{max}} 1$ finite field inversions
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ combinations of reduced results
-  \item $\sum_{r=0}^{r\_\text{max}} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \frac{1}{8}$ add, subtract, and freeze instructions
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), add, freeze, and store instructions (first inner loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} 1$ finite field inversions
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (normalize loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load, combine, and store instructions (normalize loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \frac{1}{8}$ load instructions (last inner loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (last inner loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (last inner loop)
 \end{itemize}
-Combining these results (using the same technique as for the complexity analysis), we obtain $1$.
+Given that reduction takes 5 cycles, freezing takes 3 cycles, field inversion takes 115 cycles, and all other instructions take 1 cycle, combining these results using the same techniques as for the complexity analysis gives us the following minimum cycle bound for the basic algorithm:
+\begin{align*}
+  & 115 \cdot r_\text{max} + \frac{27}{8} \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)\\
+  & + \frac{1}{8} \left( (m-1) \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) \\
+  & + \frac{40}{8} \left( mn \cdot r_\text{max} - m \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} - n \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right. \\
+  & \left. + \frac{(r_\text{max} - 1)r_{\text{max}}(2r_{\text{max}} - 1)}{6} - n \cdot r_\text{max} + \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+\end{align*}
+
+When using the algorithm with do\_swap set to true, the following instructions are added to the minimum cycle bound:
+\begin{itemize}
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1} \frac{1}{8}$ load and or instructions (swap loop 1)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{i=0}^{r-1} \frac{1}{8}$ load (two) and store (two) instructions (swap loop 2)
+\end{itemize}
+Following the same approach as above, using do\_swap adds the following value to the minimum cycle bound:
+\begin{align*}
+  & \frac{2}{8} \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{4}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+\end{align*}
+
+When using the algorithm with do\_backsub set to true, the following instructions are added to the minimum cycle bound:
+\begin{itemize}
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub middle loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub middle loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub inner loop)
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub inner loop)
+\end{itemize}
+Following the same approach as above, using do\_backsub adds the following value to the minimum cycle bound:
+\begin{align*}
+  & \frac{33}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{33}{8} \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+\end{align*}
 
 \subsection{System Solving}
 \label{sec:systemsolving}
@@ -1181,13 +1224,13 @@ In our low-level optimization approach (see Section \ref{sec:lowleveloptimizatio
     Matrix Multiplication & $A$: $m \times n$ & $B$: $n \times n$ & 16845 & 13350 & 1.26\\
     Matrix Multiplication & $A$: $32 \times 32$ & $B$: $32 \times 32$ & 10795 & 10624 & 1.02\\
 \midrule
-    Matrix Syst. & $A$: $k \times k$& & 105571 & 100 & 1055.71\\
-    Matrix Systemization & $A$: $k \times 2k$& & 209888 & 100 & 2098.88\\
-    Matrix Syst. (bsub$^{*}$) & $A$: $n \times 2n$& & 329936 & 100 & 3299.36\\
-    Matrix Syst. (bsub$^{*}$) & $A$: $m \times 2m$& & 295878 & 100 & 2958.78\\
-    Matrix Syst. (bsub$^{*}$) & $A$: $k \times 2k$& & 295632 & 100 & 2956.32\\
-    Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $A$: $n \times 2m$& & 306502 & 100 & 3065.02\\
-    Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $A$: $m-1 \times m$& & 133584 & 100 & 1335.84\\
+    Matrix Systemization & $A$: $k \times k$& & 95959 & 71438 & 1.34\\
+    Matrix Syst. & $A$: $k \times 2k$& & 175155 & 170710 & 1.03\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $n \times 2n$& & 292150 & 274242 & 1.07\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $m \times 2m$& & 261217 & 251704 & 1.04\\
+    Matrix Syst. (bsub$^{*}$) & $A$: $k \times 2k$& & 260785 & 251704 & 1.04\\
+    Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $A$: $n \times 2m$& & 269919 & 260463 & 1.04\\
+    Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $A$: $m-1 \times m$& & 123796 & 73106 & 1.69\\
 \midrule
     System Solving & $C$: $2 \times mn$ & & 350968 & 249100 & 1.41\\
     \bottomrule

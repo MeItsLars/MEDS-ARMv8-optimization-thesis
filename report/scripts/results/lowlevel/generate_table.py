@@ -46,18 +46,19 @@ def matmul_cycles(m, o, n):
 
 def matsyst_cycles(m, n, r_max, do_swap, do_backsub):
     result = 0
-    # 1
-    result = result + r_max * 200
-    # 2
-    result = result + (15/8) * n * r_max
-    result = result - (15/8) * r_max * (r_max + 1) / 2
-    # 3
-    result = result + (22/8) * m * n * r_max
-    result = result - (22/8) * n * r_max * (r_max + 1) / 2
-    result = result - (22/8) * n * r_max
-    result = result + (22/8) * m * r_max
-    result = result + (22/8) * r_max * (r_max + 1) * (2 * r_max + 1) / 6
-    result = result + (22/8) * r_max * (r_max + 1) / 2
+    
+    result = result + 115 * r_max
+    result = result + (27/8) * (n * r_max - (r_max - 1) * r_max / 2)
+    result = result + (1/8) * ((m-1) * r_max - (r_max - 1) * r_max / 2)
+    result = result + (40/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+    
+    if do_swap:
+        result = result + (2/8) * (m * r_max - (r_max - 1) * r_max / 2)
+        result = result + (4/8) * (r_max - 1) * r_max / 2
+    
+    if do_backsub:
+        result = result + (33/8) * (r_max - 1) * r_max / 2
+        result = result + (33/8) * (n - r_max) * (r_max - 1) * r_max / 2
     
     return result
 
@@ -115,7 +116,6 @@ def parse_data(data):
     result = []
     new_stage = None
     stage = None
-    first_in_stage = True
     for row in data:
         function = row[0]
         cycles = row[1]
@@ -123,7 +123,7 @@ def parse_data(data):
             new_line = parse_matmul(function, cycles)
             new_stage = 'matmul'
         if function.startswith('pmod_mat_syst'):
-            new_line = parse_matsyst(function, cycles, first_in_stage)
+            new_line = parse_matsyst(function, cycles, stage != 'matsyst')
             new_stage = 'matsyst'
         if function.startswith('solve_opt_part'):
             new_line = parse_solve(function, cycles)
@@ -133,9 +133,6 @@ def parse_data(data):
             if stage is not None:
                 result.append('rule')
             stage = new_stage
-            first_in_stage = True
-        else:
-            first_in_stage = False
         result.append(new_line)
     return result
 

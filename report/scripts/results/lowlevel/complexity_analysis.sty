@@ -1,0 +1,98 @@
+==================================== BASIC ALGORITHM ====================================
+> Initial analysis:
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), add, freeze, and store instructions (first inner loop)
+\item $\sum_{r=0}^{r\_\text{max}-1} 1$ finite field inversions
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (normalize loop)
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load, combine, and store instructions (normalize loop)
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \frac{1}{8}$ load instructions (last inner loop)
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (last inner loop)
+\item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (last inner loop)
+
+> Converting and combining gives:
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 7/8
+SUM[r=0,r_max-1] 115
+SUM[r=0,r_max-1] SUM[c=r,n-1] 24/8
+SUM[r=0,r_max-1] SUM[c=r,n-1] 3/8
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] 1/8
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 24/8
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 9/8
+
+> Grouping by sum gives:
+SUM[r=0,r_max-1] 115
+SUM[r=0,r_max-1] SUM[c=r,n-1] 27/8
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] 1/8
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 40/8
+
+> Simplifying gives:
+1      * SUM[r=0,r_max-1] 115
+(27/8) * SUM[r=0,r_max-1] (n-r)
+(1/8)  * SUM[r=0,r_max-1] (m-r-1)
+(40/8) * SUM[r=0,r_max-1] (m-r-1) * (n-r)
+
+> Simplyfing sum terms gives:
+1      * SUM[r=0,r_max] 115
+(27/8) * SUM[r=0,r_max-1] (n-r)
+(1/8)  * SUM[r=0,r_max-1] (m-r-1)
+(40/8) * SUM[r=0,r_max] (mn - mr - nr + r^2 - n + r)
+
+> Removing easy sums gives:
+1 * (115 * r_max)
+(27/8) * (n * r_max - SUM[r=0,r_max-1] r)
+(1/8) * ((m-1) * r_max - SUM[r=0,r_max-1] r)
+(40/8) * (mn * r_max - m * SUM[r=0,r_max-1] r - n * SUM[r=0,r_max-1] r + SUM[r=0,r_max-1] r^2 - n * r_max + SUM[r=0,r_max-1] r)
+
+> Applying arithmetic series gives:
+115 * r_max
+(27/8) * (n * r_max - (r_max - 1) * r_max / 2)
+(1/8) * ((m-1) * r_max - (r_max - 1) * r_max / 2)
+(40/8) * (mn * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+
+==================================== WITH DO_SWAP ====================================
+> Initial analysis:
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1} \frac{1}{8}$ load and or instructions (swap loop 1)
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{i=0}^{r-1} \frac{1}{8}$ load (two) and store (two) instructions (swap loop 2)
+
+> Converting and combining gives:
+SUM[r=0,r_max-1] SUM[r_2=r,m-1] 2/8
+SUM[r=0,r_max-1] SUM[i=0,r-1] 4/8
+
+> Simplifying gives:
+(2/8) * SUM[r=0,r_max-1] (m-r)
+(4/8) * SUM[r=0,r_max-1] r
+
+> Expanding:
+(2/8) * (m * r_max - SUM[r=0,r_max-1] r)
+(4/8) * SUM[r=0,r_max-1] r
+
+> Applying arithmetic series gives:
+(2/8) * (m * r_max - (r_max - 1) * r_max / 2)
+(4/8) * (r_max - 1) * r_max / 2
+
+==================================== WITH BACKSUB ====================================
+> Initial analysis:
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub middle loop)
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub middle loop)
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub inner loop)
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub inner loop)
+
+> Converting and combining gives:
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] 24/8
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] 9/8
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] SUM[c=r_max,n-1] 24/8
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] SUM[c=r_max,n-1] 9/8
+
+> Grouping by sum gives:
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] 33/8
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] SUM[c=r_max,n-1] 33/8
+
+> Simplifying gives:
+(33/8) * SUM[r=0,r_max-1] r
+(33/8) * SUM[r=0,r_max-1] r * (n - r_max)
+
+> Removing easy sums gives:
+(33/8) * SUM[r=0,r_max-1] r
+(33/8) * (n - r_max) * SUM[r=0,r_max-1] r
+
+> Applying arithmetic series gives:
+(33/8) * (r_max - 1) * r_max / 2
+(33/8) * (n - r_max) * (r_max - 1) * r_max / 2
