@@ -1,0 +1,92 @@
+\chapter{Benchmark Results}
+\label{app:benchmark_results}
+
+% \begin{table}[H]
+%   \centering
+%   \resizebox{\textwidth}{!}{
+%   %
+%   \begin{tabular}{lrrrrrrrrr}
+%     \toprule
+%     & \multicolumn{3}{c}{\textbf{MEDS-21595}} & \multicolumn{3}{c}{\textbf{MEDS-55520}} & \multicolumn{3}{c}{\textbf{MEDS-122000}} \\
+%     & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+%     \midrule
+%     Reference & 8.0 & 890.7 & 889.8 & 22.7 & 3623.8 & 3628.2 & 71.0 & 13748.9 & 13731.4 \\
+%     Reference (New Hash Structure) & 8.0 & 892.0 & 889.5 & 22.6 & 3622.2 & 3633.0 & 71.0 & 13749.6 & 13723.3 \\
+%     Low-Level & 2.9 & 257.6 & 238.9 & 7.4 & 962.4 & 914.2 & 17.0 & 2893.9 & 2795.2 \\
+%     Low-Level (New Hash Structure) & 2.9 & 244.3 & 226.4 & 7.4 & 915.2 & 865.1 & 17.1 & 2756.5 & 2665.4 \\
+%     High-Level & 8.0 & 261.7 & 256.2 & 22.6 & 1202.5 & 1204.1 & 71.2 & 3940.2 & 4373.7 \\
+%     High-Level (New Hash Structure) & 8.0 & 247.9 & 244.7 & 22.6 & 1153.5 & 1158.2 & 71.2 & 3801.5 & 4259.2 \\
+
+%     \bottomrule
+%   \end{tabular}
+%   %
+%   }
+%   \caption{Benchmarking results for all variants of MEDS. The values represent the number of megacycles required to execute that algorithm.}
+%   \label{tab:overall_benchmark_results}
+% \end{table}
+
+\begin{table}[H]
+  \centering
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 8.0 & \footnotesize$(\times 1.0)$ & 890.7 & \footnotesize$(\times 1.0)$ & 889.8 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 8.0 & \footnotesize$(\times 1.0)$ & 892.0 & \footnotesize$(\times 1.0)$ & 889.5 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 2.8 & \footnotesize$(\times 2.9)$ & 248.2 & \footnotesize$(\times 3.6)$ & 229.8 & \footnotesize$(\times 3.9)$ \\
+  Low-Level (New Hash Structure) & 2.8 & \footnotesize$(\times 2.9)$ & 235.5 & \footnotesize$(\times 3.8)$ & 217.1 & \footnotesize$(\times 4.1)$ \\
+  High-Level & 8.0 & \footnotesize$(\times 1.0)$ & 261.7 & \footnotesize$(\times 3.4)$ & 256.2 & \footnotesize$(\times 3.5)$ \\
+  High-Level (New Hash Structure) & 8.0 & \footnotesize$(\times 1.0)$ & 247.9 & \footnotesize$(\times 3.6)$ & 244.7 & \footnotesize$(\times 3.6)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+  \caption{MEDS-21595 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm.}
+  \label{tab:overall_benchmark_results_21595}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 22.7 & \footnotesize$(\times 1.0)$ & 3623.8 & \footnotesize$(\times 1.0)$ & 3628.2 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 22.6 & \footnotesize$(\times 1.0)$ & 3622.2 & \footnotesize$(\times 1.0)$ & 3633.0 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 7.2 & \footnotesize$(\times 3.2)$ & 927.9 & \footnotesize$(\times 3.9)$ & 878.3 & \footnotesize$(\times 4.1)$ \\
+  Low-Level (New Hash Structure) & 7.2 & \footnotesize$(\times 3.2)$ & 880.4 & \footnotesize$(\times 4.1)$ & 832.1 & \footnotesize$(\times 4.4)$ \\
+  High-Level & 22.6 & \footnotesize$(\times 1.0)$ & 1202.5 & \footnotesize$(\times 3.0)$ & 1204.1 & \footnotesize$(\times 3.0)$ \\
+  High-Level (New Hash Structure) & 22.6 & \footnotesize$(\times 1.0)$ & 1153.5 & \footnotesize$(\times 3.1)$ & 1158.2 & \footnotesize$(\times 3.1)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+  \caption{MEDS-55520 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm.}
+  \label{tab:overall_benchmark_results_55520}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 71.0 & \footnotesize$(\times 1.0)$ & 13748.9 & \footnotesize$(\times 1.0)$ & 13731.4 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 71.0 & \footnotesize$(\times 1.0)$ & 13749.6 & \footnotesize$(\times 1.0)$ & 13723.3 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 16.6 & \footnotesize$(\times 4.3)$ & 2794.5 & \footnotesize$(\times 4.9)$ & 2693.8 & \footnotesize$(\times 5.1)$ \\
+  Low-Level (New Hash Structure) & 16.7 & \footnotesize$(\times 4.3)$ & 2653.6 & \footnotesize$(\times 5.2)$ & 2550.3 & \footnotesize$(\times 5.4)$ \\
+  High-Level & 71.2 & \footnotesize$(\times 1.0)$ & 3940.2 & \footnotesize$(\times 3.5)$ & 4373.7 & \footnotesize$(\times 3.1)$ \\
+  High-Level (New Hash Structure) & 71.2 & \footnotesize$(\times 1.0)$ & 3801.5 & \footnotesize$(\times 3.6)$ & 4259.2 & \footnotesize$(\times 3.2)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+  \caption{MEDS-122000 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm.}
+  \label{tab:overall_benchmark_results_122000}
+\end{table}

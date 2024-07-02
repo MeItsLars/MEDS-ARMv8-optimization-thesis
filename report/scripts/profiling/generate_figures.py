@@ -41,7 +41,7 @@ def generate_barplot(measurements, filename):
     fig.legend(handles=handles, labels=[f"{measurement['variant']}" for measurement in measurements], loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=3)
 
     # Export images
-    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "..", "imgs", "plots", filename), bbox_inches='tight')
+    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "imgs", "plots", filename), bbox_inches='tight')
     # plt.show()
 
 def load_csv(file):

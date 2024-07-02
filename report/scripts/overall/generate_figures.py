@@ -25,7 +25,7 @@ def generate_barplot(parsed_data, filename):
         ax1.bar(x1 + (i - num_techniques1 / 2 + 0.5) * width, values[:1], width)
 
     # Add labels
-    ax1.set_ylabel('Megacycles (x1e6)')
+    ax1.set_ylabel('MCycles')
     ax1.set_xticks(x1)
     ax1.set_xticklabels(subcategories1)
 
@@ -55,7 +55,7 @@ def generate_barplot(parsed_data, filename):
     fig.legend(handles=handles, labels=parsed_data.keys(), loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=3)
 
     # Export images
-    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "..", "imgs", "plots", filename), bbox_inches='tight')
+    plt.savefig(os.path.join(THIS_FILE_PATH, "..", "..", "imgs", "plots", filename), bbox_inches='tight')
     # plt.show()
 
 def parse_data(data):

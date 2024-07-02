@@ -17,6 +17,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
+\usepackage{array}
 \usepackage[english]{babel}
 \usepackage{booktabs}
 \usepackage{dsfont}
@@ -81,7 +82,7 @@
   showstringspaces=false,
   showtabs=false,                  
   tabsize=2,
-  morekeywords={uint64_t, pmod_mat_entry, uint16x4_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vmovn_u32, pmod_mat_t, pmod_mat_vec_t, pmod_mat_vec_w_t, ZERO_VEC_W, MUL_ACC_VEC, FREEZE_REDUCE_VEC}
+  morekeywords={uint64_t, pmod_mat_entry, uint16x4_t, uint16x8_t, uint32x4_t, uint64x2_t, vmull_u32, vget_low_u32, vmull_high_u32, vuzp2q_u32, vshrq_n_u32, vmlsq_u32, vcgeq_u16, vandq_u16, vsubq_u16, vmovn_u32, pmod_mat_t, pmod_mat_vec_t, pmod_mat_vec_w_t, ZERO_VEC_W, MUL_ACC_VEC, FREEZE_REDUCE_VEC}
 }
 
 
@@ -102,7 +103,7 @@
   showstringspaces=false,
   showtabs=false,                  
   tabsize=2,
-  morekeywords={umull, umull2, uzp2, ushr, mls, xtn}
+  morekeywords={umull, umull2, uzp2, ushr, mls, xtn, cmhs, and, sub}
 }
 
 % Set the line spacing between paragraphs
@@ -329,7 +330,7 @@ The team behind MEDS has proposed three parameter sets for the new optimized ver
   \label{tab:medssecuritylevels}
 \end{table}
 
-We can see that all parameter sets use the same finite field size $q = 4093$. The dimensions of the matrices that are used increase with each security level, as well as the number of challenges $t$ (and the number of fixed challenges $w$). The number of public keys $s$ is always set to 2, meaning the scheme does not use the multiple public keys technique, which would have greatly increased the size of the public key and the signature. Note that this differs from the original MEDS scheme, which used multiple public keys \cite{chou2023meds}.
+We can see that all parameter sets use the same finite field size $q = 4093$. The dimensions of the matrices that are used increase with each security level, as well as the number of challenges $t$ (and the number of fixed challenges $w$). The number of public keys $s$ is always set to 2, meaning the scheme does not use the multiple public keys technique. Note that this differs from the original MEDS scheme, which used multiple public keys \cite{chou2023meds}.
 
 % A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
 \subsection{MEDS Algorithms}
@@ -417,25 +418,99 @@ A simplified overview version of the MEDS signature verification algorithm is sh
 \subsection{Known Attacks}
 \todo[inline]{Question to Peter and Simona: Should I add a section containing a list of the best known attack(s) on MEDS (or the underlying problem)? Alternatively, I can reference the MEDS paper for this information.}
 
-\section{ARMv8 and NEON}
+\section{ARMv8, Cortex-A72, and NEON}
 \label{sec:armv8}
 \todo[inline]{Cite NEON reference manual and intrinsics page.}
-In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 architecture. To this end, we will use a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU. We will be testing and comparing the performance of the MEDS implementation on this device.
-
-\subsection{ARMv8 Architecture}
-ARMv8 is the architecture that is used in the ARM Cortex-A72 and a lot of other processors. The default instruction set for ARMv8 is AArch64, a 64-bit instruction set that has more registers and higher performance than the 32-bit AArch32 instruction set.
+In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 CPU architecture. ARMv8 supports a wide range of instruction sets and extensions, of which the following are relevant for this thesis:
+\begin{itemize}
+  \item \textbf{A64} (AArch64): The default 64-bit instruction set for ARMv8.
+  \item \textbf{NEON} (Advanced SIMD): The NEON instruction set is an extension to the ARMv8 architecture that is mandatory in all ARMv8 implementations. It allows for SIMD operations on 128-bit registers (see Section \ref{sec:simd}).
+  \item \textbf{Crypto}: The cryptographic extension to the ARMv8 architecture. This is a non-mandatory extension that supports hardware support for various cryptographic algorithms.
+\end{itemize}
 
 \subsection{Vectorization and SIMD}
-Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on multiple numbers in a time that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to parallelization.
+\label{sec:simd}
+Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data (vectors) in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on a vector of multiple numbers in a timeframe that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to vectorization.
 
 In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
 
 \todo[inline]{Maybe extend this section to give a more detailed explanation of NEON, such as provide lane distribution options and some operation examples, together with graphics.}
 
-\subsection{Assembly Instructions and Latency}
-\todo[inline]{For NEON; add pipeline information and latency for used assembly instructions. Include a reference to the document that provides these values.}
+\subsection{Cortex-A72 Micro-Architecture}
+For profiling and benchmarking our code, we will be using a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU that uses the ARMv8-A architecture (which is a specific profile of ARMv8). The term `Cortex-A72 Micro-Architecture' refers to the specific design of the ARM Cortex-A72 CPU, which differs from other CPUs that implement the ARMv8-A architecture.
 
-\subsection{Optimizing Cryptographic Schemes}
+We will be working with the A64 instruction set, combined with the NEON extension. Unfortunately, the Cortex-A72 does not support the Crypto extension, which means that we cannot use hardware acceleration for cryptographic operations.
+
+\subsubsection{Core Pipeline}
+The core pipeline of the Cortex-A72 consists of 15 stages which are split into a front-end and a back-end. A high-level overview of the instruction processing pipeline \cite{CortexA72OptGuide} is shown in Figure \ref{fig:cortexa72pipeline}.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{armv8/Cortex-A72-pipeline-simplified.jpg}
+  \caption{High-level Cortex-A72 instruction processing pipeline \cite{CortexA72OptGuide}}
+  \label{fig:cortexa72pipeline}
+\end{figure}
+
+The pipeline consists of two parts:
+\begin{enumerate}
+  \item \textbf{Front-end} (In Order): This part of the pipeline is responsible for fetching and decoding incoming instructions into micro-ops: smaller instructions that are easier to execute. These micro-ops are then fed into the back-end. The front-end works on instructions in order, meaning that it processes them in the order that they are received.
+  \item \textbf{Back-end} (Out of Order): This part of the pipeline is responsible for executing the micro-ops that are generated by the front-end. It consists of multiple pipelines that serve different purposes, such as branching, integer arithmetic, NEON operations, and memory operations. The back-end pipelines can execute micro-ops out of order, meaning they can execute operations in a different order than they were received.
+\end{enumerate}
+
+The front-end is able to work on 3 instructions at the same time and it can dispatch up to 5 micro-ops per cycle to the back-end \cite{SandSoftwaresound2024}. The back-end pipelines can execute one or two micro-ops per cycle, depending on the specific pipeline. The main goal of the front-end (and this structure in general) is to make sure that the back-end pipelines are always filled with micro-ops to minimize stalls (where a pipeline has to wait for an earlier operation to finish).
+
+\subsubsection{Assembly Instructions and Latency}
+In this thesis, we will use AArch64 assembly instructions to optimize the MEDS implementation. Each used instruction has three relevant properties:
+\begin{itemize}
+  \item \textbf{Execution Latency}: The number of CPU cycles after starting an instruction that it takes for the results of that instruction to be available for usage in the next instruction.
+  \item \textbf{Execution Throughput}: The maximum amount of times that a particular instruction can be executed per cycle.
+  \item \textbf{Utilized Pipeline}: The back-end pipeline(s) that this instruction uses.
+\end{itemize}
+
+As the Cortex-A72 uses an out-of-order execution model, it is impossible to provide instruction timing information that will predict how long a certain instruction will take to execute in a certain context \cite{CortexA72OptGuide}. Nevertheless, the execution latency and throughput of instructions provides valuable information about the performance of that instruction. Therefore, we list the execution latency and throughput of the NEON instructions that we use in the assembly code that was written for this thesis in Table \ref{tab:neonlatencythroughput}. We will also use a lot of intrinsic functions in the C code, which are functions that map directly to assembly instructions. However, as the compiler is still able to reorder and optimize these instructions, it is not directly beneficial to know the latencies and throughputs of these instructions.
+
+\begin{table}
+  \centering
+  \resizebox{\textwidth}{!}{
+    %
+  \begin{tabular}{llrr}
+    \toprule
+    \textbf{Instruction} & \textbf{Description} & \textbf{Latency} & \textbf{Throughput} \\
+    \midrule
+      \texttt{ld1} & Load from memory & 5 & 1 \\
+      \texttt{st1} & Store to memory & 5 & 1 \\
+    \midrule
+      \texttt{umull} & Unsigned multiply long & 4 & 1 \\
+      \texttt{umull2} & Unsigned multiply long (high half) & 4 & 1 \\
+      \texttt{umlal} & Uns. mult. long \& accumulate & 4 & 1 \\
+      \texttt{mls} & Multiply subtract & 5 & 1/2 \\
+      \texttt{add} & Add & 3 & 2 \\
+      \texttt{sub} & Subtract & 3 & 2 \\
+      \texttt{and} & Bitwise AND & 3 & 2 \\
+      \texttt{ushr} & Unsigned shift right & 3 & 1 \\
+    \midrule
+      \texttt{dup} & Store in all lanes & 8 & 1 \\
+      \texttt{ins} & Store in one lane & 3 & 2 \\
+      \texttt{xtn} & Extract and narrow & 3 & 2 \\
+      \texttt{uzp1} & Unzip (keep low) & 3 & 2 \\
+      \texttt{uzp2} & Unzip (keep high) & 3 & 2 \\
+    \midrule
+      \texttt{cmeq} & Compare equal & 3 & 2 \\
+      \texttt{cmhs} & Compare higher or same & 3 & 2 \\
+    \bottomrule
+  \end{tabular}
+  %
+  }
+  \caption{NEON Instruction Latency and Throughput for Cortex-A72 \cite{CortexA72OptGuide}}
+  \label{tab:neonlatencythroughput}
+\end{table}
+
+\subsubsection{Instruction Scheduling}
+At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence in an optimal fashion without the need for hand tuning the instruction order \cite{CortexA72OptGuide}. This means that the CPU is able to `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
+
+It is important to note that this does not mean that there are no more benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code, because some instructions might be better suited for that specific computation.
+
+\section{Optimizing Cryptographic Schemes}
 \todo[inline]{Question to Peter and Simona: I'm not completely sure if this subsection is necessary, but it would be a nice place to explain constant-time programming, timing attacks, and cache poisoning attacks. Is it a good idea to include this information?}
 
 \section{Related Work}
@@ -499,12 +574,12 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
     \midrule
       \texttt{pmod\_mat\_mul} & 15.98 & 69.78 & 70 \\
       \texttt{pmod\_mat\_syst} & 2.08 & 9.07 & 6 \\
-      \texttt{solve\_opt} & 2.06 & 8.97 & 1 \\
-      \texttt{rnd\_sys\_mat} & 1.42 & 6.20 & 1 \\
+      \texttt{rnd\_sys\_mat} & 2.07 & 9.05 & 1 \\
+      \texttt{solve\_opt} & 1.42 & 6.20 & 1 \\
       \texttt{bs\_fill} & 1.06 & 4.63 & 1 \\
     \midrule
-      Cumulative & 22.60 & 98.65 & \\
-      Remaining & 0.31 & 1.35 & \\
+      Cumulative & 22.61 & 98.73 & \\
+      Remaining & 0.29 & 1.27 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-55520 Keygen Profiling Results}
@@ -517,14 +592,14 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
     \toprule
     \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-      \texttt{pmod\_mat\_mul} & 2523.80 & 69.22 & 14635 \\
-      \texttt{pmod\_mat\_syst} & 391.87 & 10.75 & 1040 \\
-      \texttt{solve\_opt} & 293.11 & 8.04 & 624 \\
-      \texttt{bs\_fill} & 212.75 & 5.84 & 208 \\
-      \texttt{shake256\_absorb} & 202.92 & 5.57 & 212 \\
+      \texttt{pmod\_mat\_mul} & 2518.85 & 69.17 & 14635 \\
+      \texttt{pmod\_mat\_syst} & 391.36 & 10.75 & 1040 \\
+      \texttt{solve\_opt} & 293.44 & 8.06 & 208 \\
+      \texttt{bs\_fill} & 212.74 & 5.84 & 1 \\
+      \texttt{shake256\_absorb} & 203.06 & 5.58 & 212 \\
     \midrule
-      Cumulative & 3624.46 & 99.42 & \\
-      Remaining & 21.14 & 0.58 & \\
+      Cumulative & 3619.46 & 99.39 & \\
+      Remaining & 22.24 & 0.61 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-55520 Signing Profiling Results}
@@ -537,14 +612,14 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
     \toprule
     \textbf{Function} & \textbf{\# MCycles} ($\pm$) & \textbf{\% of Total} ($\pm$) & \textbf{\# Calls} \\
     \midrule
-      \texttt{pmod\_mat\_mul} & 2525.93 & 69.23 & 14560 \\
-      \texttt{pmod\_mat\_syst} & 391.58 & 10.73 & 1040 \\
-      \texttt{solve\_opt} & 293.18 & 8.04 & 624 \\
-      \texttt{bs\_fill} & 212.75 & 5.83 & 208 \\
-      \texttt{shake256\_absorb} & 202.94 & 5.56 & 210 \\
+      \texttt{pmod\_mat\_mul} & 2537.20 & 69.24 & 14560 \\
+      \texttt{pmod\_mat\_syst} & 393.22 & 10.73 & 1040 \\
+      \texttt{solve\_opt} & 294.20 & 8.03 & 208 \\
+      \texttt{bs\_fill} & 212.88 & 5.81 & 1 \\
+      \texttt{shake256\_absorb} & 203.31 & 5.55 & 267 \\
     \midrule
-      Cumulative & 3626.38 & 99.39 & \\
-      Remaining & 22.26 & 0.61 & \\
+      Cumulative & 3640.80 & 99.35 & \\
+      Remaining & 23.80 & 0.65 & \\
     \bottomrule
   \end{tabular}
   \caption{MEDS-55520 Verification Profiling Results}
@@ -578,8 +653,7 @@ For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most
 % This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
 
 \subsubsection{Matrix Systemization}
-The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that operates in constant time, meaning the code will always take the same amount of time to execute for matrices with the same dimensions.
-\todo[inline]{Complexity}
+The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that has a complexity of $\mathcal{O}(m^2n)$ (this is calculated in Section \ref{sec:matrixsystemizationcomplexity}).
 
 \subsubsection{System Solving}
 The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time.
@@ -604,7 +678,7 @@ We have established two approaches to optimize the MEDS implementation. These ap
   \item \textbf{High-Level Optimization}:\\
   This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the exact same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
 \end{itemize}
-In this chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}, respectively. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
+In this chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}. Lastly, we will provide an optional optimization technique to the way in which hash functions are used in MEDS in Section \ref{sec:hashfunctionoptimization}. This optimization can be applied to both approaches, but it changes the underlying MEDS algorithm, causing the resulting signatures to be different.
 
 \section{Modular Reduction}
 \label{sec:modularreduction}
@@ -645,7 +719,7 @@ From this, the Barrett reduction formula for unsigned integers can be derived (D
 As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
 
 \subsubsection{Choice of $k$}
-Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the floor function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ also has a big advantage: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
+Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the `floor' function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ can also be beneficial: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
 
 For the MEDS parameter sets that we consider, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
 
@@ -681,7 +755,37 @@ The NEON version of the Barrett reduction algorithm is shown in Algorithm \ref{a
   \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/barrett_reduce_asm.s}
 \end{algorithm}
 
-From the assembly code, we can see that the reduction is done using 5 instructions (not counting the optional shrink). Including latency, the reduction takes 16 cycles to complete\todo{Check this and give a proper reasoning} and is able to reduce 4 elements.
+From the assembly code, we can see that the reduction is done using 5 instructions (not counting the optional shrink).
+
+\subsection{Freeze Operation}
+A useful operation when working with numbers outside of the finite field is the `freeze' operation. This operation takes a number $a \in [0, 2n-1]$ and returns $a \mod n$. The advantage over the reduction functions mentioned before is that this operation can be executed in fewer instructions. Additionally, the operation can be executed over 8 lanes of a 128-bit NEON register (as opposed to 4 lanes for the reduction operation). The freeze operation is useful after (for example) two field elements are added together and need to be reduced, in which case we can do a cheaper reduction operation. The freeze operation for MEDS is shown in Algorithm \ref{alg:freezeoperation}.
+
+\begin{algorithm}
+  \caption{MEDS Freeze Operation}
+  \label{alg:freezeoperation}
+  \begin{algorithmic}
+    \Function{freeze}{$a$}
+      \If {$a \geq 4093$}
+        \State $a = a - 4093$
+      \EndIf
+      \State \Return $a$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+As explained in Section \todo{Reference to CT section}, we can not use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm \ref{alg:neonfreezeoperationc} (C code) and Algorithm \ref{alg:neonfreezeoperationasm} (assembly code).
+
+\begin{algorithm}
+  \caption{NEON Freeze Operation (C)}
+  \label{alg:neonfreezeoperationc}
+  \lstinputlisting[language=C, style=CStyle]{code/freeze_c.c}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{NEON Freeze Operation (Assembly)}
+  \label{alg:neonfreezeoperationasm}
+  \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/freeze_asm.s}
+\end{algorithm}
 
 \section{Low-Level Optimization}
 \label{sec:lowleveloptimization}
@@ -780,7 +884,7 @@ The `multiply-accumulate' operation is a single instruction on ARMv8, and modula
 A more accurate minimum cycle bound can be established by looking at the number of instructions required for the vectorized algorithm (see Algorithm \ref{alg:vectorizedmatrixmultiplication}). This algorithm obtains a speedup because of two factors:
 \begin{itemize}
   \item The NEON unit is able to perform operations in parallel.
-  \item As we compute the result for a $4\times4$ submatrix of $C$ at the same time, we are able to use the same input value 4 times, reducing the number of loads required.
+  \item As we compute the result for a $4\times4$ submatrix of $C$, we are able to use the same input value 4 times, reducing the number of loads required.
 \end{itemize}
 The number of instructions required for the vectorized algorithm can be calculated as follows:\todo{Explain why times 2}
 \begin{itemize}
@@ -790,7 +894,11 @@ The number of instructions required for the vectorized algorithm can be calculat
   \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot 2$ reductions
   \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8$ stores
 \end{itemize}
-Given that reduction takes 5 cycles and the other operations take 1 cycle, we establish a minimum bound of $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot (1 + 1 + 8 \cdot 2) + \frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot (1 + 5 \cdot 2) = \frac{1}{64}mo(18n + 88)$ cycles.
+Given that reduction takes 5 cycles and the other operations take 1 cycle, we establish a minimum bound of 
+\[
+  \frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot (1 + 1 + 8 \cdot 2) + \frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot (1 + 5 \cdot 2) = \frac{1}{64}mo(18n + 88)
+\]
+cycles.
 
 \subsection{Matrix Systemization}
 \label{sec:matrixsystemization}
@@ -876,7 +984,7 @@ We consider the changes that the three optional features of the algorithm bring 
   \begin{align*}
     & \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \sum_{c=m}^{n} \mathcal{O}(1) \right)
   \end{align*}
-  Again, following a similar approach as above, we find that this results in a complexity of $\mathcal{O}(m^2 + nm^2 - m^2) = \mathcal{O}(nm^2)$, which does not change the complexity of the algorithm.
+  Again, following a similar approach as above, we find that this results in a complexity of $\mathcal{O}(m^2 + m^2n - m^2) = \mathcal{O}(m^2n)$, which does not change the complexity of the algorithm.
 \end{enumerate}
 From this, we can conclude that the complexity of the matrix systemization algorithm is $\mathcal{O}(m^2n)$.
 
@@ -957,7 +1065,14 @@ Unfortunately, the function is also extremely large, with the reference code con
 \end{algorithm}
 
 \subsubsection{Complexity Analysis}
-\todo[inline]{ezpz}
+\label{sec:systemsolvingcomplexity}
+Analyzing the complexity of the two time-consuming loops is trivial as they are both tripple-nested loops that start and end at specific values. As can be derived from Algorithm \ref{alg:systemsolving1}, the first loop has a complexity of:
+\begin{align*}
+  & \mathcal{O}((m-3)(m-1)m) \\
+  & = \mathcal{O}(3m - 4m^2 + m^3) \\
+  & = \mathcal{O}(m^3)
+\end{align*}
+Using the same approach, we find that the second loop has a complexity of $\mathcal{O}(m^2n)$.
 
 \subsubsection{Optimization}
 \label{sec:systemsolvingoptimization}
@@ -1180,7 +1295,7 @@ The resulting structure introduces a small amount of overhead, as stage 2 requir
 Unfortunately, the final state $s_t$ that the optimized structure generates is different from the final state that the original structure generates. This means that the resulting challenges will also be different between the two structures. Although this does not compromise the security of the scheme, it does meen that the optimized and reference implementations are not compatible with each other. Therefore, we leave this optimized hash structure as a suggested change to the MEDS scheme.
 
 \subsection{Implementation}
-The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package \cite{xkcp} does not contain optimized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer \cite{becker2022hybrid} has resulted in a large set of optimized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
+The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package \cite{xkcp} does not contain vectorized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer \cite{becker2022hybrid} has resulted in a large set of optimized and vectorized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
 
 We have benchmarked these implementations on the Cortex-A72 and found that the \texttt{keccak\_f1600\_x4\_hybrid\_asm\_v3p}\footnote{\url{https://gitlab.com/arm-research/security/pqax/-/blob/master/asm/manual/keccak\_f1600/keccak\_f1600\_x4\_hybrid\_asm\_v3p.s}} optimized permutation (which is able to process 4 states in parallel) requires the lowest amount of cycles per state permutation. As the number of challenges $t$ is a multiple of 4 for all MEDS parameter sets that we consider, this means that we can easily plug this optimized permutation into the new hash structure.
 
@@ -1347,7 +1462,7 @@ We have shown that the MEDS implementation is very suitable for optimization usi
 \bibliography{bibliofile}
 
 \appendix
-\input{algorithm_appendix.tex}
-\input{results_appendix.tex}
+\input{appendix_algorithms.tex}
+\input{appendix_results.tex}
 
 \end{document}
