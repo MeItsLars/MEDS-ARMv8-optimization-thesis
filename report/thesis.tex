@@ -11,7 +11,7 @@
 % - In every figure and table, give references in the caption to all the sources.
 % - Definitely include comparison to other schemes; Dilithium(?), Falcon(?), Sphinx(?), traditional ECC(?), SELF REPORTED!!
 
-\usepackage{algorithm}
+\usepackage[chapter]{algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{algpseudocode}
 \usepackage{amsmath}
@@ -196,6 +196,15 @@ We investigate the following research questions in this thesis (see also Chapter
 \end{itemize}
 
 In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
+
+
+\chapter{Research Objectives}
+\label{ch:researchobjectives}
+\todo[inline]{Question to Peter and Simona: I'm not really certain about the necesity of this chapter. I could also include this information in the Introduction chapter. In this chapter, I would discuss the research objectives and the reason for optimizing MEDS for ARMv8.}
+\todo[inline]{Explain MEDS speedup goals}
+\todo[inline]{Explain SIMD speedup}
+\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
+
 
 \chapter{Preliminaries}
 \label{ch:preliminaries}
@@ -432,9 +441,59 @@ In this thesis, we will focus on optimizing the MEDS implementation for the ARMv
 \label{sec:simd}
 Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data (vectors) in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on a vector of multiple numbers in a timeframe that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to vectorization.
 
-In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit consists of 32 128-bit registers, each of which can be used to store 16 8-bit integers, 8 16-bit integers, 4 32-bit integers, or 2 64-bit integers. The NEON instruction set includes a wide range of instructions that can be used to perform operations on these registers.
+In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit contains 32 128-bit registers, each of which can be used to store a vector of values. Each NEON register can be split into a number of different lanes. The lane sizes that are supported in NEON, together with their assembly (ASM) code suffixes, are shown in Table \ref{tab:neonlanes}.
 
-\todo[inline]{Maybe extend this section to give a more detailed explanation of NEON, such as provide lane distribution options and some operation examples, together with graphics.}
+\begin{table}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Lane Count} & \textbf{Lane Width} & \textbf{ASM Suffix} \\
+    \midrule
+    2 & 64 bits & \texttt{.2d} \\
+    1 & 64 bits & \texttt{.1d} \\
+    4 & 32 bits & \texttt{.4s} \\
+    2 & 32 bits & \texttt{.2s} \\
+    8 & 16 bits & \texttt{.8h} \\
+    4 & 16 bits & \texttt{.4h} \\
+    16 & 8 bits & \texttt{.16b} \\
+    8 & 8 bits & \texttt{.8b} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Possible NEON lane sizes and their suffixes}
+  \label{tab:neonlanes}
+\end{table}
+
+In assembly code, we can refer to a NEON register by using the register prefix \texttt{v0}-\texttt{v31} followed by a suffix that indicates the lane size. For example, \texttt{v0.4s} refers to a 128-bit NEON register that contains 4 lanes of 32 bits each and can therefore store 4 32-bit values.
+
+The NEON instruction set contains a wide range of instructions that can be used to perform various operations on these vectors. Some illustrative examples are included in the following assembly code snippet:
+
+\begin{lstlisting}[language={[x86masm]Assembler}, style=ASMStyle]
+  // Load 4 32-bit unsigned integers stored at the memory address in x0 and x1 into v0.4s and v1.4s
+  ld1 {v0.4s}, [x0]
+  ld1 {v1.4s}, [x1]
+  // Add the values in v0.4s and v1.4s into v2.4s
+  add v2.4s, v0.4s, v1.4s
+  // Multiply v2.4s with itself into v3.2d and v4.2d
+  umull v3.2d, v2.2s, v2.2s   // Lower half
+  umull2 v4.2d, v2.4s, v2.4s  // Upper half
+  // Combine the upper halves of v3.2d and v4.2d into v5.4s
+  uzp2 v5.4s, v3.4s, v4.4s
+  // Store the result in v5.4s to the memory address in x2
+  st1 {v5.4s}, [x2]
+\end{lstlisting}
+
+A graphical depiction of the instructions in the code snippet above is shown in Figure \ref{fig:neonexample}. In the remainder of this thesis, we will use such NEON instructions in two forms:
+\begin{itemize}
+  \item \textbf{Assembly}: Directly writing assembly code that uses NEON instructions, such as the \texttt{add v2.4s, v0.4s, v1.4s} instruction that adds two 4-lane vectors of 32-bit values.
+  \item \textbf{C Intrinsics}: Using C intrinsics, which are functions that map directly to NEON instructions. ARM provides a set of intrinsics that can be used when include the \texttt{arm\_neon.h} header file\footnote{\url{https://arm-software.github.io/acle/neon\_intrinsics/advsimd.html}}\footnote{\url{https://developer.arm.com/architectures/instruction-sets/intrinsics/\#f:@navigationhierarchiessimdisa=[Neon]\&f:@navigationhierarchiesarchitectures=[A64]}}. An example is the \texttt{vadd\_u16(uint16x4\_t a, uint16x4\_t b)} intrinsic, which adds two 4-lane vectors of 16-bit unsigned integers.
+\end{itemize}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{neon/neon_example.drawio.png}
+  \caption{Visual representation of the NEON registers and instructions in the code snippet}
+  \label{fig:neonexample}
+\end{figure}
 
 \subsection{Cortex-A72 Micro-Architecture}
 For profiling and benchmarking our code, we will be using a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU that uses the ARMv8-A architecture (which is a specific profile of ARMv8). The term `Cortex-A72 Micro-Architecture' refers to the specific design of the ARM Cortex-A72 CPU, which differs from other CPUs that implement the ARMv8-A architecture.
@@ -508,10 +567,114 @@ As the Cortex-A72 uses an out-of-order execution model, it is impossible to prov
 \subsubsection{Instruction Scheduling}
 At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence in an optimal fashion without the need for hand tuning the instruction order \cite{CortexA72OptGuide}. This means that the CPU is able to `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
 
-It is important to note that this does not mean that there are no more benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code, because some instructions might be better suited for that specific computation.
+It is important to note that this does not mean that there are no benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code, because some instructions might be better suited for that specific computation.
 
 \section{Optimizing Cryptographic Schemes}
-\todo[inline]{Question to Peter and Simona: I'm not completely sure if this subsection is necessary, but it would be a nice place to explain constant-time programming, timing attacks, and cache poisoning attacks. Is it a good idea to include this information?}
+\label{sec:optimizingcrypto}
+When programming or optimizing cryptographic schemes or primitives, it is essential that the security of the scheme is not compromised because of vulnerabilities that are introduced in the code. One of the most important aspects in this context is the notion of \textit{constant-time execution} \cite{kocher1996timing}. A cryptographic function is said to be executed in constant-time if there exist no side-channel attacks that can extract secret information (such as a private key) by looking at the execution time of the function. In this section, we will go over the main pitfalls that can lead to non-constant-time execution.
+
+\subsection{Branching and Conditional Execution}
+\label{sec:branching}
+One of the most common reasons for non-constant-time execution occurs when the code contains branches that depend on secret data, allowing an attacker to perform a \textit{timing attack}. A timing attack is a side-channel attack where an attacker measures the time that it takes to execute a certain piece of code and uses this information to infer information about the secret data that is used in the code. Consider the example in Algorithm \ref{alg:branchingsecretdata}.
+
+\begin{algorithm}
+  \caption{Branching on Secret Data (Unsafe)}
+  \label{alg:branchingsecretdata}
+  \begin{algorithmic}[1]
+    \If{$\text{secret\_data} = 0$}
+      \State \Call{doExpensiveOperation}{}() \Comment{This operation is slow}
+    \Else
+      \State \Call{doCheapOperation}{}() \Comment{This operation is fast}
+    \EndIf
+  \end{algorithmic}
+\end{algorithm}
+
+The execution time of this code snippet depends on the value of `secret\_data'. If `secret\_data' is 0, the execution time will be longer than when `secret\_data', allowing an attacker to infer information about the value of `secret\_data' by measuring the execution time of the code.
+
+Another example of branching on secret data occurs when the code uses a loop of which the execution time depends on secret data. Consider the example in Algorithm \ref{alg:loopsecretdata}.
+
+\begin{algorithm}
+  \caption{Looping on Secret Data (Unsafe)}
+  \label{alg:loopsecretdata}
+  \begin{algorithmic}[1]
+    \For{$i = 0$ to $\text{secret\_data}$}
+      \State \Call{doSomething}{}()
+    \EndFor
+  \end{algorithmic}
+\end{algorithm}
+
+Obviously, the execution time of this code snippet depends on the value of `secret\_data'.
+
+\subsubsection{Compiler Optimizations and Branch Prediction}
+The previous examples are relatively obvious, but there are many more subtle ways in which branching on secret data can occur, especially when working with a smart compiler that tries to optimize the code. Consider the following example in Algorithm \ref{alg:conditionalswap}.
+
+\begin{algorithm}
+  \caption{Conditional Swap (Unsafe)}
+  \label{alg:conditionalswap}
+  \begin{algorithmic}[1]
+    \Function{conditionalSwap}{$x, y, \text{secret\_data}$}
+      \If{$\text{secret\_data} = 1$}
+        \State $x, y \gets y, x$
+      \Else
+        \State $x, y \gets x, y$
+      \EndIf
+      \State \Return $x, y$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+Although it might seem that this function is safe, nearly all compilers will optimize this code such that the assignment in the `else' branch is removed, making a timing attack possible.
+
+Even if you can guarantee that the compiler does not optimize this code, the `branch prediction' feature in modern CPUs might still make a timing attack possible. Branch prediction is a technique that tries to predict the outcome of a branch instruction before it is executed, allowing a CPU to start executing the instructions within the predicted branch. If the prediction is correct, the code will execute faster, but if the prediction is incorrect, the CPU will need to discard the results and start executing the correct branch, causing a delay. If an attacker knows how the CPU will predict the branch, they can use this information to perform a timing attack.
+
+\subsubsection{Mitigating Timing Attacks}
+The most important technique to mitigate timing attacks on conditional execution is to never branch on secret data at all, not even if it seems safe. Most common operations can be rewritten in a way that removes conditional execution. For example, the conditional swap operation in Algorithm \ref{alg:conditionalswap} can be rewritten as shown in Algorithm \ref{alg:conditionalswapfixed}.
+
+\begin{algorithm}
+  \caption{Conditional Swap (Safe)}
+  \label{alg:conditionalswapfixed}
+  \begin{algorithmic}[1]
+    \Function{conditionalSwap}{$x, y, \text{secret\_data}$}
+      \State $d \gets (x \oplus y) \cdot \text{secret\_data}$ \Comment{`$\oplus$' is the XOR operation}
+      \State $x \gets x \oplus d$
+      \State $y \gets y \oplus d$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+In this code snippet, if `secret\_data' is 1, $x = x \oplus (x \oplus y) = y$. Otherwise, $x = x \oplus 0 = x$. This way, the code does not branch (on secret data) and is therefore safe from timing attacks.
+
+\subsection{Data-Dependent Memory Access}
+\label{sec:datadependentmemoryaccess}
+Another common cause for non-constant-time execution is caused by accessing memory at an index that depends on secret data. Consider the example in Algorithm \ref{alg:datadependentmemoryaccess}.
+
+\begin{algorithm}
+  \caption{Data-Dependent Memory Access (Unsafe)}
+  \label{alg:datadependentmemoryaccess}
+  \begin{algorithmic}[1]
+    \State $x \gets \text{public\_array}[\text{secret\_data}]$
+  \end{algorithmic}
+\end{algorithm}
+
+This code is susceptible to a `cache-timing attack'. A cache-timing attack is a side-channel attack where an attacker measures the time that it takes to access a certain memory location \cite{kocher1996timing, bernstein2005cache}. If the data at that location is stored in the CPU cache, the access time will be faster than if the data is not (yet) in the cache. By measuring the time that it takes to access a certain memory location, an attacker can infer information about the value of `secret\_data'.
+
+This is only the most basic form of a cache-timing attack. More advanced attacks can be performed if the attacker has more control over the system, such as the ability to manipulate the cache to ensure that the data is (or is not) in the cache. Although there exist techniques to mitigate these attacks (such as always accessing every index of the array), it is best to avoid accessing memory at an index that depends on secret data altogether.
+
+\subsection{Non-Constant-Time Operations}
+\label{sec:nonconstanttimeoperations}
+A final common cause for non-constant-time execution is the use of CPU instructions that do not execute in constant time. Common examples of such instructions are (integer) division, math functions (such as sin/cos), and various other instructions, depending on the CPU architecture. Instructions like these can take a variable amount of time to execute, depending on the input data. It is important to avoid using such instructions with secret data.
+
+\subsection{Preventing Timing Attacks with Valgrind and Timecop}
+\label{sec:valgrindtimecop}
+It has been shown that even if you write code that should theoretically compile to a constant-time binary, the compiler might still optimize the code in such a way that it is vulnerable to various kinds of timing attacks \cite{simon2018you, barthe2019formal}. Therefore, it is important to make sure the resulting binary is indeed constant-time.
+
+Vulnerabilities to timing attacks described in Section \ref{sec:branching} and Section \ref{sec:datadependentmemoryaccess} can be detected using Valgrind \cite{nethercote2007valgrind} using a technique that was described by Langley \cite{langley2010checking,langley2010ctgrind}. Valgrind is a programming tool that is used to detect memory leaks, buffer overflows, and other memory-related problems. Among many other things, Valgrind can detect branching on unitialized data and memory accessing at an unintialized index. Using the following routine, we can use Valgrind to detect timing attack vulnerabilities:
+\begin{enumerate}
+  \item \textbf{Uninitialized Secret Data}: Make sure our code does not initialize any secret data. Normal operations (such as arithmetic operations) on uninitialized data are not complained about by Valgrind (by default).
+  \item \textbf{Run Valgrind}: Run Valgrind on our code. Any resulting complaints about uninitialized data are possible locations at which a vulnerability to a timing attack might exist.
+\end{enumerate}
+
+Timecop \cite{timecop} provides a \texttt{poison.h} header file that can be used to poison secret data, which essentially makes it uninitialized. This can be used in combination with Valgrind to detect timing attack vulnerabilities.
 
 \section{Related Work}
 \todo[inline]{Give more related work. This section will be expanded to include more related work (and references) and explanations for each item.}
@@ -522,13 +685,6 @@ It is important to note that this does not mean that there are no more benefits 
   \item The extended KECCAK code package.
   \item The KECCAK optimization for ARMv8.
 \end{itemize}
-
-\chapter{Research Objectives}
-\label{ch:researchobjectives}
-\todo[inline]{Question to Peter and Simona: I'm not really certain about the necesity of this chapter. I could also include this information in the Introduction chapter. In this chapter, I would discuss the research objectives and the reason for optimizing MEDS for ARMv8.}
-\todo[inline]{Explain MEDS speedup goals}
-\todo[inline]{Explain SIMD speedup}
-\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
 
 \chapter{Profiling}
 \label{ch:profiling}

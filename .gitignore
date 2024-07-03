@@ -13,7 +13,6 @@ build
 *.rsp
 **/params.h
 **/api.h
-build
 
 # Compilation files
 *.o
@@ -23,6 +22,8 @@ build
 *.cmd
 *.order
 *.symvers
+
+# Assembly files
 pmod_mat_mul_asm_*.s
 pmod_mat_mul_8_asm_*.s
 pmod_mat_syst_*.s
