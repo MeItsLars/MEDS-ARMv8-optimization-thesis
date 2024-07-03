@@ -185,14 +185,17 @@ In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this 
 
 Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds, sometimes even seconds.
 
-In this thesis, we aim to optimize the speed of the MEDS implementation. We will look at the general performance of MEDS, but we will mostly focus on the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
+In this thesis, we aim to optimize the speed of the MEDS implementation. We will take a look at the general performance of MEDS, but we will mostly focus on optimizing MEDS for the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
 
 We investigate the following research questions in this thesis (see also Chapter \ref{ch:researchobjectives}):
-\begin{itemize}
-  \item What are the bottlenecks in the MEDS implementation?
-  \item How can we improve the general performance of the MEDS implementation?
-  \item How can we optimize the MEDS implementation for ARMv8?
-  \item How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
+\begin{itemize}[left=35pt,labelsep=15pt]
+  \item[RQ I.] How is CPU time distributed across the code of the MEDS implementation?
+  \item[RQ II.] What optimizations can be made to improve the performance of the MEDS implementation for the ARMv8 architecture?
+  \begin{itemize}
+    \item[a)] Which of these optimizations can be used in general for any 
+    architecture?
+  \end{itemize}
+  \item[RQ III.] How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
 In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture. In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking results of the non-optimized and optimized MEDS versions and compare these results to other digital signature schemes. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the research questions and the results that we have obtained.
@@ -200,11 +203,33 @@ In Chapter \ref{ch:preliminaries}, we will provide the necessary background info
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
-\todo[inline]{Question to Peter and Simona: I'm not really certain about the necesity of this chapter. I could also include this information in the Introduction chapter. In this chapter, I would discuss the research objectives and the reason for optimizing MEDS for ARMv8.}
 \todo[inline]{Explain MEDS speedup goals}
 \todo[inline]{Explain SIMD speedup}
-\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
 
+\section{Motivation}
+\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
+As explained in the introduction, the need for secure digital signature schemes that are secure against quantum computers is increasing.
+Explain the need for fast digital signature schemes.
+Explain traditional schemes and their speeds (order of 10000).
+Explain why fast speeds are important (SSL/TLS, electronic transactions, crypto/blockchain, etc.)
+
+\section{Research Questions}
+The goal of this thesis is to optimize the performance of the MEDS implementation for the ARMv8 architecture to an extent that further optimizations are either infeasible or provide only minimal performance improvements. To achieve this goal, we will investigate the following research questions:
+\begin{itemize}[left=35pt,labelsep=15pt]
+  \item[RQ I.] How is CPU time distributed across the code of the MEDS implementation?
+  \item[RQ II.] What optimizations can be made to improve the performance of the MEDS implementation for the ARMv8 architecture?
+  \begin{itemize}
+    \item[a)] Which of these optimizations can be used in general for any 
+    architecture?
+  \end{itemize}
+  \item[RQ III.] How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
+\end{itemize}
+
+Since the submission of the original MEDS implementation to the NIST PQC competition in 2023 \cite{chou2023meds}, the authors have proposed several optimizations to the scheme to reduce the size of the public key and the signatures \cite{chou2024reducing}. The authors have provided a new reference implementation for MEDS that implements these optimizations. In this thesis, we will focus on optimizing this new implementation for the ARMv8 architecture. There are two main reasons for this focus:
+\begin{itemize}
+  \item Research has been done on the optimization of the original MEDS implementation for the x86 architecture (using AVX512 instructions) in \cite{IIS2023LowLevel, IIS2023HighLevel}. Although the ARMv8 architecture is different and an optimization of the original implementation for ARMv8 would be interesting, we believe that optimizing the new implementation provides better insights into the performance of a state-of-the-art MEDS implementation.
+  \item The new MEDS variant has quite a few differences compared to the original, but the core structure and algorithms remain the same. This suggests that the optimizations that we will make for the new implementation can also be applied to the original implementation, should the need arise.
+\end{itemize}
 
 \chapter{Preliminaries}
 \label{ch:preliminaries}
