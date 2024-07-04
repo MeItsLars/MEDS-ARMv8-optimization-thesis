@@ -1,5 +1,6 @@
 \documentclass[11pt,a4paper]{report}
 
+% SIMONA FEEDBACK TODO
 % - Make more clear which version of MEDS we optimized (the one after optimization) and discuss how these optimizations could also be applied to the original one
 % - 'Optimizing Cryptographic Schemes' section is relevant
 % - Related Work: show landscape, elliptic curve optimization. other signature schemes. Other fiat shamir (and what is important in such schemes, such as keccak). Maybe cite other optimizations from the same NIST competition (other fiat shamir signatures maybe, if something interesting is there; LESS/uv-based/code-based/with fields). Additionally, maybe look at other techniques such as AVX2/AVX512 that are used nowadays.
@@ -10,6 +11,13 @@
 % - All referneces to 'solve' need to be altered a bit. Give pseudocode/algorithm for 'solve' in the appendix and explain what it does.
 % - In every figure and table, give references in the caption to all the sources.
 % - Definitely include comparison to other schemes; Dilithium(?), Falcon(?), Sphinx(?), traditional ECC(?), SELF REPORTED!!
+
+% REMAINING TODO SELF
+% Check all figures and tables for proper captions
+% Check capitalization of section names
+% Check formatting of enumerate items (;;;.)
+% Grammar check entire thing
+% Check all citations (specifically URLs, they are not always included)
 
 \usepackage[chapter]{algorithm}
 \usepackage[noend]{algpseudocode}
@@ -203,15 +211,17 @@ In Chapter \ref{ch:preliminaries}, we will provide the necessary background info
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
-\todo[inline]{Explain MEDS speedup goals}
-\todo[inline]{Explain SIMD speedup}
 
 \section{Motivation}
-\todo[inline]{Explain ARM speedup goals (IoT, mobile, etc.)}
-As explained in the introduction, the need for secure digital signature schemes that are secure against quantum computers is increasing.
-Explain the need for fast digital signature schemes.
-Explain traditional schemes and their speeds (order of 10000).
-Explain why fast speeds are important (SSL/TLS, electronic transactions, crypto/blockchain, etc.)
+The need for secure digital signature schemes that are secure against quantum computers is increasing. Of course, the security of these schemes is the most important aspect, but the speed at which an implementation can create or verify a signature is also important. The speed of a digital signature scheme is essential for many applications, such as TLS/SSL certificate verification, electronic payments, and blockchain transactions. Traditional digital signature schemes such as RSA \cite{rivest1978method} and ECDSA \cite{johnson2001elliptic} are able to verify thousands of signatures per second on both modern and even older hardware \cite{koppl2021performance,de1998performance}. It is important that the new post-quantum digital signature schemes are eventually able to achieve similar performance levels.
+
+The two most widely used CPU architectures in the world are x86 (used in Intel and AMD processors) and ARM. ARM is used in a wide variety of devices, among which:
+\begin{itemize}
+  \item Mobile devices and tablets such as the Apple iPhone and iPad, Samsung Galaxy, and Google Pixel;
+  \item Internet of Things (IoT) devices such as smart light bulbs, smart thermostats, and smart doorbells;
+  \item Apple M1/M2 chips used in Apple MacBooks.
+\end{itemize}
+Optimizing the MEDS implementation for the ARMv8 architecture will improve the MEDS performance for these devices, as well as provide valuable insights into the performance of MEDS on ARMv8.
 
 \section{Research Questions}
 The goal of this thesis is to optimize the performance of the MEDS implementation for the ARMv8 architecture to an extent that further optimizations are either infeasible or provide only minimal performance improvements. To achieve this goal, we will investigate the following research questions:
@@ -369,7 +379,7 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 % A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
 \subsection{MEDS Algorithms}
 \label{sec:medsalgorithms}
-In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}.
+In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}. Additionally, we will provide some information on matrix systemization and linear system solving, two common functions used in the MEDS algorithms.
 
 \subsubsection{Key Generation}
 % This section will contain an algorithm that represents key generation. It is not the completely detailed variant (which is shown in the appendix), but a more high-level overview of the algorithm.
@@ -449,13 +459,34 @@ A simplified overview version of the MEDS signature verification algorithm is sh
   \end{algorithmic}
 \end{algorithm}
 
+\subsubsection{Matrix Systemization}
+\label{sec:systemization}
+Matrix systemization is responsible for converting a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized form. In MEDS, the systemized form $A' \in \mathbb{F}_{4093}^{m \times n}$ of a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ can take two forms:
+\begin{itemize}
+  \item \textbf{REF'}:\\
+  $A'$ is in row-echelon form (REF) \cite{leon2006linear}, with the additional property that the leading coefficient of row $i$ is in column $i$.
+  \item \textbf{RREF'}:\\
+  $A'$ is in reduced row-echelon form (RREF) \cite{leon2006linear}, with the additional property that the first $m \times m$ submatrix of $A'$ is the identity matrix.
+\end{itemize}
+
+The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains three optional features that can be used (based in the input arguments):
+\begin{enumerate}
+  \item $r_{\text{max}}$: Set the number of rows of the input matrix that need to be systemized. If not specified, the entire matrix is systemized.
+  \item do\_swap: Allow the algorithm to swap columns of the matrix to ensure that the leading coefficient of a row is not 0.
+  \item do\_backsub: Whether or not to perform back substitution after the matrix has been systemized.
+\end{enumerate}
+The complete algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
+
+\subsubsection{Linear System Solving}
+\label{sec:linearsolving}
+\todo[inline]{...}
+
 \subsection{Known Attacks}
-\todo[inline]{Question to Peter and Simona: Should I add a section containing a list of the best known attack(s) on MEDS (or the underlying problem)? Alternatively, I can reference the MEDS paper for this information.}
+\todo[inline]{Add a section containing a list of the best known attack(s) on MEDS (or the underlying problem)? Reference MEDS paper on this information.}
 
 \section{ARMv8, Cortex-A72, and NEON}
 \label{sec:armv8}
-\todo[inline]{Cite NEON reference manual and intrinsics page.}
-In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 CPU architecture. ARMv8 supports a wide range of instruction sets and extensions, of which the following are relevant for this thesis:
+In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 CPU architecture \cite{armv8m}. ARMv8 supports a wide range of instruction sets and extensions, of which the following are relevant for this thesis:
 \begin{itemize}
   \item \textbf{A64} (AArch64): The default 64-bit instruction set for ARMv8.
   \item \textbf{NEON} (Advanced SIMD): The NEON instruction set is an extension to the ARMv8 architecture that is mandatory in all ARMv8 implementations. It allows for SIMD operations on 128-bit registers (see Section \ref{sec:simd}).
@@ -701,6 +732,46 @@ Vulnerabilities to timing attacks described in Section \ref{sec:branching} and S
 
 Timecop \cite{timecop} provides a \texttt{poison.h} header file that can be used to poison secret data, which essentially makes it uninitialized. This can be used in combination with Valgrind to detect timing attack vulnerabilities.
 
+\section{Modular Reduction}
+\label{sec:preliminariesmodularreduction}
+As MEDS is a cryptographic scheme that operates on elements in a finite field, modular reduction is a basic building block that is used in many parts of the scheme. There are various algorithms that can be used to perform modular reduction. In this section, we will go over the most common algorithms.
+
+\begin{itemize}
+  \item \textbf{Naive Reduction}\\
+  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. A big disadvantage of this approach is that division is not a constant time operation, which can lead to timing attacks (see Section \ref{sec:nonconstanttimeoperations}). Furthermore, the division operation is usually relatively slow compared to other operations.
+  \item \textbf{Montgomery Reduction}\\
+  Montgomery reduction \cite{montgomery1985modular} is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input and outputs to be converted to and from a Montgomery representation.
+  \item \textbf{Barrett Reduction}\\
+  Barrett reduction\cite{barrett1986implementing} is a modular reduction algorithm that is similar to Montgomery reduction in the sense that it also subtracts a multiple of the modulus from the input. However, it does not require the input to be converted to a different representation. Additionally, the cost of the reduction is slightly lower for small inputs compared to Montgomery reduction.
+\end{itemize}
+
+Montgomery reduction is generally very efficient when a large chain of multiplications is required and the overhead of converting to and from Montgomery representation is negligible compared to the number of multiplications/reductions, whereas Barrett reduction is typically a bit faster when we do not have a large chain of multiplications and reductions.
+
+\subsection{Barrett Reduction}
+\label{sec:barrettreduction}
+Barrett reduction works by approximating the modular reduction. Given an unsigned integer $a$ and a modulus $n$, clearly
+\[
+  a \mod n = a - \left\lfloor \frac{a}{n} \right\rfloor \cdot n.
+\]
+
+From this, the Barrett reduction formula for unsigned integers can be derived (Definition \ref{def:barrettreduction}).
+
+\begin{definition}[Barrett Reduction for unsigned integers]~\\
+  \label{def:barrettreduction}
+  Let $a$ be an unsigned integer and $n$ be a modulus.
+  Let $R$ be a constant such that $R = 2^k > n$ for some $k$.
+  \[
+    a \mod n = a - \left\lfloor \frac{a \cdot \left[\frac{R}{n}\right]}{R} \right\rfloor \cdot n.
+  \]
+  where $\left[\right]$ represents a rounding operation such as floor or ceiling.
+\end{definition}
+
+As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
+
+\subsubsection{Choice of $k$}
+\label{sec:choiceofk}
+Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the `floor' function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ can also be beneficial: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
+
 \section{Related Work}
 \todo[inline]{Give more related work. This section will be expanded to include more related work (and references) and explanations for each item.}
 \begin{itemize}
@@ -834,14 +905,13 @@ For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most
 % This is so much time that I was not able to finish this thesis. Mic drop; I am a failure. <- van fringerlie
 
 \subsubsection{Matrix Systemization}
-The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$. This is done using a Gaussian elimination algorithm that has a complexity of $\mathcal{O}(m^2n)$ (this is calculated in Section \ref{sec:matrixsystemizationcomplexity}).
+The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub} in the code, but shortened for readability) is responsible for about 11\% of the total number of cycles for signing and verification. This function is used to systemize a matrix $A \in \mathbb{F}_q^{m \times n}$ over a finite field $\mathbb{F}_q$ (see Section \ref{sec:systemization}). This is done using a Gaussian elimination algorithm that has a complexity of $\mathcal{O}(m^2n)$ (this is calculated in Section \ref{sec:matrixsystemizationcomplexity}).
 
 \subsubsection{System Solving}
-The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time.
-\todo[inline]{Complexity}
+The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function is used to solve a system of linear equations over a finite field $\mathbb{F}_q$. In MEDS, the systems that need to be solved are constructed in a very specific way, which allows for a more efficient method of solving them (as opposed to using a more general algorithm like Gaussian elimination). Even though the system solving algorithm is thus optimized, it still takes up a significant amount of time, having a complexity of $\mathcal{O}(m^2n)$ (this is calculated in Section \ref{sec:systemsolvingcomplexity}) on the sections that take up the most time.
 
 \subsubsection{Bitstream Filling}
-The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to make the resulting keys and signatures more compact.\todo[inline]{This is true for the keys and signatures, but most of the time for `bitstream filling' is spent on converting the commitments before they are hashed. This still needs to be mentioned here somehow.}
+The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to reduce the number of bytes required to store a list of field elements.
 
 \subsubsection{SHAKE256}
 \label{sec:shake256}
@@ -863,46 +933,12 @@ In this chapter, we will start by discussing how we will implement modular reduc
 
 \section{Modular Reduction}
 \label{sec:modularreduction}
-\todo[inline]{Question to Peter and Simona: Should I list the background information on modular reduction in the preliminaries instead of here? Doing that will split the information, but it might be more logical.}
 Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we will use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we can not rely on this operator, as it is not defined for NEON registers and there is no direct alternative in assembly.
 
-Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. There are various algorithms that can be used to perform modular reduction. Especially for large moduli, there are a lot of possible algorithms and optimizations to choose from\todo{Cite or remove}. However, as our modulus is relatively small and fits in just 12 bits, we do not have to consider these more complex algorithms. Instead, we have considered the following well-known algorithms.
-\begin{itemize}
-  \item \textbf{Naive Reduction}\\
-  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. The main problem with this approach is that division is not a constant time operation, which can lead to timing attacks\todo{Reference section}. Furthermore, the division operation is usually relatively slow compared to other operations.
-  \item \textbf{Montgomery Reduction}\\
-  Montgomery reduction \cite{montgomery1985modular} is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input to be converted to a Montgomery representation, after which (for our input sizes) the reduction algorithm can be executed with 2 multiplications, 2 additions/subtractions, and a right shift, followed by a conditional subtraction.
-  \item \textbf{Barrett Reduction}\\
-  Barrett reduction\cite{barrett1986implementing} is a modular reduction algorithm that is similar to Montgomery reduction in the sense that it also subtracts a multiple of the modulus from the input. However, it does not require the input to be converted to a different representation. For our input sizes, the algorithm can be executed with 2 multiplications, 1 subtraction, and a right shift (with an optional conditional subtraction, see Section \ref{sec:barrettreduction}).
-\end{itemize}
+Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. We go over the various modular reduction algorithms in Section \ref{sec:preliminariesmodularreduction}. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we decide to use Barrett reduction (see Section \ref{sec:barrettreduction}) instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
 
-Montgomery reduction is generally very efficient when a large chain of multiplications is required and the overhead of converting to and from Montgomery representation is negligible compared to the number of multiplications/reductions. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we have decided to use Barrett reduction instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
-
-\subsection{Barrett Reduction}
-\label{sec:barrettreduction}
-Barrett reduction works by approximating the modular reduction. Given an unsigned integer $a$ and a modulus $n$, clearly
-\[
-  a \mod n = a - \left\lfloor \frac{a}{n} \right\rfloor \cdot n.
-\]
-
-From this, the Barrett reduction formula for unsigned integers can be derived (Definition \ref{def:barrettreduction}).
-
-\begin{definition}[Barrett Reduction for unsigned integers]~\\
-  \label{def:barrettreduction}
-  Let $a$ be an unsigned integer and $n$ be a modulus.
-  Let $R$ be a constant such that $R = 2^k > n$ for some $k$.
-  \[
-    a \mod n = a - \left\lfloor \frac{a \cdot \left[\frac{R}{n}\right]}{R} \right\rfloor \cdot n.
-  \]
-  where $\left[\right]$ represents a rounding operation such as floor or ceiling.
-\end{definition}
-
-As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
-
-\subsubsection{Choice of $k$}
-Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the `floor' function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ can also be beneficial: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
-
-For the MEDS parameter sets that we consider, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
+\subsection{Choosing $k$ for Barrett reduction}
+As mentioned in Section \ref{sec:choiceofk}, the choice of $k$ for Barrett reduction is important. We need to pick a $k$ such that the reduction will not require a final conditional subtraction. For the MEDS parameter sets that we consider, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
 
 As $2^{30}$ is a relatively small number, we use a brute force approach to find the smallest $k$ that satisfies this condition. This value turns out to be $k = 43$. This gives $m = \lceil \frac{2^{43}}{4093} \rceil = 0\text{x}80180481$. This number fits nicely into 32 bits, which means that we can store it in 32-bit NEON lanes.
 
@@ -954,7 +990,7 @@ A useful operation when working with numbers outside of the finite field is the 
   \end{algorithmic}
 \end{algorithm}
 
-As explained in Section \todo{Reference to CT section}, we can not use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm \ref{alg:neonfreezeoperationc} (C code) and Algorithm \ref{alg:neonfreezeoperationasm} (assembly code).
+As explained in Section \ref{sec:branching}, we can not use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm \ref{alg:neonfreezeoperationc} (C code) and Algorithm \ref{alg:neonfreezeoperationasm} (assembly code).
 
 \begin{algorithm}
   \caption{NEON Freeze Operation (C)}
@@ -1083,57 +1119,11 @@ cycles.
 
 \subsection{Matrix Systemization}
 \label{sec:matrixsystemization}
-\todo[inline]{Change this section so it first gives a recap of what matrix systemization is, then discusses the optimization approach.}
-\todo[inline]{The systemized forms (REF and RREF) should not be explained in this section but in the background section. Add references to Echelon?}
-Matrix systemization is responsible for converting a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized form. In MEDS, the systemized form $A' \in \mathbb{F}_{4093}^{m \times n}$ of a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ can take two forms:
-\begin{itemize}
-  \item \textbf{REF}:\\
-  $A'$ is in row-echelon form (REF), with the additional property that the leading coefficient of row $i$ is in column $i$.
-  \item \textbf{RREF}:\\
-  $A'$ is in reduced row-echelon form (RREF), with the additional property that the first $m \times m$ submatrix of $A'$ is the identity matrix.
-\end{itemize}
-
-The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains three optional features that can be used (based in the input arguments):
-\begin{enumerate}
-  \item $r_{\text{max}}$: Set the number of rows of the input matrix that need to be systemized. If not specified, the entire matrix is systemized.
-  \item do\_swap: Allow the algorithm to swap columns of the matrix to ensure that the leading coefficient of a row is not 0.
-  \item do\_backsub: Whether or not to perform back substitution after the matrix has been systemized.
-\end{enumerate}
-The complete algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
+Matrix systemization is the second most time-consuming function in MEDS, taking up about 9\% of the total number of cycles for key generation and 11\% of the total number of cycles for signing and verification. The function is responsible for the task of systemizing a matrix $A \in \mathbb{F}_{4093}^{m \times n}$ over the finite field $\mathbb{F}_{4093}$ into a systemized matrix of REF' or RREF' form (see Section \ref{sec:systemization}).
 
 \subsubsection{Complexity Analysis}
 \label{sec:matrixsystemizationcomplexity}
 We analyze the complexity of the matrix systemization algorithm used in the reference implementation (see Algorithm \ref{alg:systemizer}). We will first consider the basic algorithm where $r_\text{max} = m$ and do\_swap and do\_backsub are set to false. We can then compute the complexity of the algorithm as follows:
-
-% \resizebox{\textwidth}{!}{
-% \begin{minipage}{\textwidth}
-%   \begin{align*}
-%     & \sum_{r=0}^{m} \left( \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1) + \mathcal{O}(1) + \sum_{c=r}^{n} \mathcal{O}(1) + \sum_{r_2=r+1}^m \sum_{c=r}^{n} \mathcal{O}(1) \right) \\
-%     & =
-%     2 \cdot \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \sum_{c=r}^{n} \mathcal{O}(1)\right)
-%     + \left( \sum_{r=0}^{m} \sum_{c=r}^{n} \mathcal{O}(1) \right)
-%     + \left( \sum_{r=0}^{m} \mathcal{O}(1) \right) \\
-%     & =
-%     2 \cdot \left( \sum_{r=0}^{m} O((m-r)(n-r)) \right)
-%     + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
-%     + O(m) \\
-%     & =
-%     2 \cdot \left( \sum_{r=0}^{m} O(mn - mr - nr + r^2) \right)
-%     + \left( \sum_{r=0}^{m} \mathcal{O}(n-r) \right)
-%     + O(m) \\
-%     & = \mathcal{O} \left( mn \sum_{r=0}^{m} 1 - m \sum_{r=0}^{m} r - n \sum_{r=0}^{m} r + \sum_{r=0}^{m} r^2 + \sum_{r=0}^{m} n - \sum_{r=0}^{m} r + m \right) \\
-%     & = \mathcal{O} \left( 
-%     \begin{aligned}
-%       mn \cdot m - m \cdot \frac{m(m+1)}{2} - n \cdot \frac{m(m+1)}{2} + \\
-%       \frac{m(m+1)(2m+1)}{6} + n \cdot m - \frac{m(m+1)}{2} + m 
-%     \end{aligned}
-%     \right) \\
-%     &= \mathcal{O} \left( m^2n - \frac{m^3 + m^2}{2} - \frac{m^2n + mn}{2} + \frac{m^3 + 3m^2 + 2m}{6} + mn - \frac{m^2 + m}{2} + m \right) \\
-%     &= \mathcal{O} \left( m^2n - \frac{m^3}{2} - \frac{m^2}{2} - \frac{m^2n}{2} - \frac{mn}{2} + \frac{m^3}{6} + \frac{3m^2}{6} + \frac{2m}{6} + mn - \frac{m^2}{2} - \frac{m}{2} + m \right) \\
-%     &= \mathcal {O} (m^2n)
-%   \end{align*}
-% \end{minipage}
-% }
 
 \resizebox{\textwidth}{!}{
 \begin{minipage}{\textwidth}
@@ -1237,7 +1227,7 @@ Following the same approach as above, using do\_backsub adds the following value
 In all three operations of MEDS, the \texttt{solve\_opt} function is used to solve a system of linear equations over the finite field $\mathbb{F}_{4093}$. The system that needs to be solved is constructed in a very specific way, which allows for a more efficient method of solving it (as opposed to using a more general algorithm like Gaussian elimination). Even though this more efficient method is used, the function still takes up a significant amount of time in the MEDS implementation.
 
 % Majority of time is spent on two tripple-nested loops
-Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 88 \%$\todo{Update measurement}) is spent on two relatively small tripple-nested loops, while the remainder of the time ($\pm 12 \%$\todo{Update measurement}) is spent on all other parts of the function combined. Therefore, we have decided to focus on optimizing these two loops. Both loops have the exact same structure, so we will only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
+Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 88 \%$\todo{Update measurement}) is spent on two relatively small tripple-nested loops, while the remainder of the time ($\pm 12 \%$\todo{Update measurement}) is spent on all other parts of the function combined. Therefore, we focus on optimizing these two loops. Both loops have the exact same structure, so we will only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
 
 \begin{algorithm}
   \caption{System Solving: Time-consuming loop 1}
@@ -1284,7 +1274,7 @@ We call $x$ the number of iterations of the outermost loop, $y$ the number of it
   \item $x \cdot y \cdot \frac{1}{8}z$ additions, subtractions, and final reductions to compute \texttt{val}
   \item $x \cdot y \cdot \frac{1}{8}z$ stores of \texttt{val}
 \end{itemize}
-Given that reductions takes 5 cycles, final reductions take 3 cycles\todo{Check and reference}, and all other operations take 1 cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
+Given that reductions takes 5 cycles, final reductions take 3 cycles, and all other operations take 1 cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
 
 We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table \ref{tab:medsparametersets}). This gives us a total of $\frac{1}/{8}(m-3)(m-1)(28m + 8)$ cycles for loop 1 and $\frac{1}{8}(m-2)(m-1)(28n + 8)$ cycles for loop 2, giving a combined total of $\frac{1}{8}(m-3)(m-1)(28m + 28n + 16)$ cycles.
 
@@ -1366,7 +1356,7 @@ As can be seen from the code, the vectorized version is essentially the same as 
 
 \subsection{Parallelization of Commitment Computations}
 \label{sec:commitmentparallelization}
-Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm X\todo{Update}) and verification (Algorithm X\todo{Update}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while-loop that runs until the commitment is succesfully generated. This is why the signing and verification code exhibits the following structure:
+Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm \ref{alg:medssignoverview}) and verification (Algorithm \ref{alg:medsverifyoverview}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while-loop that runs until the commitment is succesfully generated. This is why the signing and verification code exhibits the following structure:
 \begin{verbatim}
   // Initial definitions and loading
   for (int i = 0; i < t; i++) {
@@ -1383,7 +1373,7 @@ This structure introduces a problem if we want to parallelize the computation of
 
 \subsubsection{Optimization}
 \label{sec:commitmentparallelizationoptimization}
-We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This approach is inspired by X\todo{Cite existing Git}. It is suitable for parallelization and has the following structure:
+We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This approach is inspired by \cite{IIS2023HighLevel}. It is suitable for parallelization and has the following structure:
 \begin{verbatim}
   // Initial definitions and loading
   while (there are uncomputed/failed commitments) {
@@ -1605,28 +1595,40 @@ The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmar
 
 \chapter{Future work}
 \label{ch:futurework}
-\todo[inline]{The future work section contains all ideas for future work, but they have not yet been nicely formatted and explained.}
-Future Work:
-\begin{itemize}
-  \item Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can possibly utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en}
-  \item Perform high-level optimization for key generation (even though this is hard to do with our current parameter sets, as $s$ is always 2, limiting the parallelization possibilities).
-  \item Optimize the `solve' method (for the low-level approach) using a pure-assembly approach.
-  \item Explore additional multiplication techniques for matrices with very specific dimensions, such as $2 \cdot x$.
-  \item Analyse and optimize memory and power usage of the (optimized) MEDS implementation.
-  \item Implement the optimized MEDS implementation on other CPU architectures that support SIMD instructions, such as AVX512.
-  \item In low-level systemizer, add 8-way parallelization to all loops.
-  \item In high level-v8, change 13-bit reduction to a simple freeze.
-\end{itemize}
+Although we have optimized the MEDS implementation significantly, we have mentioned several limitations and possible improvements. In this chapter, we will discuss these ideas in more detail. Additionally, there are some other unexplored but interesting topics that we will discuss.
 
+\section{Further optimization possibilities}
+
+\subsection*{Bitstream optimization}
+As explained in Section \ref{sec:bitstreamfilling}, the commitment matrices are hashed by first converting them into a bitstream. An alternative approach is to change the pointer type of the matrix elements from 16-bit to 8-bit unsigned integers (which would practically take no time to execute) and then hash the resulting array. The main advantage of this approach is that we no longer need to execute the relatively costly bitstream filling process. However, it also comes at the cost of having $\frac{4}{3}$ times as many values to hash. It would be interesting to see if this approach results in a speedup of the general hashing process.
+
+\subsection*{Optimizing linear system solving}
+Our optimizations to the linear system solving function as described in Section \ref{sec:systemsolving} have been very effective, resulting in a speedup of 2.7 for MEDS-55520 (see also the results in Section \ref{sec:profilingoptimizations}). However, our optimizations were solely based on the vectorization of the two most time-consuming loops in the \texttt{solve\_opt} function using NEON intrinsics. We expect that an additional speedup can be achieved by optimizing the remaining loops in the function. Additionally, we believe that a pure-assembly approach will result in an even larger speedup.
+
+\subsection*{Additional multiplication techniques for specific matrix dimensions}
+We have heavily optimized the matrix multiplication function, achieving an average matrix multiplication speedup of 6.9 for MEDS-55520 (see also the results in Section \ref{sec:profilingoptimizations}). Naturally, the optimizations are slightly less effective for matrices that use dimensions that are not a multiple of 8. For most matrix sizes, the results were still very close to the minimal bound. However, we noticed that matrices with dimensions $2 \times x$ were not optimized as well as we would have liked. The creation of an additional algorithm that is specifically tailored to such matrix sizes could pull the performance of these matrix multiplications closer to the minimal bound.
+
+\subsection*{High-level key generation optimization}
+We have not applied high-level optimizations to the key generation function. The main loop of the key generation generates all $s$ matrices that represent the public key. For the parameter sets that we consider, $s$ is always 2, which heavily limits the possibilities for parallelization. The speedup factor would be limited to 2, which we already exceeded with our low-level optimizations. However, it might still be interesting to explore the possibilities for high-level optimizations for key generation, especially considering that the need for parameter sets with larger values of $s$ might arise in the future.
+
+% (such as other CPU architecturer, analysing memory and energy usage, etc.)
+\section{Additional research topics}
+
+% Analyse and optimize memory and power usage of the (optimized) MEDS implementation.
+\subsection*{Memory and power usage analysis}
+We have focused on optimizing the performance of the MEDS implementation, but we have not analyzed the memory and power usage of any of the implementations. It would be interesting to see what the impact of our optimizations on memory and power usage is. Additionally, the possibilities for further optimizations in these areas could be explored, which is especially relevant for embedded systems and IoT devices.
+
+% Implement the optimized MEDS implementation on other CPU architectures that support SIMD instructions, such as AVX512.
+\subsection*{Optimizing for other CPU architectures}
+We have optimized the MEDS implementation for the ARMv8 architecture, but there are many other CPU architectures that support SIMD instructions. One interesting architecture to explore is the AVX512 architecture, which is supported by Intel CPUs. AVX512 is able to process 8 times as many field elements in parallel compared to ARMv8, which could result in a significant speedup of the MEDS implementation.
+
+\subsection*{Deze sectie gaat nog weg yeet}
 Still plan to do myself:
 \begin{itemize}
-  \item Analyze the minimum time complexity of the low-level systemizer algorithm?
   \item Adust the 2 python generation files with an abstract file for clearity
   \item Cite ARM Calling Convention PDF \url{https://github.com/ARM-software/abi-aa/releases}
-  \item Check possibilities for low-level matrix multiplication while working on 8x8 submatrices instead of 4x4 submatrices
-  \item Check possibilities for high-level parallelization where 8 commitments are computed at the same time
-  \item Check possibilities for ignoring bitstream setup before hashing into a challenge hash. Instead, we could just pass the entire commitment matrix into the hash function. This will require additional calls to the hash function, but it will skip the bitstream filling process.
-  \item Assuming I get the Apple device in time, I will also benchmark the optimized MEDS implementation on that CPU.
+  \item Assuming I get the Apple device in time, I will also benchmark the optimized MEDS implementation on that CPU. Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can possibly utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100/A64-Instruction-Set-Reference/A64-Cryptographic-Algorithms/A64-Cryptographic-instructions?lang=en}
+  \item In high level-v8, change 13-bit reduction to a simple freeze.
 \end{itemize}
 
 \chapter{Conclusion}
