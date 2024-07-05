@@ -256,7 +256,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
   PROFILER_START("solve_opt");
-  PROFILER_START("solve_opt_raw");
 
   // set up core sub-system
   pmod_mat_t N[MEDS_n * (2 * MEDS_m)] = {0};
@@ -272,7 +271,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
     }
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
-  PROFILER_STOP("solve_opt_raw");
 
   // Systemize core sub-system while pivoting all but the last row.
   int piv;
@@ -282,7 +280,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
     PROFILER_STOP("solve_opt");
     return -1;
   }
-  PROFILER_START("solve_opt_raw");
 
   LOG_MAT(N, MEDS_n, 2 * MEDS_m);
 
@@ -328,7 +325,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   GFq_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
 
   int N1_r;
-  PROFILER_STOP("solve_opt_raw");
 
   // Sytemize 2nd sub-system.
   N1_r = pmod_mat_rref(N1, MEDS_m - 1, MEDS_m);
@@ -339,7 +335,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
     PROFILER_STOP("solve_opt");
     return -1;
   }
-  PROFILER_START("solve_opt_raw");
 
   LOG_MAT(N1, MEDS_m - 1, MEDS_m);
 
@@ -538,7 +533,6 @@ int solve_opt(pmod_mat_t *A_tilde, pmod_mat_t *B_tilde_inv, pmod_mat_t *G0prime)
   LOG_MAT(A_tilde, MEDS_m, MEDS_m);
   LOG_MAT(B_tilde_inv, MEDS_n, MEDS_n);
 
-  PROFILER_STOP("solve_opt_raw");
   PROFILER_STOP("solve_opt");
   return 0;
 }

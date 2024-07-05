@@ -25,7 +25,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
     for (int j = 0; j < MEDS_n; j++)
     {
       // There was a % in the original, but that should not be necessary
-      pmod_mat_set_entry(N, MEDS_n, 2 * MEDS_m, j, i, SUB_LOW_VEC(MEDS_p_VEC, pmod_mat_entry((G0prime + (MEDS_m * MEDS_n)), MEDS_m, MEDS_n, i, j)));
+      pmod_mat_set_entry(N, MEDS_n, 2 * MEDS_m, j, i, SUB_VEC(MEDS_p_VEC, pmod_mat_entry((G0prime + (MEDS_m * MEDS_n)), MEDS_m, MEDS_n, i, j)));
 
       pmod_mat_set_entry(N, MEDS_n, 2 * MEDS_m, j, MEDS_m + i,
                          pmod_mat_entry(G0prime, MEDS_m, MEDS_n, i, j));
@@ -62,11 +62,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
         pmod_mat_vec_t tmp0 = pmod_mat_entry(N1, MEDS_m - 1, MEDS_m, row - 1, i);
         pmod_mat_vec_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, i, j);
 
-        pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp0, tmp1));
+        pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp0, tmp1);
 
         pmod_mat_vec_t tmp2 = pmod_mat_entry(N1, MEDS_m - 1, MEDS_m, row, j);
 
-        pmod_mat_vec_t diff = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, tmp2), prod));
+        pmod_mat_vec_t diff = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, tmp2), prod));
 
         pmod_mat_set_entry(N1, MEDS_m - 1, MEDS_m, row, j, diff);
       }
@@ -108,11 +108,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
       pmod_mat_vec_t tmp1 = pmod_mat_entry(N_swap, MEDS_n - 1, MEDS_m, r, c);
       pmod_mat_vec_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) + c];
 
-      pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp1, tmp2));
+      pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp1, tmp2);
 
       pmod_mat_vec_t val = sol[2 * MEDS_m * MEDS_n - MEDS_m - (MEDS_m - 1) + r];
 
-      val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, val), prod));
+      val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, val), prod));
 
       sol[2 * MEDS_m * MEDS_n - MEDS_m - (MEDS_m - 1) + r] = val;
     }
@@ -122,7 +122,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
 
   for (int i = 0; i < MEDS_n; i++)
     for (int j = 0; j < MEDS_m; j++)
-      pmod_mat_set_entry(P01nt, MEDS_n, MEDS_m, i, j, SUB_LOW_VEC(MEDS_p_VEC, pmod_mat_entry((G0prime + (MEDS_m * MEDS_n)), MEDS_m, MEDS_n, j, i)));
+      pmod_mat_set_entry(P01nt, MEDS_n, MEDS_m, i, j, SUB_VEC(MEDS_p_VEC, pmod_mat_entry((G0prime + (MEDS_m * MEDS_n)), MEDS_m, MEDS_n, j, i)));
 
   // Conditionally swap columns.
   for (int r = 0; r < MEDS_n; r++)
@@ -142,11 +142,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
       pmod_mat_vec_t tmp1 = pmod_mat_entry(P01nt, MEDS_n, MEDS_m, r, c);
       pmod_mat_vec_t tmp2 = pmod_mat_entry(N1, MEDS_m - 1, MEDS_m, c, MEDS_m - 1);
 
-      pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp1, tmp2));
+      pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp1, tmp2);
 
       pmod_mat_vec_t val = sol[MEDS_m * MEDS_n + r];
 
-      val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, val), prod));
+      val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, val), prod));
 
       sol[MEDS_m * MEDS_n + r] = val;
     }
@@ -156,7 +156,7 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
 
   for (int i = 0; i < MEDS_n; i++)
     for (int j = 0; j < MEDS_m; j++)
-      pmod_mat_set_entry(P00nt, MEDS_n, MEDS_m, i, j, SUB_LOW_VEC(MEDS_p_VEC, pmod_mat_entry(G0prime, MEDS_m, MEDS_n, j, i)));
+      pmod_mat_set_entry(P00nt, MEDS_n, MEDS_m, i, j, SUB_VEC(MEDS_p_VEC, pmod_mat_entry(G0prime, MEDS_m, MEDS_n, j, i)));
 
   pmod_mat_vec_t P00nt_swap[MEDS_n * MEDS_m] = {0};
 
@@ -179,11 +179,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
       pmod_mat_vec_t tmp1 = pmod_mat_entry(P00nt_swap, MEDS_n, MEDS_m, r, c);
       pmod_mat_vec_t tmp2 = pmod_mat_entry(N1, MEDS_m - 1, MEDS_m, c, MEDS_m - 1);
 
-      pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp1, tmp2));
+      pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp1, tmp2);
 
       pmod_mat_vec_t val = sol[(MEDS_m - 1) * MEDS_n + r];
 
-      val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, val), prod));
+      val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, val), prod));
 
       sol[(MEDS_m - 1) * MEDS_n + r] = val;
     }
@@ -196,11 +196,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
         pmod_mat_vec_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
         pmod_mat_vec_t tmp2 = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c];
 
-        pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp1, tmp2));
+        pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp1, tmp2);
 
         pmod_mat_vec_t val = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r];
 
-        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, val), prod));
+        val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, val), prod));
 
         sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
       }
@@ -213,11 +213,11 @@ pmod_mat_s_vec_t solve_vec(pmod_mat_vec_t *A_tilde, pmod_mat_vec_t *B_tilde_inv,
         pmod_mat_vec_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
         pmod_mat_vec_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
 
-        pmod_mat_vec_t prod = FREEZE_REDUCE_VEC(MUL_VEC(tmp1, tmp2));
+        pmod_mat_vec_t prod = MUL_REDUCE_VEC(tmp1, tmp2);
 
         pmod_mat_vec_t val = sol[b * MEDS_n + r];
 
-        val = FREEZE_VEC(SUB_LOW_VEC(ADD_LOW_VEC(MEDS_p_VEC, val), prod));
+        val = FREEZE_VEC(SUB_VEC(ADD_VEC(MEDS_p_VEC, val), prod));
 
         sol[b * MEDS_n + r] = val;
       }

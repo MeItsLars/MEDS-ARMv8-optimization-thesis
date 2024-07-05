@@ -1,7 +1,7 @@
 \chapter{MEDS Algorithms}
 \label{app:medsalgs}
 
-\section{Notations and Functions}
+\section{Notations and functions}
 
 \subsection{Notations}
 In the algorithms in this appendix, we use the following notations in addition to the notations mentioned in Section \ref{sec:notations}:
@@ -22,7 +22,7 @@ In the algorithms in this appendix, we use the following functions (in order of 
   \item ExpandSysMat($\sigma$): Generate a random systematic matrix from seed $\sigma$.
   \item XOF($\sigma$, $x$, $y$): Generates two random byte strings of length $x$ and $y$ from seed $\sigma$.
   \item ExpandInvMat($\sigma$, $k$): Generates a random invertible matrix of size $k \times k$ from seed $\sigma$.
-  \item Solve($\textbf{G}$): Solves the system of linear equations represented by matrix $\textbf{G}$.
+  \item Solve($\textbf{G}$): Computes an isometry mapping $\phi = (\textbf{A}, \textbf{B})$ from the (first) two codewords represented by the rows in $\textbf{G}$.
   \item SF($\textbf{G}$): Converts matrix $\textbf{G}$ to systematic form.
   \item Compress(G)($\textbf{A}$): Compresses matrix $\textbf{A}$ into a byte string.
   \item Decompress(G)($x$): Decompresses byte string $x$ into a matrix.
@@ -36,7 +36,7 @@ In the algorithms in this appendix, we use the following functions (in order of 
   \item PathToSeedTree$_t(h_0, \ldots, h_{t-1}, p, \alpha)$: Reconstructs a seed tree with the same structure as SeedTree$_t(\rho, \alpha)$. Based on the values of $h_0, \ldots, h_{t-1}$ and the path $p$, returns the seeds of the leaf nodes.
 \end{itemize}
 
-\section{Main Algorithms}
+\section{Main algorithms}
 \begin{algorithm}[H]
 \caption{MEDS.KeyGen()}\label{alg:medskeygen}
 \hspace*{\algorithmicindent} \textbf{Input:} -\\
@@ -270,7 +270,7 @@ $\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\hat{\textbf{G}}_{t-1}[;k,mn-
 \end{algorithmic}
 \end{algorithm}
 
-\section{Supplemental Algorithms}
+\section{Supplemental algorithms}
 \label{app:supplementalalgs}
 The MEDS key generation, signing, and verification algorithms require some additional algorithms to function. In this section, we present a few algorithms that are used by the three MEDS algorithms. Note that we do not list all supplemental algorithms, but only those that are relevant to our research.
 
@@ -388,3 +388,5 @@ The MEDS key generation, signing, and verification algorithms require some addit
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
+
+\todo[inline]{Maybe include solve\_opt function?}

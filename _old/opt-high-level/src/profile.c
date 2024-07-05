@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
 
   enable_cyclecounter();
 
-  crypto_sign_keypair_vec(pk, sk);
-  crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+  crypto_sign_keypair(pk, sk);
+  crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
 
   long long results[rounds];
 
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     case 1:
     {
       long long keygen_time = -get_cyclecounter();
-      crypto_sign_keypair_vec(pk, sk);
+      crypto_sign_keypair(pk, sk);
       keygen_time += get_cyclecounter();
       results[round] = keygen_time;
       break;
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
       unsigned long long msg_out_len = sizeof(msg_out);
 
       long long verify_time = -get_cyclecounter();
-      int ret = crypto_sign_open_vec(msg_out, &msg_out_len, sig, sizeof(sig), pk);
+      int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
       
       verify_time += get_cyclecounter();
       results[round] = verify_time;

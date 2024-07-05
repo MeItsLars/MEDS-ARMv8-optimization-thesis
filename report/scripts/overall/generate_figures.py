@@ -5,6 +5,7 @@ import seaborn as sns
 import numpy as np
 
 sns.set_theme()
+# sns.set_palette(sns.color_palette(sns.color_palette(), desat=0.5))
 
 THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 FILE_PATH = os.path.join(THIS_FILE_PATH, "results.csv")

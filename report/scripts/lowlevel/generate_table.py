@@ -105,7 +105,7 @@ def parse_solve(function, cycles):
     n = function_parts[4]
     cycle_bound = solve_cycles()
     return {
-        "name": "System Solving",
+        "name": "Isometry Derivation (part)",
         "input": f"$C$: ${m} \\times {n}$ &",
         "cycles": int(cycles),
         "bound": cycle_bound,

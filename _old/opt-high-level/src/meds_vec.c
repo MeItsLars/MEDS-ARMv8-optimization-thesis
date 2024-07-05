@@ -18,7 +18,7 @@
 #include "matrixmod_vec.h"
 #include "bitstream.h"
 #include "meds_vec.h"
-#include "vec_16x8.h"
+#include "vec_16x4.h"
 
 #define solve solve_opt
 
@@ -150,7 +150,6 @@ int crypto_sign_keypair_vec(
 
     bitstream_t bs;
 
-    PROFILER_START("bs_fill");
     bs_init(&bs, tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -161,7 +160,6 @@ int crypto_sign_keypair_vec(
 
       bs_finalize(&bs);
     }
-    PROFILER_STOP("bs_fill");
 
     LOG_VEC(tmp_pk, MEDS_PK_BYTES - MEDS_pub_seed_bytes, "G[1:] (pk)");
     tmp_pk += MEDS_PK_BYTES - MEDS_pub_seed_bytes;
@@ -183,7 +181,6 @@ int crypto_sign_keypair_vec(
 
     bitstream_t bs;
 
-    PROFILER_START("bs_fill");
     bs_init(&bs, sk + MEDS_sec_seed_bytes + MEDS_pub_seed_bytes, MEDS_SK_BYTES - MEDS_sec_seed_bytes - MEDS_pub_seed_bytes);
 
     for (int si = 1; si < MEDS_s; si++)
@@ -209,7 +206,6 @@ int crypto_sign_keypair_vec(
 
       bs_finalize(&bs);
     }
-    PROFILER_STOP("bs_fill");
 
     LOG_HEX(sk, MEDS_SK_BYTES);
   }
@@ -222,13 +218,6 @@ int crypto_sign_vec(
     const unsigned char *m, unsigned long long mlen,
     const unsigned char *sk)
 {
-  // If MEDS_t is not 8, this optimized version of MEDS cannot be used.
-  if (MEDS_t < 8)
-  {
-    fprintf(stderr, "ERROR: This high-level optimized version of MEDS requires MEDS_t >= 8\n");
-    return -1;
-  }
-
   // skip secret seed
   sk += MEDS_sec_seed_bytes;
 
@@ -377,7 +366,6 @@ int crypto_sign_vec(
   PROFILER_START("SEC_COMMIT");
   while (num_valid < MEDS_t)
   {
-    PROFILER_START("SEC_COMMIT_INIT");
     int index = num_tried;
 
     // Determine the batch size for the current iteration
@@ -401,7 +389,6 @@ int crypto_sign_vec(
 
       rnd_matrix(M_tilde[index_netto], 2, MEDS_k, sigma_M_tilde_i, MEDS_pub_seed_bytes);
     }
-    PROFILER_STOP("SEC_COMMIT_INIT");
 
     pmod_mat_s_vec_t valid = SET_S_VEC(1);
 
@@ -554,18 +541,24 @@ int crypto_sign_vec(
   return 0;
 }
 
+void print_mat_vec(pmod_mat_vec_t *M, int rows, int cols, int size)
+{
+  for (int t = 0; t < size; t++)
+  {
+    pmod_mat_t M_non_vec[rows * cols];
+    for (int r = 0; r < rows; r++)
+      for (int c = 0; c < cols; c++)
+        M_non_vec[r * cols + c] = M[r * cols + c][t];
+    printf("t=%d\n", t);
+    pmod_mat_fprint(stdout, M_non_vec, rows, cols);
+  }
+}
+
 int crypto_sign_open_vec(
     unsigned char *m, unsigned long long *mlen,
     const unsigned char *sm, unsigned long long smlen,
     const unsigned char *pk)
 {
-  // If MEDS_t is not 8, this optimized version of MEDS cannot be used.
-  if (MEDS_t < 8)
-  {
-    fprintf(stderr, "ERROR: This high-level optimized version of MEDS requires MEDS_t >= 8\n");
-    return -1;
-  }
-  
   LOG_HEX(pk, MEDS_PK_BYTES);
   LOG_HEX(sm, smlen);
 
@@ -722,12 +715,10 @@ int crypto_sign_open_vec(
         rnd_matrix(kappa_or_M_hat_i[index + t], 2, MEDS_k, sigma_M_hat_i, MEDS_pub_seed_bytes);
       }
 
-      PROFILER_START("init_G");
       // Load G_vec from G
       int G_index = h[index_netto];
       for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++)
         G_vec[i][t] = G[G_index][i];
-      PROFILER_STOP("init_G");
     }
 
     // Load kappa_or_M_hat_i into kappa_or_M_hat_i_vec
@@ -748,7 +739,6 @@ int crypto_sign_open_vec(
     valid = AND_S_VEC(valid, TO_S_VEC(EQ0_S_VEC(SF_vec(G_hat_i_vec, G_hat_i_vec, 0))));
 
     // Store G_hat_i_vec into G_hat_i[index]
-    PROFILER_START("bs_fill");
     if (GFq_bits == 12)
     {
       // Use a 12-bit optimized parallel bitstream fill function (12 bits are used for all parameter sets)
@@ -770,7 +760,6 @@ int crypto_sign_open_vec(
         bs_finalize(&bs);
       }
     }
-    PROFILER_STOP("bs_fill");
 
     int current_batch_invalids = 0;
 
