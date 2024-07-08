@@ -1,20 +1,9 @@
 \documentclass[11pt,a4paper]{report}
 
-% SIMONA FEEDBACK TODO
-% - Make more clear which version of MEDS we optimized (the one after optimization) and discuss how these optimizations could also be applied to the original one
-% - Related Work: show landscape, elliptic curve optimization. other signature schemes. Other fiat shamir (and what is important in such schemes, such as keccak). Maybe cite other optimizations from the same NIST competition (other fiat shamir signatures maybe, if something interesting is there; LESS/uv-based/code-based/with fields). Additionally, maybe look at other techniques such as AVX2/AVX512 that are used nowadays.
-% - Start every chapter with a small summary (but no forward references)
-% - In every figure and table, give references in the caption to all the sources.
-% - Definitely include comparison to other schemes; Dilithium(?), Falcon(?), Sphinx(?), traditional ECC(?), SELF REPORTED!!
-
 % REMAINING TODO SELF
-% Include a discussion which looks back at the research questions
-% Grammar check entire thing
-% Check all citations (specifically URLs, they are not always included)
-% Adust the 2 python generation files with an abstract file for clarity
+% Adust the 2 Python generation files with an abstract file for clarity
 % Cite ARM Calling Convention PDF \url{https://github.com/ARM-software/abi-aareleases}
-% Assuming I get the Apple device in time, I will also benchmark theoptimized MEDS implementation on that CPU. Explore the speedup possibilitieson other ARM-based CPUs (such as Apple M1) which can possibly utilize largercaches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100A64-Instruction-Set-Reference/A64-Cryptographic-AlgorithmsA64-Cryptographic-instructions?lang=en}
-% In high level-v8, change 13-bit reduction to a simple freeze.
+% Assuming I get the Apple device in time, I will also benchmark the optimised MEDS implementation on that CPU. Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100A64-Instruction-Set-Reference/A64-Cryptographic-AlgorithmsA64-Cryptographic-instructions?lang=en}
 
 \usepackage[chapter]{algorithm}
 \usepackage[noend]{algpseudocode}
@@ -34,6 +23,7 @@
 \usepackage{hyperref}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
+\usepackage{multirow}
 \usepackage{natbib}
 \usepackage{parskip}
 \usepackage{pgf-pie}
@@ -182,15 +172,15 @@
 
 \chapter{Introduction}
 \label{ch:introduction}
-As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm \cite{shor1994algorithms} and Grover's algorithm \cite{grover1996fast} to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, wich would have devestating consequences for the security of the internet.
+As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm \cite{shor1994algorithms} and Grover's algorithm \cite{grover1996fast} to break a lot of symmetric and asymmetric cryptographic schemes. As the majority of the internet's security relies on these cryptographic schemes, the consequences of this are severe. Without proper measurements, quantum computers will cause the absolute collapse of the present public key algorithms that are considered secure \cite{mavroeidis2018impact}, which would have devastating consequences for the security of the internet.
 
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017 \cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
 
-In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
+In 2022, NIST announced the set of selected PQC algorithms. Unfortunately, this set did not include any algorithms for digital signatures \todo{This is not true. Fix.}. To address this, NIST announced a second competition in the PQC standardization process, which aims to find a set of secure digital signature schemes. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence.
 
 Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds, sometimes even seconds.
 
-In this thesis, we aim to optimize the speed of the MEDS implementation. We will take a look at the general performance of MEDS, but we will mostly focus on optimizing MEDS for the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
+In this thesis, we aim to optimize the speed of the MEDS implementation. We take a look at the general performance of MEDS, but we mostly focus on optimizing MEDS for the ARMv8 architecture. This architecture is used in a wide range of devices, including many mobile devices and tablets, Internet of Things (IoT) devices, and Apple M1/M2/M3 chips. By optimizing the MEDS implementation for ARMv8, we aim to improve the MEDS performance for these devices, as well as obtain a better understanding of the performance of MEDS.
 
 We investigate the following research questions in this thesis (see also Chapter \ref{ch:researchobjectives}):
 \begin{itemize}[left=35pt,labelsep=15pt]
@@ -203,24 +193,24 @@ We investigate the following research questions in this thesis (see also Chapter
   \item[RQ III.] How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-In Chapter \ref{ch:researchobjectives}, we will discuss the research objectives of this thesis. In Chapter \ref{ch:preliminaries}, we will provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture, as well as a selection of related work. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we will also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we will discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we will present the benchmarking and profiling results of our optimizations. Finally, in Chapter \ref{ch:futurework}, we will discuss the future work that can be done in this area. We will conclude the thesis in Chapter \ref{ch:conclusion}, where we will reflect on the results that we have obtained.
+In Chapter \ref{ch:researchobjectives}, we discuss the research objectives of this thesis. In Chapter \ref{ch:preliminaries}, we provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture, as well as a selection of related work. In Chapter \ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we also present the profiling results of the MEDS implementation. Following that, in Chapter \ref{ch:methodology}, we discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter \ref{ch:results}, we present the benchmarking and profiling results of our optimizations. Finally, in Chapter \ref{ch:futurework}, we discuss the future work that can be done in this area. We conclude the thesis in Chapter \ref{ch:conclusion}, where we reflect on the results that we obtained.
 
 \chapter{Research Objectives}
 \label{ch:researchobjectives}
 
 \section{Motivation}
-The need for secure digital signature schemes that are secure against quantum computers is increasing. Of course, the security of these schemes is the most important aspect, but the speed at which an implementation can create or verify a signature is also important. The speed of a digital signature scheme is essential for many applications, such as TLS/SSL certificate verification, electronic payments, and blockchain transactions. Traditional digital signature schemes such as RSA \cite{rivest1978method} and ECDSA \cite{johnson2001elliptic} are able to verify thousands of signatures per second on both modern and even older hardware \cite{koppl2021performance,de1998performance}. It is important that the new post-quantum digital signature schemes are eventually able to achieve similar performance levels.
+The need for secure digital signature schemes that are secure against quantum computers is increasing. Of course, the security of these schemes is the most important aspect, but the speed at which an implementation can create or verify a signature is also important. The speed of a digital signature scheme is essential for many applications, such as TLS/SSL certificate verification, electronic payments, and blockchain transactions. Traditional digital signature schemes such as RSA \cite{rivest1978method} and ECDSA \cite{johnson2001elliptic} can verify thousands of signatures per second on both modern and even older hardware \cite{koppl2021performance,de1998performance}. The new post-quantum digital signature schemes must eventually achieve similar performance levels.
 
 The two most widely used CPU architectures in the world are x86 (used in Intel and AMD processors) and ARM. ARM is used in a wide variety of devices, among which:
 \begin{itemize}
   \item Mobile devices and tablets such as the Apple iPhone and iPad, Samsung Galaxy, and Google Pixel;
-  \item Internet of Things (IoT) devices such as smart light bulbs, smart thermostats, and smart doorbells;
-  \item Apple M1/M2 chips used in Apple MacBooks.
+  \item Embedded and Internet of Things (IoT) devices such as smart light bulbs, smart thermostats, and smart doorbells;
+  \item Apple M1/M2/M3 chips used in Apple MacBooks.
 \end{itemize}
 Optimizing the MEDS implementation for the ARMv8 architecture will improve the MEDS performance for these devices, as well as provide valuable insights into the performance of MEDS on ARMv8.
 
 \section{Research questions}
-The goal of this thesis is to optimize the performance of the MEDS implementation for the ARMv8 architecture to an extent that further optimizations are either infeasible or provide only minimal performance improvements. To achieve this goal, we will investigate the following research questions:
+The goal of this thesis is to optimize the performance of the MEDS implementation for the ARMv8 architecture to the extent that further optimizations are either infeasible or provide only minimal performance improvements. To achieve this goal, we investigate the following research questions:
 \begin{itemize}[left=35pt,labelsep=15pt]
   \item[RQ I.] How is CPU time distributed across the code of the MEDS implementation?
   \item[RQ II.] What optimizations can be made to improve the performance of the MEDS implementation for the ARMv8 architecture?
@@ -231,18 +221,19 @@ The goal of this thesis is to optimize the performance of the MEDS implementatio
   \item[RQ III.] How does the optimized MEDS implementation compare to (optimized) implementations of other digital signature schemes?
 \end{itemize}
 
-Since the submission of the original MEDS implementation to the NIST PQC competition in 2023 \cite{chou2023meds}, the authors have proposed several optimizations to the scheme to reduce the size of the public key and the signatures \cite{chou2024reducing}. The authors have provided a new reference implementation for MEDS that implements these optimizations. In this thesis, we will focus on optimizing this new implementation for the ARMv8 architecture. There are two main reasons for this focus:
+Since the submission of the original MEDS implementation to the NIST PQC competition in 2023 \cite{chou2023meds}, the authors have proposed several optimizations to the scheme to reduce the size of the public key and the signatures \cite{chou2024reducing}. The authors have provided a new reference implementation for MEDS that implements these optimizations. In this thesis, we focus on optimizing this new implementation for the ARMv8 architecture. There are two main reasons for this focus:
 \begin{itemize}
   \item Research has been done on the optimization of the original MEDS implementation for the x86 architecture (using AVX512 instructions) in \cite{IIS2023LowLevel, IIS2023HighLevel}. Although the ARMv8 architecture is different and an optimization of the original implementation for ARMv8 would be interesting, we believe that optimizing the new implementation provides better insights into the performance of a state-of-the-art MEDS implementation.
-  \item The new MEDS variant has quite a few differences compared to the original, but the core structure and algorithms remain the same. This suggests that the optimizations that we will make for the new implementation can also be applied to the original implementation, should the need arise.
+  \item The new MEDS variant has quite a few differences compared to the original, but the core structure and algorithms remain the same. This suggests that the optimizations that we make for the new implementation can also be applied to the original implementation, should the need arise.
 \end{itemize}
 
 \chapter{Preliminaries}
 \label{ch:preliminaries}
+In this chapter, we provide the relevant background concepts on the functioning of the MEDS scheme, the ARMv8 architecture, the optimization of cryptographic schemes and modular reduction. Additionally, we give a small overview of the notations that we use in this thesis. We conclude this chapter with a selection of related work.
 
 \section{Notations}
 \label{sec:notations}
-In the MEDS scheme and in this thesis, we use the following notations and definitions:
+In the MEDS scheme and this thesis, we use the following notations and definitions:
 \begin{itemize}
   \item $\mathbb{F}_q$: The finite field of size $q$.
   \item $\mathbb{F}_q^{m \times n}$: The set of matrices of size $m \times n$ ($m$ rows and $n$ columns) over $\mathbb{F}_q$, meaning that each element of the matrix is an element of $\mathbb{F}_q$.
@@ -260,7 +251,7 @@ In the MEDS scheme and in this thesis, we use the following notations and defini
 
 \section{Matrix Equivalence Digital Signature (MEDS)}
 \label{sec:meds}
-Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based digital signature scheme and the candidate in the NIST PQC competition that we aim to optimize in this thesis. A series of optimizations for the key and signature sizes of MEDS have already been proposed by the authors of the scheme in \cite{chou2024reducing}, together with a new reference implementation that implements these optimizations. In this paper, we will focus our efforts on optimizing this new reference implementation.
+Matrix Equivalence Digital Signature (MEDS) \cite{chou2023take} is a code-based digital signature scheme and the candidate in the NIST PQC competition that we aim to optimize in this thesis. A series of optimizations for the key and signature sizes of MEDS have already been proposed by the authors of the scheme in \cite{chou2024reducing}, together with a new reference implementation that implements these optimizations. In this paper, we focus our efforts on optimizing this new reference implementation.
 
 \subsection{Signature schemes}
 \label{sec:signatureschemes}
@@ -276,15 +267,15 @@ The formal definition of a digital signature scheme is given in Definition \ref{
 
 \begin{definition}[Signature Scheme, following \cite{goldwasser2008lecture}]~\\
   \label{def:signaturescheme}
-  A digital signature scheme is a tuple of algorithms $(\text{G}, \text{S}, \text{V})$, where:
+  A digital signature scheme is a tuple of algorithms $(\text{Keygen}, \text{Sign}, \text{Verify})$, where:
   \begin{itemize}
-    \item $\text{G}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
-    \item $\text{S}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
-    \item $\text{V}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
+    \item $\text{Keygen}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
+    \item $\text{Sign}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
+    \item $\text{Verify}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
   \end{itemize}
-  Such that, given $(pk, sk) \leftarrow \text{G}(1^n)$:
+  Such that, given $(pk, sk) \leftarrow \text{Keygen}(1^n)$:
   \[
-    \text{V}(pk, m, \text{S}(sk, m)) = 1
+    \text{Verify}(pk, m, \text{Sign}(sk, m)) = 1
   \]
   for all $m$ (with a negligible probability of error).
 \end{definition}
@@ -353,7 +344,7 @@ The team behind MEDS has proposed three parameter sets for the new optimized ver
     MEDS-122000 & 4093 & 45 & 44 & 44 & 2 & 272 & 103 & 122000 & 19068 \\
     \bottomrule
   \end{tabular}
-  \caption{MEDS parameter sets. \textbf{pk} and \textbf{sig} represent the size in bytes of the public key and the signature, respectively.}
+  \caption{Recommended MEDS parameter sets. \textbf{pk} and \textbf{sig} represent the size in bytes of the public key and the signature, respectively.}
   \label{tab:medsparametersets}
 \end{table}
 
@@ -377,7 +368,7 @@ We can see that all parameter sets use the same finite field size $q = 4093$. Th
 % A section that references the 3 meds algorithms of which the pseudocode is shown in the appendix
 \subsection{MEDS algorithms}
 \label{sec:medsalgorithms}
-In this section, we will give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}. Additionally, we will provide some information on matrix systemization and isometry mapping derivation, two common functions used in the MEDS algorithms.
+In this section, we give an algorithmic overview of the three algorithms of MEDS: key generation, signature generation, and signature verification. The complete and detailed pseudocode of these algorithms is shown in Appendix \ref{app:medsalgs}. Additionally, we provide some information on matrix systemization and isometry mapping derivation, two common functions used in the MEDS algorithms.
 
 \subsubsection{Key generation}
 % This section will contain an algorithm that represents key generation. It is not the completely detailed variant (which is shown in the appendix), but a more high-level overview of the algorithm.
@@ -388,7 +379,7 @@ A simplified overview version of the MEDS key generation algorithm is shown in A
   \label{alg:medskeygenoverview}
   \begin{algorithmic}[1]
     \State \textbf{Input:} -
-    \State \textbf{Output:} Public key \textbf{pk}, private key \textbf{sk}
+    \State \textbf{Output:} public key \textbf{pk}, private key \textbf{sk}
     \State Generate random matrix $\textbf{G}_0 \in \mathbb{F}_q^{k \times mn}$
     \For{$i = 1$ to $s$}
       \State Generate random invertible matrix $\textbf{T}_i \in \mathbb{F}_q^{k \times k}$
@@ -408,8 +399,8 @@ A simplified overview version of the MEDS signature algorithm is shown in Algori
   \caption{MEDS Signature Generation (Overview)}
   \label{alg:medssignoverview}
   \begin{algorithmic}[1]
-    \State \textbf{Input:} Private key \textbf{sk}, message $m$
-    \State \textbf{Output:} Signature $s$ (contains the tag)
+    \State \textbf{Input:} private key \textbf{sk}, message $m$
+    \State \textbf{Output:} signature $\sigma$ (contains the tag)
     \State Parse $\textbf{G}_0$ and $\textbf{T}_i$ from \textbf{sk} for $i = 1$ to $s$
     \For{$i = 0$ to $t$}
       \State Generate random matrix $\tilde{\textbf{M}}_i \in \mathbb{F}_q^{2 \times k}$
@@ -425,7 +416,7 @@ A simplified overview version of the MEDS signature algorithm is shown in Algori
         \State Compute $\kappa_i \in \mathbb{F}_q^{2 \times k} = \tilde{\textbf{M}}_i \times \textbf{T}^{-1}_{h_i}$
       \EndIf
     \EndFor
-    \State \Return Signature $s = \kappa_0, \ldots, \kappa_{t-1}, h_0, \ldots, h_{t-1}, m$
+    \State \Return Signature $\sigma = \kappa_0, \ldots, \kappa_{t-1}, h_0, \ldots, h_{t-1}, m$
   \end{algorithmic}
 \end{algorithm}
 
@@ -436,10 +427,10 @@ A simplified overview version of the MEDS signature verification algorithm is sh
   \caption{MEDS Signature Verification (Overview)}
   \label{alg:medsverifyoverview}
   \begin{algorithmic}[1]
-    \State \textbf{Input:} Public key \textbf{pk}, signature $s$
+    \State \textbf{Input:} public key \textbf{pk}, signature $\sigma$
     \State \textbf{Output:} 1 if the signature is valid, 0 otherwise
     \State Parse $\textbf{G}_0$ and $\textbf{G}_i$ from \textbf{pk} for $i = 0$ to $s$
-    \State Parse $\kappa_i$, $h_i$, $d$ and $m$ from $s$ for $i = 0$ to $t$
+    \State Parse $\kappa_i$, $h_i$, $d$ and $m$ from $\sigma$ for $i = 0$ to $t$
     \For{$i = 0$ to $t$}
       \If{$h_i > 0$}
         \State Compute $\textbf{G}'_{0} = \kappa_i \times \textbf{G}_{h_i}$
@@ -467,20 +458,20 @@ Matrix systemization is responsible for converting a matrix $A \in \mathbb{F}_{4
   $A'$ is in reduced row-echelon form (RREF) \cite{leon2006linear}, with the additional property that the first $m \times m$ submatrix of $A'$ is the identity matrix.
 \end{itemize}
 
-The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains three optional features that can be used (based in the input arguments):
-\begin{enumerate}
+The algorithm used in MEDS to systemize a matrix is a Gaussian elimination algorithm with some extra properties. The algorithm is implemented such that it runs in constant time, meaning that the execution time is the same for all matrices of equal size. Additionally, the algorithm contains three optional features that can be used (based on the input arguments):
+\begin{itemize}
   \item $r_{\text{max}}$: Set the number of rows of the input matrix that need to be systemized. If not specified, the entire matrix is systemized.
-  \item do\_swap: Allow the algorithm to swap columns of the matrix to ensure that the leading coefficient of a row is not 0.
-  \item do\_backsub: Whether or not to perform back substitution after the matrix has been systemized.
-\end{enumerate}
-The complete algorithm is is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
+  \item \texttt{\texttt{do\_swap}}: Allow the algorithm to swap columns of the matrix to ensure that the leading coefficient of a row is not 0.
+  \item \texttt{do\_backsub}: Whether or not to perform back substitution after the matrix has been systemized.
+\end{itemize}
+The complete algorithm is depicted in Algorithm \ref{alg:systemizer} (Appendix \ref{app:supplementalalgs}).
 
 \subsubsection{Deriving isometry mappings}
 \label{sec:derivingisometry}
 In key generation, signing, and verification, MEDS requires the derivation of an isometry mapping $\phi = (\textbf{A} \in \mathbb{F}_q^{m \times m}, \textbf{B} \in \mathbb{F}_q^{n \times n})$. This isometry mapping maps two full-rank, linearly independendent codewords $\tilde{\textbf{C}}_1, \tilde{\textbf{C}}_2 \in \mathbb{F}_q^{1 \times mn}$ that are stored in a matrix $\textbf{C} \in \mathbb{F}_q^{2 \times mn}$ to two matrices $\textbf{D}_0, \textbf{D}_1 \in \mathbb{F}_q^{m \times n}$ \cite{chou2024reducing}. The deriving of this isometry is done by constructing a linear system of $2mn$ equations and $m^2 + n^2$ variables formed by:
 \begin{align*}
-  & \textbf{A} \times \textbf{C}_0 = \textbf{D}_0 \times \textbf{B}^{-1} & (1) \\
-  & \textbf{A} \times \textbf{C}_1 = \textbf{D}_1 \times \textbf{B}^{-1} & (2)
+  & \textbf{A} \times \textbf{C}_0 = \textbf{D}_0 \times \textbf{B}^{-1} \\
+  & \textbf{A} \times \textbf{C}_1 = \textbf{D}_1 \times \textbf{B}^{-1}
 \end{align*}
 The resulting system of linear equations can be solved using a simple Gaussian elimination algorithm. However, because of the large size of the linear system, this would result in a complexity of $\mathcal{O}(2mn \cdot (m^2 + n^2)^2) = \mathcal{O}(n^6)$ which is very inefficient.
 
@@ -490,14 +481,14 @@ This is precisely what the \texttt{solve\_opt} function in the MEDS reference im
 
 For more information on this process, we refer the reader to \cite[Section 4.2]{chou2024reducing}, where the authors provide a detailed explanation of the technique.
 
-\subsection{Known attacks}
-\todo[inline]{Add a section containing a list of the best known attack(s) on MEDS (or the underlying problem). Reference MEDS paper on this information.}
+% \subsection{Known attacks}
+% \todo[inline]{Add a section containing a list of the best known attack(s) on MEDS (or the underlying problem). Reference the MEDS paper on this information.}
 
 \section{ARMv8, Cortex-A72, and NEON}
 \label{sec:armv8}
-In this thesis, we will focus on optimizing the MEDS implementation for the ARMv8 CPU architecture \cite{armv8m}. ARMv8 supports a wide range of instruction sets and extensions, of which the following are relevant for this thesis:
+In this thesis, we focus on optimizing the MEDS implementation for the ARMv8 CPU architecture \cite{armv8m}. ARMv8 supports a wide range of instruction sets and extensions, of which the following are relevant to this thesis:
 \begin{itemize}
-  \item \textbf{A64} (AArch64): The default 64-bit instruction set for ARMv8.
+  \item \textbf{A64}: The default 64-bit instruction set for ARMv8.
   \item \textbf{NEON} (Advanced SIMD): The NEON instruction set is an extension to the ARMv8 architecture that is mandatory in all ARMv8 implementations. It allows for SIMD operations on 128-bit registers (see Section \ref{sec:simd}).
   \item \textbf{Crypto}: The cryptographic extension to the ARMv8 architecture. This is a non-mandatory extension that supports hardware support for various cryptographic algorithms.
 \end{itemize}
@@ -506,7 +497,7 @@ In this thesis, we will focus on optimizing the MEDS implementation for the ARMv
 \label{sec:simd}
 Single Instruction, Multiple Data (SIMD) is a type of instruction that operates on multiple pieces of data (vectors) in parallel. Using this technique, it is possible to execute a single operation (such as an addition or multiplication) on a vector of multiple numbers in a timeframe that is similar to the conventional operation on a single number. This can greatly improve the performance of algorithms that lend themselves to vectorization.
 
-In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit contains 32 128-bit registers, each of which can be used to store a vector of values. Each NEON register can be split into a number of different lanes. The lane sizes that are supported in NEON, together with their assembly (ASM) code suffixes, are shown in Table \ref{tab:neonlanes}.
+In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms refer to the same thing). NEON is a 128-bit SIMD architecture extension that is required in all standard ARMv8 implementations \cite{ARMv8A-ProgrammersGuide}. The NEON unit contains 32 128-bit registers, each of which can be used to store a vector of values. Each NEON register can be split into several different lanes. The lane sizes that are supported in NEON, together with their assembly (ASM) code suffixes, are shown in Table \ref{tab:neonlanes}.
 
 \begin{table}
   \centering
@@ -524,46 +515,37 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
     8 & 8 bits & \texttt{.8b} \\
     \bottomrule
   \end{tabular}
-  \caption{Possible NEON lane sizes and their suffixes.}
+  \caption{Possible ARMv8 NEON lane sizes and their suffixes.}
   \label{tab:neonlanes}
 \end{table}
 
 In assembly code, we can refer to a NEON register by using the register prefix \texttt{v0}-\texttt{v31} followed by a suffix that indicates the lane size. For example, \texttt{v0.4s} refers to a 128-bit NEON register that contains 4 lanes of 32 bits each and can therefore store 4 32-bit values.
 
-The NEON instruction set contains a wide range of instructions that can be used to perform various operations on these vectors. Some illustrative examples are included in the following assembly code snippet:
+The NEON instruction set contains a wide range of instructions that can be used to perform various operations on these vectors. Some illustrative examples are included in Algorithm \ref{alg:neoninstructions}.
 
-\begin{lstlisting}[language={[x86masm]Assembler}, style=ASMStyle]
-  // Load 4 32-bit unsigned integers stored at the memory address in x0 and x1 into v0.4s and v1.4s
-  ld1 {v0.4s}, [x0]
-  ld1 {v1.4s}, [x1]
-  // Add the values in v0.4s and v1.4s into v2.4s
-  add v2.4s, v0.4s, v1.4s
-  // Multiply v2.4s with itself into v3.2d and v4.2d
-  umull v3.2d, v2.2s, v2.2s   // Lower half
-  umull2 v4.2d, v2.4s, v2.4s  // Upper half
-  // Combine the upper halves of v3.2d and v4.2d into v5.4s
-  uzp2 v5.4s, v3.4s, v4.4s
-  // Store the result in v5.4s to the memory address in x2
-  st1 {v5.4s}, [x2]
-\end{lstlisting}
+\begin{algorithm}
+  \caption{NEON Instruction Example (Assembly)}
+  \label{alg:neoninstructions}
+  \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/neon_example_asm.s}
+\end{algorithm}
 
-A graphical depiction of the instructions in the code snippet above is shown in Figure \ref{fig:neonexample}. In the remainder of this thesis, we will use such NEON instructions in two forms:
+A graphical depiction of the instructions in the code snippet above is shown in Figure \ref{fig:neonexample}. In the remainder of this thesis, we use such NEON instructions in two forms:
 \begin{itemize}
   \item \textbf{Assembly}: Directly writing assembly code that uses NEON instructions, such as the \texttt{add v2.4s, v0.4s, v1.4s} instruction that adds two 4-lane vectors of 32-bit values.
-  \item \textbf{C Intrinsics}: Using C intrinsics, which are functions that map directly to NEON instructions. ARM provides a set of intrinsics that can be used when include the \texttt{arm\_neon.h} header file\footnote{\url{https://arm-software.github.io/acle/neon\_intrinsics/advsimd.html}}\footnote{\url{https://developer.arm.com/architectures/instruction-sets/intrinsics/\#f:@navigationhierarchiessimdisa=[Neon]\&f:@navigationhierarchiesarchitectures=[A64]}}. An example is the \texttt{vadd\_u16(uint16x4\_t a, uint16x4\_t b)} intrinsic, which adds two 4-lane vectors of 16-bit unsigned integers.
+  \item \textbf{C Intrinsics}: Using C intrinsics, which are functions that map directly to NEON instructions. ARM provides a set of intrinsics that can be used when including the \texttt{arm\_neon.h} header file\footnote{\url{https://arm-software.github.io/acle/neon\_intrinsics/advsimd.html}}\footnote{\url{https://developer.arm.com/architectures/instruction-sets/intrinsics/\#f:@navigationhierarchiessimdisa=[Neon]\&f:@navigationhierarchiesarchitectures=[A64]}}. An example is the \texttt{vadd\_u16(uint16x4\_t a, uint16x4\_t b)} intrinsic, which adds two 4-lane vectors of 16-bit unsigned integers.
 \end{itemize}
 
 \begin{figure}
   \centering
   \includegraphics[width=0.8\textwidth]{neon/neon_example.drawio.png}
-  \caption{Visual representation of the NEON registers and instructions in the code snippet.}
+  \caption{Visual representation of the NEON registers and instructions in Algorithm \ref{alg:neoninstructions}.}
   \label{fig:neonexample}
 \end{figure}
 
 \subsection{Cortex-A72 Micro-Architecture}
-For profiling and benchmarking our code, we will be using a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU that uses the ARMv8-A architecture (which is a specific profile of ARMv8). The term `Cortex-A72 Micro-Architecture' refers to the specific design of the ARM Cortex-A72 CPU, which differs from other CPUs that implement the ARMv8-A architecture.
+For profiling and benchmarking our code, we use a Raspberry Pi 4 Model B, which has a 64-bit quad-core ARM Cortex-A72 CPU that uses the ARMv8-A architecture (which is a specific profile of ARMv8). The term `Cortex-A72 Micro-Architecture' refers to the specific design of the ARM Cortex-A72 CPU, which differs from other CPUs that implement the ARMv8-A architecture.
 
-We will be working with the A64 instruction set, combined with the NEON extension. Unfortunately, the Cortex-A72 does not support the Crypto extension, which means that we cannot use hardware acceleration for cryptographic operations.
+We work with the A64 instruction set, combined with the NEON extension. Unfortunately, the Cortex-A72 does not support the Crypto extension, which means that we cannot use hardware acceleration for cryptographic operations.
 
 \subsubsection{Core Pipeline}
 The core pipeline of the Cortex-A72 consists of 15 stages which are split into a front-end and a back-end. A high-level overview of the instruction processing pipeline \cite{CortexA72OptGuide} is shown in Figure \ref{fig:cortexa72pipeline}.
@@ -571,27 +553,27 @@ The core pipeline of the Cortex-A72 consists of 15 stages which are split into a
 \begin{figure}
   \centering
   \includegraphics[width=0.8\textwidth]{armv8/Cortex-A72-pipeline-simplified.jpg}
-  \caption{High-level Cortex-A72 instruction processing pipeline \cite{CortexA72OptGuide}}
+  \caption{High-level overview of the ARM Cortex-A72 instruction processing pipeline \cite{CortexA72OptGuide}}
   \label{fig:cortexa72pipeline}
 \end{figure}
 
 The pipeline consists of two parts:
 \begin{enumerate}
-  \item \textbf{Front-end} (In Order): This part of the pipeline is responsible for fetching and decoding incoming instructions into micro-ops: smaller instructions that are easier to execute. These micro-ops are then fed into the back-end. The front-end works on instructions in order, meaning that it processes them in the order that they are received.
-  \item \textbf{Back-end} (Out of Order): This part of the pipeline is responsible for executing the micro-ops that are generated by the front-end. It consists of multiple pipelines that serve different purposes, such as branching, integer arithmetic, NEON operations, and memory operations. The back-end pipelines can execute micro-ops out of order, meaning they can execute operations in a different order than they were received.
+  \item \textbf{Front-end} (In Order): This part of the pipeline is responsible for fetching and decoding incoming instructions into micro-ops: smaller instructions that are easier to execute. These micro-ops are then fed into the back end. The front end works on instructions in order, meaning that it processes them in the order that they are received.
+  \item \textbf{Back-end} (Out of Order): This part of the pipeline is responsible for executing the micro-ops that are generated by the front end. It consists of multiple pipelines that serve different purposes, such as branching, integer arithmetic, NEON operations, and memory operations. The back-end pipelines can execute micro-ops out of order, meaning they can execute operations in a different order than they were received.
 \end{enumerate}
 
-The front-end is able to work on 3 instructions at the same time and it can dispatch up to 5 micro-ops per cycle to the back-end \cite{SandSoftwaresound2024}. The back-end pipelines can execute one or two micro-ops per cycle, depending on the specific pipeline. The main goal of the front-end (and this structure in general) is to make sure that the back-end pipelines are always filled with micro-ops to minimize stalls (where a pipeline has to wait for an earlier operation to finish).
+The front-end can work on 3 instructions at the same time and it can dispatch up to 5 micro-ops per cycle to the back-end \cite{SandSoftwaresound2024}. The back-end pipelines can execute one or two micro-ops per cycle, depending on the specific pipeline. The main goal of the front end (and this structure in general) is to make sure that the back-end pipelines are always filled with micro-ops to minimize stalls (where a pipeline has to wait for an earlier operation to finish).
 
 \subsubsection{Assembly Instructions and Latency}
-In this thesis, we will use AArch64 assembly instructions to optimize the MEDS implementation. Each used instruction has three relevant properties:
+In this thesis, we use A64 assembly instructions to optimize the MEDS implementation. Each used instruction has three relevant properties:
 \begin{itemize}
   \item \textbf{Execution Latency}: The number of CPU cycles after starting an instruction that it takes for the results of that instruction to be available for usage in the next instruction.
   \item \textbf{Execution Throughput}: The maximum amount of times that a particular instruction can be executed per cycle.
   \item \textbf{Utilized Pipeline}: The back-end pipeline(s) that this instruction uses.
 \end{itemize}
 
-As the Cortex-A72 uses an out-of-order execution model, it is impossible to provide instruction timing information that will predict how long a certain instruction will take to execute in a certain context \cite{CortexA72OptGuide}. Nevertheless, the execution latency and throughput of instructions provides valuable information about the performance of that instruction. Therefore, we list the execution latency and throughput of the NEON instructions that we use in the assembly code that was written for this thesis in Table \ref{tab:neonlatencythroughput}. We will also use a lot of intrinsic functions in the C code, which are functions that map directly to assembly instructions. However, as the compiler is still able to reorder and optimize these instructions, it is not directly beneficial to know the latencies and throughputs of these instructions.
+As the Cortex-A72 uses an out-of-order execution model, it is impossible to provide instruction timing information that will predict how long a certain instruction will take to execute in a certain context \cite{CortexA72OptGuide}. Nevertheless, the execution latency and throughput of instructions provide valuable information about the performance of that instruction. Therefore, we list the execution latency and throughput of the NEON instructions that we use in the assembly code that was written for this thesis in Table \ref{tab:neonlatencythroughput}. We also use a lot of intrinsic functions in the C code, which are functions that map directly to assembly instructions. However, as the compiler is still able to reorder and optimize these instructions, it is not directly beneficial to know the latencies and throughputs of these instructions.
 
 \begin{table}
   \centering
@@ -625,18 +607,18 @@ As the Cortex-A72 uses an out-of-order execution model, it is impossible to prov
   \end{tabular}
   %
   }
-  \caption{NEON instruction latency and throughput for Cortex-A72 \cite{CortexA72OptGuide}}
+  \caption{ARM Cortex-A72 latency and throughput for the NEON assembly instructions used in this thesis \cite{CortexA72OptGuide}.}
   \label{tab:neonlatencythroughput}
 \end{table}
 
 \subsubsection{Instruction Scheduling}
-At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence in an optimal fashion without the need for hand tuning the instruction order \cite{CortexA72OptGuide}. This means that the CPU is able to `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
+At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand-tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence optimally without the need for hand-tuning the instruction order \cite{CortexA72OptGuide}. This means that the CPU can `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
 
-It is important to note that this does not mean that there are no benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code, because some instructions might be better suited for that specific computation.
+It is important to note that this does not mean that there are no benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code because some instructions might be better suited for that specific computation.
 
 \section{Optimizing cryptographic schemes}
 \label{sec:optimizingcrypto}
-When programming or optimizing cryptographic schemes or primitives, it is essential that the security of the scheme is not compromised because of vulnerabilities that are introduced in the code. One of the most important aspects in this context is the notion of \textit{constant-time execution} \cite{kocher1996timing}. A cryptographic function is said to be executed in constant-time if there exist no side-channel attacks that can extract secret information (such as a private key) by looking at the execution time of the function. In this section, we will go over the main pitfalls that can lead to non-constant-time execution.
+When programming or optimizing cryptographic schemes or primitives, it is essential that the security of the scheme is not compromised because of vulnerabilities that are introduced in the code. One of the most important aspects in this context is the notion of \textit{constant-time execution} \cite{kocher1996timing}. A cryptographic function is said to be executed in constant-time if there exist no side-channel attacks that can extract secret information (such as a private key) by looking at the execution time of the function. In this section, we go over the main pitfalls that can lead to non-constant-time execution.
 
 \subsection{Branching and conditional execution}
 \label{sec:branching}
@@ -656,7 +638,7 @@ One of the most common reasons for non-constant-time execution occurs when the c
 
 The execution time of this code snippet depends on the value of `secret\_data'. If `secret\_data' is 0, the execution time will be longer than when `secret\_data', allowing an attacker to infer information about the value of `secret\_data' by measuring the execution time of the code.
 
-Another example of branching on secret data occurs when the code uses a loop of which the execution time depends on secret data. Consider the example in Algorithm \ref{alg:loopsecretdata}.
+Another example of branching on secret data occurs when the code uses a loop in which the execution time depends on secret data. Consider the example in Algorithm \ref{alg:loopsecretdata}.
 
 \begin{algorithm}
   \caption{Looping on Secret Data (Unsafe)}
@@ -733,7 +715,7 @@ A final common cause for non-constant-time execution is the use of CPU instructi
 \label{sec:valgrindtimecop}
 It has been shown that even if you write code that should theoretically compile to a constant-time binary, the compiler might still optimize the code in such a way that it is vulnerable to various kinds of timing attacks \cite{simon2018you, barthe2019formal}. Therefore, it is important to make sure the resulting binary is indeed constant-time.
 
-Vulnerabilities to timing attacks described in Section \ref{sec:branching} and Section \ref{sec:datadependentmemoryaccess} can be detected using Valgrind \cite{nethercote2007valgrind} using a technique that was described by Langley \cite{langley2010checking,langley2010ctgrind}. Valgrind is a programming tool that is used to detect memory leaks, buffer overflows, and other memory-related problems. Among many other things, Valgrind can detect branching on unitialized data and memory accessing at an unintialized index. Using the following routine, we can use Valgrind to detect timing attack vulnerabilities:
+Vulnerabilities to timing attacks described in Section \ref{sec:branching} and Section \ref{sec:datadependentmemoryaccess} can be detected using Valgrind \cite{nethercote2007valgrind} using a technique that was described by Langley \cite{langley2010checking}. Valgrind is a programming tool that is used to detect memory leaks, buffer overflows, and other memory-related problems. Among many other things, Valgrind can detect branching on uninitialized data and memory accessing at an uninitialized index. Using the following routine, we can use Valgrind to detect timing attack vulnerabilities:
 \begin{enumerate}
   \item \textbf{Uninitialized Secret Data}: Make sure our code does not initialize any secret data. Normal operations (such as arithmetic operations) on uninitialized data are not complained about by Valgrind (by default).
   \item \textbf{Run Valgrind}: Run Valgrind on our code. Any resulting complaints about uninitialized data are possible locations at which a vulnerability to a timing attack might exist.
@@ -743,11 +725,11 @@ Timecop \cite{timecop} provides a \texttt{poison.h} header file that can be used
 
 \section{Modular reduction}
 \label{sec:preliminariesmodularreduction}
-As MEDS is a cryptographic scheme that operates on elements in a finite field, modular reduction is a basic building block that is used in many parts of the scheme. There are various algorithms that can be used to perform modular reduction. In this section, we will go over the most common algorithms.
+As MEDS is a cryptographic scheme that operates on elements in a finite field, modular reduction is a basic building block that is used in many parts of the scheme. Various algorithms can be used to perform modular reduction. In this section, we go over the most common algorithms.
 
 \begin{itemize}
   \item \textbf{Naive Reduction}\\
-  The naive reduction algorithm is slow and not suitable for our purposes, but we will use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. A big disadvantage of this approach is that division is not a constant time operation, which can lead to timing attacks (see Section \ref{sec:nonconstanttimeoperations}). Furthermore, the division operation is usually relatively slow compared to other operations.
+  The naive reduction algorithm is slow and not suitable for our purposes, but we use it as a baseline to compare the other algorithms to. This algorithm works by applying an integer division instruction to the input, followed by a multiplication with the modulus and a subtraction. A big disadvantage of this approach is that division is not a constant time operation, which can lead to timing attacks (see Section \ref{sec:nonconstanttimeoperations}). Furthermore, the division operation is usually relatively slow compared to other operations.
   \item \textbf{Montgomery Reduction}\\
   Montgomery reduction \cite{montgomery1985modular} is a modular reduction algorithm that is based on the Montgomery multiplication algorithm. It does not use a division instruction, which makes it suitable for constant time operations. Instead, it works by subtracting a multiple of the modulus from the input such that the input is (almost) smaller than the modulus. The algorithm requires the input and outputs to be converted to and from a Montgomery representation.
   \item \textbf{Barrett Reduction}\\
@@ -775,31 +757,36 @@ From this, the Barrett reduction formula for unsigned integers can be derived (D
   where $\left[\right]$ represents a rounding operation such as floor or ceiling.
 \end{definition}
 
-As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
+As $R$ is a power of 2, the division by $R$ can be implemented as a cheap right-shift operation. Additionally, the value of $m = \left[\frac{R}{n}\right]$ can be precomputed because the modulus $n$ is a constant. This leaves us with two things to choose: the value of $k$ and the rounding operation.
 
 \subsubsection{Choice of $k$}
 \label{sec:choiceofk}
 Usually, the value of $k$ chosen for Barrett reduction is as small as possible such that $2^k > n$. Combined with setting the rounding function of the precomputed value to the `floor' function, this results in a reduction that reduces to a value between $0$ and $2n-1$, requiring an additional conditional subtraction at the end of the reduction. Choosing a larger value of $k$ has one major disadvantage: the precomputed value $m = \left[\frac{R}{n}\right]$ becomes larger, which means that the multiplication $a \cdot m$ will result in a larger value (possibly leading to an overflow). However, choosing a larger value of $k$ can also be beneficial: the quotient $m$ will be closer to the actual value of $\frac{R}{n}$, which means that the reduction will be more accurate. If we know that the input $a$ will never be larger than a particular value, we can choose $k$ such that the conditional subtraction at the end of the reduction is not required. For this to work, we need to use the ceiling function for the rounding operation.
 
 \section{Related work}
-\todo[inline]{Give more related work. This section will be expanded to include more related work (and references) and explanations for each item.}
-\begin{itemize}
-  \item The two GitHub repositories for the low-level and high-level optimizations of tradidional MEDS.
-  \item Other post-quantum (signature) schemes that have been optimized for ARMv8.
-  \item KECCAK (and SHAKE256).
-  \item The extended KECCAK code package.
-  \item The KECCAK optimization for ARMv8.
-\end{itemize}
+Digital signature schemes and their optimization have been the subject of many research papers over the last few decades. The first widespread digital signature scheme was RSA, which was introduced by Rivest, Shamir, and Adleman in 1978 \cite{rivest1978method}. Since then, many other digital signature schemes have been introduced, such as Schnorr signatures in 1989 \cite{schnorr1990efficient}, the digital signature algorithm (DSA) 1994 \cite{fips186}, and the elliptic curve digital signature algorithm (ECDSA) in 1999 \cite{johnson2001elliptic}.
+
+RSA received its first optimizations in the early 1990s \cite{shand1993fast, maurer1995fast} and has been optimized many times since then. The same holds for the other signature schemes, which have also been optimized many times for various platforms over the years.
+
+The next notable innovation was the introduction of EdDSA in 2011 \cite{bernstein2012high}, which (like ECDSA) is based on elliptic curve cryptography but has a different structure that allows for far more efficient implementations.
+
+With the introduction of the NIST post-quantum cryptography standardization process in 2016, many new digital signature schemes have been proposed that are based on various mathematical problems that are believed to be secure against quantum computers. In 2022, the final round of the standardization process was completed. The selected winners in the digital signature category were CRYSTALS-DILITHIUM \cite{ducas2018crystals}, Falcon \cite{fouque2018falcon}, and SPHINCS+ \cite{bernstein2015sphincs}.
+
+These three schemes have all received optimizations for various platforms, but the focus has mostly been on x86 and ARM CPUs. Both CRYSTALS-DILITHIUM and Falcon have received extensive optimizations for ARMv8 CPUs \cite{becker2021neon, kim2022crystals, kim2022accelerating, nguyen2023fast} and also the performance of SPHINCS (the predecessor of SPHINCS+) on ARM CPUs has been studied \cite{kolbl2018putting}.
+
+These optimizations often rely on the use of SIMD instructions such as NEON for ARMv8 \cite{ARMv8A-ProgrammersGuide} and AVX2/AVX512 \cite{intel-avx512} for x86. Additionally, the use of already optimized cryptographic primitives such as the KECCAK permutation \cite{bertoni2013keccak} can greatly improve the performance of a digital signature scheme.
 
 \chapter{Profiling}
 \label{ch:profiling}
-\section{Profiling techniques}
-In order to obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program, these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage, and that this part can be optimized to improve the overall performance.
+In this chapter, we discuss and execute the profiling of the MEDS implementation, with the goal of identifying the code sections that take up the most time. We use this information to optimize the code in the next chapter.
 
-Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or a specific functions. There exist a wide variety of profilers for C, such as GProf \cite{graham1982gprof}, Valgrind \cite{nethercote2007valgrind}, and Linux-Perf \cite{de2010new}. In our case, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function, which can be done with Linux-Perf.
+\section{Profiling techniques}
+To obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program, these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage and that this part can be optimized to improve the overall performance.
+
+Typically, profiling is done by running the program with a profiler, which is a tool that measures the space or time that is used by the program or specific functions. There exist a wide variety of profilers for C, such as GProf \cite{graham1982gprof}, Valgrind \cite{nethercote2007valgrind}, and Linux-Perf \cite{de2010new}. In our case, the most accurate way to measure the performance is to measure the number of cycles that are used by the program or a specific function, which can be done with Linux-Perf.
 
 \subsection{Cycle counting}
-Cycle counting is a technique that is used to measure the number of CPU cycles that it takes to execute a certain program or function. This is usually done by accessing the performance monitoring unit (PMU) of the CPU, which is a CPU component that measures the performance of the processor. Typically, these PMUs contain a register that can be read to obtain the number of cycles executed since a certain point in time. On Linux, it is very easy to access this data using the Linux-Perf tool \cite{de2010new}, which can be used to measure the number of instructions executed, number of cache misses, etc.
+Cycle counting is a technique that is used to measure the number of CPU cycles that it takes to execute a certain program or function. This is usually done by accessing the performance monitoring unit (PMU) of the CPU, which is a CPU component that measures the performance of the processor. Typically, these PMUs contain a register that can be read to obtain the number of cycles executed since a certain point in time. On Linux, it is very easy to access this data using the Linux-Perf tool \cite{de2010new}, which can be used to measure the number of instructions executed, the number of cache misses, etc.
 
 \subsubsection{Advantages}
 The advantages of profiling the code using a cycle counter are:
@@ -812,7 +799,7 @@ The advantages of profiling the code using a cycle counter are:
 \subsubsection{Disadvantages}
 The disadvantages of profiling the code using a cycle counter are:
 \begin{itemize}
-  \item \textbf{Interference}: The program to be measured shares the CPU (core) with other programs, which can interfere with measurements. If another program is switched in by the operating system, the cycle counter will also count the cycles that were used by this program. Although this usually doesn't have a big impact on profiling results, this can be problematic for obtaining accurate benchmarks.
+  \item \textbf{Interference}: The program to be measured shares the CPU (core) with other programs, which can interfere with measurements. If another program is switched in by the operating system, the cycle counter will also count the cycles that were used by this program. Although this usually does not have a big impact on profiling results, this can be problematic for obtaining accurate benchmarks.
   \item \textbf{Architecture}: The way in which the cycle counter is accessed is different for each architecture. However, since we use the perf tool, this is abstracted away for us.
 \end{itemize}
 
@@ -825,9 +812,9 @@ Another problem is the problem of program interference (see above). Unfortunatel
 \label{sec:medsprofilingresults}
 
 \subsection{Measurement setup}
-We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We decided to profile the code for the MEDS-55520 parameter set, which is in the middle of the three parameter sets in terms of security level. The results will be representative for the other parameter sets as well. We executed measurements for the three algorithms of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningfunctions} (signing), and \ref{tab:medsverificationfunctions} (verification). For each algorithm, we list the functions or code sections that take up more than 1\% of the total number of cycles. We provide the number of megacycles (MCycles) that were used in that function, the percentage of the total number of cycles that were used by that function, and the number of times that function was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function can depend on the input.
+We added cycle count measurements to all MEDS functions that we anticipate will require a significant amount of time. We ran our profiling tests on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. We decided to profile the code for the MEDS-55520 parameter set, which is in the middle of the three parameter sets in terms of security level. The results will be representative of the other parameter sets as well. We executed measurements for the three algorithms of a digital signature scheme: key generation, signing, and verification. The results are shown in Tables \ref{tab:medskeygenfunctions} (key generation), \ref{tab:medssigningfunctions} (signing), and \ref{tab:medsverificationfunctions} (verification). For each algorithm, we list the functions or code sections that take up more than 1\% of the total number of cycles. We provide the number of megacycles (MCycles) that were used in that function, the percentage of the total number of cycles that were used by that function, and the number of times that function was called. Note that the number of cycles cannot be divided by the number of calls to obtain the average number of cycles per call, because the number of cycles that are used by a function can depend on the input.
 
-\begin{table}[]
+\begin{table}
   \centering
   \begin{tabular}{lrrr}
     \toprule
@@ -847,7 +834,7 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \label{tab:medskeygenfunctions}
 \end{table}
 
-\begin{table}[]
+\begin{table}
   \centering
   \begin{tabular}{lrrr}
     \toprule
@@ -867,7 +854,7 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \label{tab:medssigningfunctions}
 \end{table}
 
-\begin{table}[]
+\begin{table}
   \centering
   \begin{tabular}{lrrr}
     \toprule
@@ -920,7 +907,7 @@ The \texttt{pmod\_mat\_syst} function (\texttt{pmod\_mat\_syst\_ct\_partial\_swa
 The \texttt{solve\_opt} function is responsible for about 8\% of the total number of cycles for signing and verification. This function derives an isometry mapping $\phi = (\textbf{A} \in \mathbb{F}_q^{m \times m}, \textbf{B} \in \mathbb{F}_q^{n \times n})$ by constructing and solving a sparse system of linear equations, see Section \ref{sec:derivingisometry}. The algorithm has a complexity of $\mathcal{O}{n^3}$.
 
 \subsubsection{Bitstream filling}
-The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them together because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to reduce the number of bytes required to store a list of field elements.
+The \texttt{bs\_fill} section is responsible for about 6\% of the total number of cycles for signing and verification. In this section of the code, multiple calls are made to the \texttt{bs\_init}, \texttt{bs\_write}, and \texttt{bs\_finalize}. We decided to group them because they are all part of the same operation: filling a bitstream with elements of the finite field $\mathbb{F}_q$. In the MEDS parameter sets that we consider, the finite field is $\mathbb{F}_{4093}$, which means that the bitstream is filled with 12-bit elements. This is done to reduce the number of bytes required to store a list of field elements.
 
 \subsubsection{SHAKE256}
 \label{sec:shake256}
@@ -931,22 +918,22 @@ The \texttt{rnd\_sys\_mat} function is responsible for about 9\% of the total nu
 
 \chapter{Methodology}
 \label{ch:methodology}
-We have established two approaches to optimize the MEDS implementation. These approaches are not specific to ARMv8, but their implementation will be tailored to the ARMv8 architecture. Note that the two approaches are mutually exclusive, meaning they can not be combined. We will implement both approaches and evaluate their performance to determine which approach gives the highest speedup.
+We have established two approaches to optimize the MEDS implementation. These approaches are not specific to ARMv8, but their implementation will be tailored to the ARMv8 architecture. Note that the two approaches are mutually exclusive, meaning they cannot be combined. We implement both approaches and evaluate their performance to determine which approach gives the highest speedup.
 \begin{itemize}
   \item \textbf{Low-Level Optimization}:\\
-  This approach focuses on optimizing the MEDS implementation at a low level. This means that we will look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
+  This approach focuses on optimizing the MEDS implementation at a low level. This means that we look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
   \item \textbf{High-Level Optimization}:\\
-  This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the exact same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
+  This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section \ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table \ref{tab:medsparametersets} (Section \ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section \ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
 \end{itemize}
-In this chapter, we will start by discussing how we will implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We will then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}. After this, we will discuss bitstream filling and alternative hash structure usage, two optimizations that can be applied to both the low-level and high-level approaches, in Section \ref{sec:bitstreamfilling} and Section \ref{sec:alternativehashstructureusage}, respectively. Finally, we will discuss a few non-constant-time optimizations that can be applied to the verification algorithm in Section \ref{sec:verificationoptimizations}.
+In this chapter, we start by discussing how we implement modular reduction, an operation that is the same for both approaches (Section \ref{sec:modularreduction}). We then discuss the implementation of the two approaches in Sections \ref{sec:lowleveloptimization} and \ref{sec:highleveloptimization}. After this, we discuss bitstream filling and alternative hash structure usage, two optimizations that can be applied to both the low-level and high-level approaches, in Section \ref{sec:bitstreamfilling} and Section \ref{sec:hashfunctionoptimization}, respectively. Finally, we discuss a few non-constant-time optimizations that can be applied to the verification algorithm in Section \ref{sec:nonconstanttime}.
 
 \section{Modular reduction}
 \label{sec:modularreduction}
-Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we will use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we can not rely on this operator, as it is not defined for NEON registers and there is no direct alternative in assembly.
+Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we cannot rely on this operator, as it is not defined for NEON registers and there is no direct alternative in assembly.
 
-Because of this, we will need to implement our own modular reduction function that can be used with NEON registers. It is essential that this function is as fast as possible, as it is used in many places in the MEDS implementation. We go over the various modular reduction algorithms in Section \ref{sec:preliminariesmodularreduction}. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we decide to use Barrett reduction (see Section \ref{sec:barrettreduction}) instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
+Because of this, we need to implement our own modular reduction function that can be used with NEON registers. This function must be as fast as possible, as it is used in many places in the MEDS implementation. We go over the various modular reduction algorithms in Section \ref{sec:preliminariesmodularreduction}. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we decide to use Barrett reduction (see Section \ref{sec:barrettreduction}) instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
 
-\subsection{Choosing $k$ for Barrett reduction}
+\subsection{Choosing \texorpdfstring{$k$}{k} for Barrett reduction}
 As mentioned in Section \ref{sec:choiceofk}, the choice of $k$ for Barrett reduction is important. We need to pick a $k$ such that the reduction will not require a final conditional subtraction. For the MEDS parameter sets that we consider, we know that all field elements fit into 12 bits. This means that any multiplication of two field elements will result in a value that fits into 24 bits. The largest possible value that any value can become (before reduction) results from the matrix multiplication algorithm, see Section \ref{sec:matrixmultiplication}. In this algorithm, the temporary value can (for parameter set MEDS-122000) become as large as $\log_2(k \cdot q \cdot q) = \log_2(44 \cdot 4092 \cdot 4092) \approx 29.5$ bits (see Section \ref{sec:matrixmultiplicationoptimization}). This means that we need to pick a $k$ such that for all $0 \leq a < 2^{30}$, the reduction will not require a conditional subtraction.
 
 As $2^{30}$ is a relatively small number, we use a brute force approach to find the smallest $k$ that satisfies this condition. This value turns out to be $k = 43$. This gives $m = \lceil \frac{2^{43}}{4093} \rceil = 0\text{x}80180481$. This number fits nicely into 32 bits, which means that we can store it in 32-bit NEON lanes.
@@ -984,7 +971,7 @@ The NEON version of the Barrett reduction algorithm is shown in Algorithm \ref{a
 From the assembly code, we can see that the reduction is done using 5 instructions (not counting the optional shrink).
 
 \subsection{Freeze operation}
-A useful operation when working with numbers outside of the finite field is the `freeze' operation. This operation takes a number $a \in [0, 2n-1]$ and returns $a \mod n$. The advantage over the reduction functions mentioned before is that this operation can be executed in fewer instructions. Additionally, the operation can be executed over 8 lanes of a 128-bit NEON register (as opposed to 4 lanes for the reduction operation). The freeze operation is useful after (for example) two field elements are added together and need to be reduced, in which case we can do a cheaper reduction operation. The freeze operation for MEDS is shown in Algorithm \ref{alg:freezeoperation}.
+A useful operation when working with numbers outside of the finite field is the `freeze' operation. This operation takes a number $a \in [0, 2n-1]$ and returns $a \mod n$. The advantage over the reduction functions mentioned before is that this operation can be executed with fewer instructions. Additionally, the operation can be executed over 8 lanes of a 128-bit NEON register (as opposed to 4 lanes for the reduction operation). The freeze operation is useful after (for example) two field elements are added together and need to be reduced, in which case we can do a cheaper reduction operation. The freeze operation for MEDS is shown in Algorithm \ref{alg:freezeoperation}.
 
 \begin{algorithm}
   \caption{MEDS Freeze Operation}
@@ -999,7 +986,7 @@ A useful operation when working with numbers outside of the finite field is the 
   \end{algorithmic}
 \end{algorithm}
 
-As explained in Section \ref{sec:branching}, we can not use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm \ref{alg:neonfreezeoperationc} (C code) and Algorithm \ref{alg:neonfreezeoperationasm} (assembly code).
+As explained in Section \ref{sec:branching}, we cannot use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm \ref{alg:neonfreezeoperationc} (C code) and Algorithm \ref{alg:neonfreezeoperationasm} (assembly code).
 
 \begin{algorithm}
   \caption{NEON Freeze Operation (C)}
@@ -1015,7 +1002,7 @@ As explained in Section \ref{sec:branching}, we can not use branching in constan
 
 \section{Low-level optimization}
 \label{sec:lowleveloptimization}
-The low-level optimization approach focuses on optimizing the individual functions that take up a significant amount of time in the MEDS implementation. As can be seen from the profiling results displayed in Section \ref{sec:medsprofilingresults}, over 99\% of the total number of cycles used in signing and verification is used on just 5 functions. In this section, we will discuss the optimization of three of these functions: matrix multiplication (Section \ref{sec:matrixmultiplication}), matrix systemization (Section \ref{sec:matrixsystemization}), and isometry derivation (Section \ref{sec:isometryderivation}). The optimization of the other two functions is not specific to the low-level optimization approach and will be discussed in Section \ref{sec:bitstreamfilling} (bitstream filling) and Section \ref{sec:hashfunctionoptimization} (SHAKE256).
+The low-level optimization approach focuses on optimizing the individual functions that take up a significant amount of time in the MEDS implementation. As can be seen from the profiling results displayed in Section \ref{sec:medsprofilingresults}, over 99\% of the total number of cycles used in signing and verification is used on just 5 functions. In this section, we discuss the optimization of three of these functions: matrix multiplication (Section \ref{sec:matrixmultiplication}), matrix systemization (Section \ref{sec:matrixsystemization}), and isometry derivation (Section \ref{sec:isometryderivation}). The optimization of the other two functions is not specific to the low-level optimization approach and will be discussed in Section \ref{sec:bitstreamfilling} (bitstream filling) and Section \ref{sec:hashfunctionoptimization} (SHAKE256).
 
 \subsection{Matrix multiplication}
 \label{sec:matrixmultiplication}
@@ -1023,11 +1010,11 @@ Matrix multiplication is by far the most time-consuming function in MEDS, taking
 
 \subsubsection{Complexity analysis}
 \label{sec:matrixmultiplicationcomplexity}
-Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. There are three nested loops that loop over the $m$ rows of $A$, the $o$ columns of $B$, and the $n$ columns of $A$ and rows of $B$. The resulting time complexity of this algorithm is therefore $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm \cite{strassen1969gaussian} and (generalizations of) the Coppersmith-Winograd algorithm \cite{coppersmith1987matrix}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we will optimize the naive algorithm using vectorization.
+Matrix multiplication is implemented using a naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication} in Appendix \ref{app:supplementalalgs}) that works by calculating the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo 4093. Three nested loops loop over the $m$ rows of $A$, the $o$ columns of $B$, and the $n$ columns of $A$ and rows of $B$. The resulting time complexity of this algorithm is therefore $\mathcal{O}(mno)$. Algorithms have been discovered that can multiply two matrices in a lower time complexity, such as the Strassen algorithm \cite{strassen1969gaussian} and (generalizations of) the Coppersmith-Winograd algorithm \cite{coppersmith1987matrix}. However, these algorithms have such a high constant factor that they are not suitable for our purposes. Instead, we optimize the naive algorithm using vectorization.
 
 \subsubsection{Optimization}
 \label{sec:matrixmultiplicationoptimization}
-We will optimize matrix multiplication by applying vectorization to the naive algorithm. We will compute the dot product of multiple rows of $A$ with multiple columns of $B$ at the same time.
+We optimize matrix multiplication by applying vectorization to the naive algorithm. We compute the dot product of multiple rows of $A$ with multiple columns of $B$ at the same time.
 
 Our first observation lies in the fact that all intermediate values that are computed while calculating the dot product fit into 32 bits.
 \begin{itemize}
@@ -1040,9 +1027,9 @@ Crucially, this means that we do not need to reduce the intermediate values modu
 
 However, we can do slightly better than that. The NEON unit is capable of performing 4 (widening) multiplications of 16-bit unsigned integers at the same time, but a NEON register can hold 8 16-bit unsigned integers. This means that we can compute the dot product of 8 rows of $A$ with 8 columns of $B$ using two multiplication instructions. This does not change the total number of multiplications that need to be performed, but it does halve the number of memory loads and stores that need to be executed.
 
-Unfortunately, we cannot directly apply an easy 8-way vectorization to (one of) the loops in the naive algorithm. The NEON unit is able to load 128 bits of data from memory at a time, but it is not able to do this with an arbitrary distance between the elements. The matrices in MEDS are stored in row-major order (each row is stored after the previous row), meaning we can load 8 elements of a row using a single NEON instruction, but we cannot load 8 elements of a column using a single NEON instruction. An easy solution would be to transpose matrix $B$ before performing the multiplication, but this would require additional memory and time to perform the transpose. 
+Unfortunately, we cannot directly apply an easy 8-way vectorization to (one of) the loops in the naive algorithm. The NEON unit can load 128 bits of data from memory at a time, but it is not able to do this with an arbitrary distance between the elements. The matrices in MEDS are stored in row-major order (each row is stored after the previous row), meaning we can load 8 elements of a row using a single NEON instruction, but we cannot load 8 elements of a column using a single NEON instruction. An easy solution would be to transpose matrix $B$ before performing the multiplication, but this would require additional memory and time to perform the transpose. 
 
-Instead, we will use an approach where 16 dot products are comptued at the same time, in the form of an $8\times8$ submatrix of $C$. We will load an $8\times8$ submatrix of $A$ and an $8\times8$ submatrix of $B$ into NEON registers and compute the dot product of these submatrices, adding the result to the submatrix of $C$. We repeat this process until all dot products are computed and stored in $C$. The resulting algorithm is shown in Algorithm \ref{alg:vectorizedmatrixmultiplication}. A visualization of the functionality of this algorithm is shown in Figure \ref{fig:vectorizedmatrixmultiplication}. This algorithm works for matrices of which the dimensions are multiples of 8.
+Instead, we use an approach where 16 dot products are computed at the same time, in the form of an $8\times8$ submatrix of $C$. We load an $8\times8$ submatrix of $A$ and an $8\times8$ submatrix of $B$ into NEON registers and compute the dot product of these submatrices, adding the result to the submatrix of $C$. We repeat this process until all dot products are computed and stored in $C$. The resulting algorithm is shown in Algorithm \ref{alg:vectorizedmatrixmultiplication}. A visualization of the functionality of this algorithm is shown in Figure \ref{fig:vectorizedmatrixmultiplication}. This algorithm works for matrices of which the dimensions are multiples of 8.
 
 \begin{algorithm}
   \caption{Vectorized matrix multiplication for matrices that are multiples of 8 in size}
@@ -1088,7 +1075,7 @@ Instead, we will use an approach where 16 dot products are comptued at the same 
 \subsubsection{Handling non-multiples of 8}
 The algorithm in Algorithm \ref{alg:vectorizedmatrixmultiplication} only works for matrices of which the dimensions are multiples of 8. Unfortunately, MEDS uses matrices of which the dimensions are usually not multiples of 8. To solve this problem, there are various approaches that we can take. An easy solution is to pad the matrices such that the dimensions become multiples of 8, but this would require additional memory and computation time.
 
-Our solution to this problem is threefold, as there are three dimensions that can be non-multiples of 8: $m$, $o$, and $n$. We will handle each of these dimensions separately.
+Our solution to this problem is threefold, as three dimensions can be non-multiples of 8: $m$, $o$, and $n$. We handle each of these dimensions separately.
 \begin{itemize}
   \item \textbf{Dimension $m$}:\\
   When $m$ is not a multiple of 8, we can use the normal approach until we reach the last multiple of 8. After this, when loading the submatrix of $A$, we load a $(m \mod 8) \times 8$ submatrix. Additionally, we only compute the dot products and store the results for the $m \mod 8$ rows of $C$ that are required.
@@ -1097,13 +1084,13 @@ Our solution to this problem is threefold, as there are three dimensions that ca
   \item \textbf{Dimension $n$}:\\
   When $n$ is not a multiple of 8, we can use the normal approach until we reach the last multiple of 8. After this, we load only a $8 \times (n \mod 8)$ submatrix of $A$ and a $(n \mod 8) \times 8$ submatrix of $B$. When computing $C_i$, we skip the last $8 - (n \mod 8)$ multiplications and additions.
 \end{itemize}
-It is also possible for multiple of these dimension to be non-multiples of 8 at the same time. In this case, we can combine the approaches described above. In a few cases where the number of rows or columns is less than 8 but at least 4, we can use 4-way vectorized instructions for a very small extra speedup.
+It is also possible for multiple of these dimensions to be non-multiples of 8 at the same time. In this case, we can combine the approaches described above. In a few cases where the number of rows or columns is less than 8 but at least 4, we can use 4-way vectorized instructions for a very small extra speedup.
 
 \subsubsection{Implementation}
 The actual implementation of Algorithm \ref{alg:vectorizedmatrixmultiplication} combined with the handling of non-multiples can be done in multiple ways. As the resulting algorithm becomes quite complex, we figured that the C compiler might not be able to optimize the code as well as we can. Therefore, we have decided to implement a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/matmul/generate\_matmul\_asm.py}} that generates optimized ARMv8 assembly code. The script generates a specialized assembly function for each set of input dimensions that is used in MEDS.
 
 \subsubsection{Minimum cycle bound}
-In order to understand the performance of our optimized matrix multiplication algorithm, we need to find a minimum bound on the number of cycles that the algorithm will take to execute. In order to do this, we will establish a minimum bound on the number of instructions that the algorithm uses.
+To understand the performance of our optimized matrix multiplication algorithm, we need to find a minimum bound on the number of cycles that the algorithm will take to execute. To do this, we establish a minimum bound on the number of instructions that the algorithm uses.
 
 A very crude minimum cycle bound on the naive algorithm (see Algorithm \ref{alg:medsmatrixmultiplication}) can be established by counting the number of arithmetic operations required:
 \begin{itemize}
@@ -1114,8 +1101,8 @@ The `multiply-accumulate' operation is a single instruction on ARMv8, and modula
 
 A more accurate minimum cycle bound can be established by looking at the number of instructions required for the vectorized algorithm (see Algorithm \ref{alg:vectorizedmatrixmultiplication}). This algorithm obtains a speedup because of two factors:
 \begin{itemize}
-  \item The NEON unit is able to perform operations in parallel.
-  \item As we compute the result for a $4\times4$ submatrix of $C$, we are able to use the same input value 4 times, reducing the number of loads required.
+  \item The NEON unit can perform operations in parallel.
+  \item As we compute the result for a $4\times4$ submatrix of $C$, we can use the same input value 4 times, reducing the number of loads required.
 \end{itemize}
 The number of instructions required for the vectorized algorithm can be calculated as follows:
 \begin{itemize}
@@ -1137,7 +1124,7 @@ Matrix systemization is the second most time-consuming function in MEDS, taking 
 
 \subsubsection{Complexity analysis}
 \label{sec:matrixsystemizationcomplexity}
-We analyze the complexity of the matrix systemization algorithm used in the reference implementation (see Algorithm \ref{alg:systemizer}). We will first consider the basic algorithm where $r_\text{max} = m$ and do\_swap and do\_backsub are set to false. We can then compute the complexity of the algorithm as follows:
+We analyze the complexity of the matrix systemization algorithm used in the reference implementation (see Algorithm \ref{alg:systemizer}). We first consider the basic algorithm where $r_\text{max} = m$ and \texttt{do\_swap} and \texttt{do\_backsub} are set to false. We can then compute the complexity of the algorithm as follows:
 
 \resizebox{\textwidth}{!}{
 \begin{minipage}{\textwidth}
@@ -1155,17 +1142,17 @@ We analyze the complexity of the matrix systemization algorithm used in the refe
 \end{minipage}
 }
 
-We are able to use arithmetic series to replace sums with closed-form expressions. In the final step, as $n \geq m$ and therefore $m^2n \geq m^3$, we find that the complexity of the basic algorithm is $\mathcal{O}(m^2n)$.
+We can use arithmetic series to replace sums with closed-form expressions. In the final step, as $n \geq m$ and therefore $m^2n \geq m^3$, we find that the complexity of the basic algorithm is $\mathcal{O}(m^2n)$.
 
 We consider the changes that the three optional features of the algorithm bring to the complexity:
 \begin{enumerate}
-  \item Using $r_\text{max}$ will change the dimentions of the outer loop of the algorithm to $r_\text{max}$ instead of $m$. This will change the complexity of the algorithm to $\mathcal{O}(r_\text{max}mn)$. As $r_\text{max}$ is only ever $m$ or $m-1$, this has no drastic effect on the complexity of the algorithm.
-  \item When do\_swap is set to true, an additional loop is added to the algorithm which adds the following complexity:
+  \item Using $r_\text{max}$ will change the dimensions of the outer loop of the algorithm to $r_\text{max}$ instead of $m$. This will change the complexity of the algorithm to $\mathcal{O}(r_\text{max}mn)$. As $r_\text{max}$ is only ever $m$ or $m-1$, this has no drastic effect on the complexity of the algorithm.
+  \item When \texttt{do\_swap} is set to true, an additional loop is added to the algorithm which adds the following complexity:
   \begin{align*}
     & \left( \sum_{r=0}^{m} \sum_{r_2=r+1}^{m} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{i=0}^{r} \mathcal{O}(1) \right)
   \end{align*}
   Following a similar approach as above, we find that this results in a complexity of $\mathcal{O}(m^2)$, which does not change the complexity of the algorithm.
-  \item When do\_backsub is set to true, we perform another tripple-nested loop to perform back substitution. This loop has the following complexity:
+  \item When \texttt{do\_backsub} is set to true, we perform another triple-nested loop to perform back substitution. This loop has the following complexity:
   \begin{align*}
     & \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \mathcal{O}(1) \right) + \left( \sum_{r=0}^{m} \sum_{r_2=0}^{r} \sum_{c=m}^{n} \mathcal{O}(1) \right)
   \end{align*}
@@ -1175,11 +1162,11 @@ From this, we can conclude that the complexity of the matrix systemization algor
 
 \subsubsection{Optimization}
 \label{sec:matrixsystemizationoptimization}
-We will optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the (changing) value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we will optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
+We optimize the matrix systemization algorithm by applying vectorization to the loops in the algorithm. Contrary to the matrix multiplication algorithm, we cannot easily parallelize the main $r$-loop in the algorithm, as the starting values of subloops depend on the (changing) value of $r$. This structure makes parallelization over the $r$-loop impossible. Instead, we optimize each inner loop separately by applying a parallelization technique tailored to the specific inner loop.
 
-For all nested loops, we will apply parallelization to the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored sequentially in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
+For all nested loops, we apply parallelization to the innermost loop. In the systemization algorithm, this loop is always the easiest to parallelize, as it accesses matrix elements that are stored sequentially in memory. Each input matrix element is stored in a 12-bit field element, which fits into a 16-bit register. This means that we can compute 8 elements at the same time using 128-bit NEON registers.
 
-Unfortunately, we are unable to use a full 8-way vectorization for all loops, as the algorithm uses multiplication operations. When multiplying two 16-bit values, the result is a 32-bit value, of which we can not store 8 in a 128-bit NEON register. We can work around this issue by using the \texttt{umull} instruction to multiply the lower 4 16-bit values of two registers and the \texttt{umull2} instruction to multiply the upper 4 16-bit values of two registers. After reducing both results, we can use the \texttt{uzp1} operation to combine the results back into a single 128-bit register.
+Unfortunately, we are unable to use a full 8-way vectorization for all loops, as the algorithm uses multiplication operations. When multiplying two 16-bit values, the result is a 32-bit value, of which we cannot store 8 in a 128-bit NEON register. We can work around this issue by using the \texttt{umull} instruction to multiply the lower 4 16-bit values of two registers and the \texttt{umull2} instruction to multiply the upper 4 16-bit values of two registers. After reducing both results, we can use the \texttt{uzp1} operation to combine the results back into a single 128-bit register.
 
 \subsubsection{Handling non-multiples of 8}
 \label{sec:matrixsystemizationnonmultiples}
@@ -1194,7 +1181,7 @@ The inner loops that we are optimizing usually do not loop over a dimension that
 As with the matrix multiplication algorithm, the resulting systemization algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}}. The script generates a specialized assembly function for each set of input dimensions that is used in MEDS.
 
 \subsubsection{Minimum cycle bound}
-Finding a minimum cycle bound for the optimized systemization algorithm is very similar to determining its complexity. As we can follow the same structure as in Section \ref{sec:matrixsystemizationcomplexity}, we will omit some of the steps taken and refer the reader to that section for a more detailed explanation.
+Finding a minimum cycle bound for the optimized systemization algorithm is very similar to determining its complexity. As we can follow the same structure as in Section \ref{sec:matrixsystemizationcomplexity}, we omit some of the steps taken and refer the reader to that section for a more detailed explanation.
 
 For the basic algorithm, the number of instructions required is as follows:
 \begin{itemize}
@@ -1214,24 +1201,24 @@ Given that reduction takes 5 cycles, freezing takes 3 cycles, field inversion ta
   & \left. + \frac{(r_\text{max} - 1)r_{\text{max}}(2r_{\text{max}} - 1)}{6} - n \cdot r_\text{max} + \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 
-When using the algorithm with do\_swap set to true, the following instructions are added to the minimum cycle bound:
+When using the algorithm with \texttt{do\_swap} set to true, the following instructions are added to the minimum cycle bound:
 \begin{itemize}
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1} \frac{1}{8}$ load and or instructions (swap loop 1);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{i=0}^{r-1} \frac{1}{8}$ load (two) and store (two) instructions (swap loop 2).
 \end{itemize}
-Following the same approach as above, using do\_swap adds the following value to the minimum cycle bound:
+Following the same approach as above, using \texttt{do\_swap} adds the following value to the minimum cycle bound:
 \begin{align*}
   & \frac{2}{8} \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{4}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 
-When using the algorithm with do\_backsub set to true, the following instructions are added to the minimum cycle bound:
+When using the algorithm with \texttt{do\_backsub} set to true, the following instructions are added to the minimum cycle bound:
 \begin{itemize}
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub middle loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub middle loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub inner loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub inner loop).
 \end{itemize}
-Following the same approach as above, using do\_backsub adds the following value to the minimum cycle bound:
+Following the same approach as above, using \texttt{do\_backsub} adds the following value to the minimum cycle bound:
 \begin{align*}
   & \frac{33}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{33}{8} \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
@@ -1240,7 +1227,7 @@ Following the same approach as above, using do\_backsub adds the following value
 \label{sec:isometryderivation}
 In all three operations of MEDS, the \texttt{solve\_opt} function is used to derive an isometry mapping $\phi = (\textbf{A} \in \mathbb{F}_q^{m \times m}, \textbf{B} \in \mathbb{F}_q^{n \times n})$ by constructing and solving a sparse system of linear equations, see Section \ref{sec:derivingisometry}. The system that needs to be solved is constructed in a very specific way, which allows for a more efficient method of solving it (as opposed to using a more general algorithm like Gaussian elimination). Even though this more efficient method is used, the function still takes up a significant amount of time in the MEDS implementation.
 
-Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 88 \%$\todo{Update measurement}) is spent on two relatively small tripple-nested loops, while the remainder of the time ($\pm 12 \%$\todo{Update measurement}) is spent on all other parts of the function combined. Therefore, we focus on optimizing these two loops. Both loops have the exact same structure, so we will only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
+Unfortunately, the function is also extremely large, with the reference code containing over 300 lines of code, making it very tedious to optimize the function as a whole. Instead, we profiled the function and found that the majority of the time of this function ($\pm 70 \%$) is spent on two relatively small triple-nested loops, while the remainder of the time ($\pm 30 \%$) is spent on all other parts of the function combined. Therefore, we focus on optimizing these two loops. Both loops have the same structure, so we only discuss the optimization of the first loop. This loop is shown in Algorithm \ref{alg:systemsolving1}.
 
 \begin{algorithm}
   \caption{Isometry Derivation: Time-consuming loop 1}
@@ -1250,7 +1237,7 @@ Unfortunately, the function is also extremely large, with the reference code con
 
 \subsubsection{Complexity analysis}
 \label{sec:isometryderivationcomplexity}
-As mentioned in Section \ref{sec:derivingisometry}, the complexity of the entire \texttt{solve\_opt} function is $\mathcal{O}(n^3)$. Analyzing the complexity of the two time-consuming loops specifically is trivial as they are both tripple-nested loops that start and end at specific values. As can be derived from Algorithm \ref{alg:systemsolving1}, the first loop has a complexity of:
+As mentioned in Section \ref{sec:derivingisometry}, the complexity of the entire \texttt{solve\_opt} function is $\mathcal{O}(n^3)$. Analyzing the complexity of the two time-consuming loops specifically is trivial as they are both triple-nested loops that start and end at specific values. As can be derived from Algorithm \ref{alg:systemsolving1}, the first loop has a complexity of:
 \begin{align*}
   & \mathcal{O}((m-3)(m-1)m) \\
   & = \mathcal{O}(3m - 4m^2 + m^3) \\
@@ -1260,9 +1247,9 @@ Using the same approach, we find that the second loop has a complexity of $\math
 
 \subsubsection{Optimization}
 \label{sec:isometryderivationoptimization}
-Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we will try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$ ($\texttt{MEDS\_n}$ for the second loop).
+Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$ ($\texttt{MEDS\_n}$ for the second loop).
 
-As the field elements are stored in 16 bits, we are able to compute 8 elements at the same time using 128-bit NEON registers. Therefore, we will compute the results for 8 values of $r$ at the same time. We start by loading \texttt{tmp1}, which gives us a small problem, as these 8 values are not stored next to each other in memory. Therefore, we load these values using normal load instructions and store them in a 128-bit NEON register. The remaining loads and stores can be done using vectorized instructions as those values are stored next to each other in memory.
+As the field elements are stored in 16 bits, we can compute 8 elements at the same time using 128-bit NEON registers. Therefore, we compute the results for 8 values of $r$ at the same time. We start by loading \texttt{tmp1}, which gives us a small problem, as these 8 values are not stored next to each other in memory. Therefore, we load these values using normal load instructions and store them in a 128-bit NEON register. The remaining loads and stores can be done using vectorized instructions as those values are stored next to each other in memory.
 
 Just like with matrix systemization, we are unable to use a full 8-way vectorization as the algorithm uses multiplication instructions, which result in 32-bit values. We apply the same approach as with matrix systemization to work around this issue, see Section \ref{sec:matrixsystemizationoptimization}.
 
@@ -1272,12 +1259,12 @@ Also like with matrix systemization, the number of elements that need to be proc
 \subsubsection{Implementation}
 As the \texttt{solve\_opt} function is very large, we have decided not to implement the full function in ARMv8 assembly. This presented us with two options: either we use NEON intrinsics to parallelize the two time-consuming loops, or we write (a script that generates) ARMv8 assembly code for the two time-consuming loops. As the loops themselves are not very complex, we have decided to use NEON intrinsics to parallelize them, under the assumption that the assembly variant would not be much faster. Exploring the assembly-based optimization of these loops and the full function is left as future work, see Section \ref{sec:futureworkopt}.
 
-The optimized C code with NEON intrinsics is quite elaborate, so we will not show it here. Instead, we refer to the code in the code repository\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/util.c}}.
+The optimized C code with NEON intrinsics is quite elaborate, so we do not show it here. Instead, we refer to the code in the code repository\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/util.c}}.
 
 \subsubsection{Minimum cycle bound}
-We will establish a minimum cycle bound for the part of the \texttt{solve\_opt} function that we optimized: the two time-consuming loops. As they share the same structure, we will show a general approach for establishing a minimum cycle bound for these loops, which we will then apply to both loops to obtain a minimum cycle bound for the combined loops.
+We establish a minimum cycle bound for the part of the \texttt{solve\_opt} function that we optimized: the two time-consuming loops. As they share the same structure, we show a general approach for establishing a minimum cycle bound for these loops, which we then apply to both loops to obtain a minimum cycle bound for the combined loops.
 
-We call $x$ the number of iterations of the outermost loop, $y$ the number of iterations of the middle loop, and $z$ the number of iterations of the innermost loop. The minimum number of instructions for the tripple-nested loop can be calculated as follows:
+We call $x$ the number of iterations of the outermost loop, $y$ the number of iterations of the middle loop, and $z$ the number of iterations of the innermost loop. The minimum number of instructions for the triple-nested loop can be calculated as follows:
 \begin{itemize}
   \item $x \cdot y$ loads of \texttt{tmp2} (it is loaded once per iteration of the innermost loop);
   \item $x \cdot y \cdot \frac{1}{8}z \cdot 8$ loads to load the 8 values of \texttt{tmp1};
@@ -1287,24 +1274,24 @@ We call $x$ the number of iterations of the outermost loop, $y$ the number of it
   \item $x \cdot y \cdot \frac{1}{8}z$ additions, subtractions, and final reductions to compute \texttt{val};
   \item $x \cdot y \cdot \frac{1}{8}z$ stores of \texttt{val}.
 \end{itemize}
-Given that reductions takes 5 cycles, final reductions take 3 cycles, and all other operations take 1 cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
+Given that reductions take 5 cycles, final reductions take 3 cycles, and all other operations take 1 cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
 
 We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table \ref{tab:medsparametersets}). This gives us a total of $\frac{1}/{8}(m-3)(m-1)(28m + 8)$ cycles for loop 1 and $\frac{1}{8}(m-2)(m-1)(28n + 8)$ cycles for loop 2, giving a combined total of $\frac{1}{8}(m-3)(m-1)(28m + 28n + 16)$ cycles.
 
 \section{High-level optimization}
 \label{sec:highleveloptimization}
-The high-level optimization approach focuses on optimizing the MEDS implementation by parallelizing over the challenge space. MEDS uses a large number ($t$) of challenges and commitments in both signing and verification, which are all computed independently in a for-loop. Additionally, the computation for each commitment is exactly the same for signing and very similar for verification. This means that we can parallelize the computation of the commitments for each challenge.
+The high-level optimization approach focuses on optimizing the MEDS implementation by parallelizing over the challenge space. MEDS uses a large number ($t$) of challenges and commitments in both signing and verification, which are all computed independently in a for-loop. Additionally, the computation for each commitment is the same for signing and very similar for verification. This means that we can parallelize the computation of the commitments for each challenge.
 
-Before we can parallelize the computation of the commitments, we need to determine the number of commitments that we will compute in parallel. The commitment computation is executed over $\mathbb{F}_{4093}$, which means that the field elements can be stored in 12 bits (which fits in a 16-bit register). This means that we can store up to 8 field elements in a single 128-bit NEON register. From this, there are two possible parallelization factors we can consider.
+Before we can parallelize the computation of the commitments, we need to determine the number of commitments that we compute in parallel. The commitment computation is executed over $\mathbb{F}_{4093}$, which means that the field elements can be stored in 12 bits (which fits in a 16-bit register). This means that we can store up to 8 field elements in a single 128-bit NEON register. From this, there are two possible parallelization factors we can consider.
 \begin{enumerate}
   \item \textbf{4-Way Parallelization}:\\
   Nearly all operations on field elements allow the values to stay in 16-bit registers. An exception is multiplication: the result of a multiplication of two field elements is a 24-bit value, which fits in a 32-bit register. This means that we can compute 4 multiplications at the same time using 128-bit NEON registers. Because of this limitation, we can choose to compute 4 commitments at a time.
   \item \textbf{8-Way Parallelization}:\\
   We can work around the multiplication limitation by using instructions such as \texttt{umull} and \texttt{umull2} to multiply the lower and upper 4 values (respectively) of two 128-bit NEON registers, after which we can reduce the results and combine them back into a single 128-bit register. Using this technique, we can compute 8 commitments at the same time.
 \end{enumerate}
-Initially, we implemented the 4-way parallelization approach as it is easier to implement. However, we found that the 8-way parallelization approach is more efficient, as the extra parallelization far outweighs the small overheads introduced by the more complex implementation. Therefore, we will focus on the 8-way parallelization approach in this section.
+Initially, we implemented the 4-way parallelization approach as it is easier to implement. However, we found that the 8-way parallelization approach is more efficient, as the extra parallelization far outweighs the small overheads introduced by the more complex implementation. Therefore, we focus on the 8-way parallelization approach in this section.
 
-In this section, we will discuss the high-level optimization of the MEDS implementation. We will first discuss the alterations that need to be made to the underlying datatypes and supplemental algorithms to allow for high-level parallelization in Section \ref{sec:highleveldataalgorithms}. Next, we will discuss the actual parallelization of the commitment computations in Section \ref{sec:commitmentparallelization}. Finally, we will discuss the limitations of the high-level optimization approach in Section \ref{sec:highlevellimitations}.
+In this section, we discuss the high-level optimization of the MEDS implementation. We first discuss the alterations that need to be made to the underlying datatypes and supplemental algorithms to allow for high-level parallelization in Section \ref{sec:highleveldataalgorithms}. Next, we discuss the actual parallelization of the commitment computations in Section \ref{sec:commitmentparallelization}. Finally, we discuss the limitations of the high-level optimization approach in Section \ref{sec:highlevellimitations}.
 
 \subsection{Parallelization of datatypes and supplemental algorithms}
 \label{sec:highleveldataalgorithms}
@@ -1313,16 +1300,16 @@ In the reference implementation of MEDS, the main datatypes used are defined as 
   #define GFq_t uint16_t
   #define pmod_mat_t GFq_t
 \end{verbatim}
-These two datatypes represent a field element and a matrix element, respectively. Matrices are stored as one-dimensional arrays in row-major order, and are passed to functions using pointers to a \texttt{pmod\_mat\_t}.
+These two datatypes represent a field element and a matrix element, respectively. Matrices are stored as one-dimensional arrays in row-major order and are passed to functions using pointers to a \texttt{pmod\_mat\_t}.
 
-In order to parallelize the algorithms that use these datatypes, we will adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x8.h} file\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-high-level/include/vec\_16x8.h}} containing these new datatypes, which are defined as follows:
+To parallelize the algorithms that use these datatypes, we adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x8.h} file\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-high-level/include/vec\_16x8.h}} containing these new datatypes, which are defined as follows:
 \begin{verbatim}
   #define GFq_vec_t uint16x8_t
   #define pmod_mat_vec_t GFq_vec_t
 \end{verbatim}
 These two datatypes represent 8 field elements and 8 matrix elements, respectively. By passing these datatypes to a modified version of a function, we can compute the function output for 8 commitments at the same time.
 
-Additionally, we will define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x8.h} file. Examples of such definitions include:
+Additionally, we define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x8.h} file. Examples of such definitions include:
 \begin{verbatim}
   #define ADD_VEC(a, b) vaddq_u16(a, b)
   #define MUL_VEC_LOW(a, b) vmull_u16(vget_low_u16(a), vget_low_u16(b))
@@ -1333,7 +1320,7 @@ The main advantage of this approach is that the entire high-level-optimized MEDS
 
 \subsubsection{Supplemental algorithms}
 \label{sec:suppalgorithmsparallelization}
-In order to parallelize the commitment computations, we need to modify the supplemental algorithms that are used in the MEDS implementation. In the reference implementation, these algorithms perform operations for matrices or values that belong to a single commitment. We need to modify these algorithms such that they can perform operations for multiple commitments at the same time. The following algorithms need to be modified:
+To parallelize the commitment computations, we need to modify the supplemental algorithms that are used in the MEDS implementation. In the reference implementation, these algorithms perform operations for matrices or values that belong to a single commitment. We need to modify these algorithms such that they can perform operations for multiple commitments at the same time. The following algorithms need to be modified:
 \begin{enumerate}
   \item \textbf{Matrix Multiplication}: \texttt{pmod\_mat\_mul}\\
   Responsible for multiplying two matrices over the finite field $\mathbb{F}_{4093}$.
@@ -1352,7 +1339,7 @@ In order to parallelize the commitment computations, we need to modify the suppl
 \end{enumerate}
 Each of these algorithms will be modified to work with the vectorized datatypes defined in the \texttt{vec\_16x8.h} file. These algorithms will then be plugged into the MEDS implementation, which will be modified to compute multiple commitments at the same time.
 
-To give a brief overview of the modifications that need to be made to these algorithms, we will provide an example for the matrix multiplication algorithm. The reference matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplication} (Appendix \ref{app:supplementalalgs}). The C code for this algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationc}. The modified matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationvec}. Both algorithms are slightly simplified for the sake of readability.
+To give a brief overview of the modifications that need to be made to these algorithms, we provide an example for the matrix multiplication algorithm. The reference matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplication} (Appendix \ref{app:supplementalalgs}). The C code for this algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationc}. The modified matrix multiplication algorithm is shown in Algorithm \ref{alg:medsmatrixmultiplicationvec}. Both algorithms are slightly simplified for the sake of readability.
 
 \begin{algorithm}
   \caption{Matrix Multiplication (Non-Vectorized)}
@@ -1370,7 +1357,7 @@ As can be seen from the code, the vectorized version is essentially the same as 
 
 \subsection{Parallelization of commitment computations}
 \label{sec:commitmentparallelization}
-Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm \ref{alg:medssignoverview}) and verification (Algorithm \ref{alg:medsverifyoverview}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while-loop that runs until the commitment is succesfully generated. This is why the signing and verification code exhibits the following structure:
+Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm \ref{alg:medssignoverview}) and verification (Algorithm \ref{alg:medsverifyoverview}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while loop that runs until the commitment is successfully generated. This is why the signing and verification code exhibits the following structure:
 \begin{verbatim}
   // Initial definitions and loading
   for (int i = 0; i < t; i++) {
@@ -1383,11 +1370,11 @@ Using the modified datatypes and supplemental algorithms, we can parallelize the
   }
   // Final operations
 \end{verbatim}
-This structure introduces a problem if we want to parallelize the computation of the commitments. We can't simply parallelize the for-loop to use $\frac{t}{8}$ iterations, as the while loop might run for a different number of iterations for each commitment. Additionally, although the computation of two different commitments is independent, the computation of the same commitment (after a failure) is dependent on the previous computation of that commitment. This means that we also can't parallelize the while-loop.
+This structure introduces a problem if we want to parallelize the computation of the commitments. We cannot simply parallelize the for-loop to use $\frac{t}{8}$ iterations, as the while loop might run for a different number of iterations for each commitment. Additionally, although the computation of two different commitments is independent, the computation of the same commitment (after a failure) is dependent on the previous computation of that commitment. This means that we also cannot parallelize the while-loop.
 
 \subsubsection{Optimization}
 \label{sec:commitmentparallelizationoptimization}
-We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we will start by running the first computation attempt for each commitment. If a computation fails, we will store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we will run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This approach is inspired by \cite{IIS2023HighLevel}. It is suitable for parallelization and has the following structure:
+We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we start by running the first computation attempt for each commitment. If a computation fails, we store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This approach is inspired by \cite{IIS2023HighLevel}. It is suitable for parallelization and has the following structure:
 \begin{verbatim}
   // Initial definitions and loading
   while (there are uncomputed/failed commitments) {
@@ -1398,7 +1385,7 @@ We can overcome the aforementioned problems by using a different approach to par
   }
   // Final operations
 \end{verbatim}
-Of course, this introduces some overhead, as steps 1 and 3 in the structure above can not be parallelized and take slightly more time than their equivalent in the reference implementation. However, the parallelization of step 2 will result in a significant speedup, as the computation of the commitments itself is by far the most time-consuming part of the MEDS implementation.
+Of course, this introduces some overhead, as steps 1 and 3 in the structure above cannot be parallelized and take slightly more time than their equivalent in the reference implementation. However, the parallelization of step 2 will result in a significant speedup, as the computation of the commitments itself is by far the most time-consuming part of the MEDS implementation.
 
 \subsubsection{Verification}
 For the signature verification algorithm, the same approach can be used with a few minor adjustments. The verification algorithm is shown in Algorithm \ref{alg:medsverifyoverview}. As can be seen, the verification of a commitment can be done in two ways. If $h_i$ is not zero, we compute the isometry mapping based on the commitment that is contained in the signature. If $h_i$ is zero, we re-compute the isometry mapping in the same way as in the signing algorithm.
@@ -1410,9 +1397,9 @@ A key observation is that in both cases, the same matrix multiplication and isom
 Theoretically, we should expect that this approach will result in a speedup factor of 8. However, there are a few important reasons that will prevent us from reaching this speedup factor:
 \begin{enumerate}
   \item \textbf{Overhead}:\\
-  As mentioned earlier, the parallelization approach introduces some overhead. This overhead is caused by the fact that we can't parallelize the loading of the data and the storing of the results.
+  As mentioned earlier, the parallelization approach introduces some overhead. This overhead is caused by the fact that we cannot parallelize the loading of the data and the storing of the results.
   \item \textbf{Memory Bandwidth}:\\
-  The parallelization approach will result in a much higher memory bandwidth usage, as the inputs and outputs of each supplemental algorithm are now 8 times larger. This has the implication that the inputs and outputs to supplemental algorithms will no longer fit in the L1 cache of the CPU, which will result in a larger amount of cache misses, causing a severe slowdown.
+  The parallelization approach will result in a much higher memory bandwidth usage, as the inputs and outputs of each supplemental algorithm are now 8 times larger. This implies that the inputs and outputs to supplemental algorithms will no longer fit in the L1 cache of the CPU, which will result in a larger amount of cache misses, causing a severe slowdown.
 \end{enumerate}
 
 \section{Bitstream filling}
@@ -1421,7 +1408,7 @@ After the commitments are computed, the resulting matrices are hashed, after whi
 
 The main advantage of this approach is that the number of 8-bit values that need to be hashed is reduced by a factor of $\frac{16}{12} = \frac{4}{3}$, lowering the number of calls to the hash function. However, it also comes with the disadvantage that the process of filling the bitstream is more complex and time-consuming than the alternative of changing the pointer type.
 
-In this section, we will discuss the optimization of the existing approach for filling the bitstream. The alternative approach of changing the pointer type is left as future work, see Section \ref{sec:futureworkopt}.
+In this section, we discuss the optimization of the existing approach for filling the bitstream. The alternative approach of changing the pointer type is left as future work, see Section \ref{sec:futureworkopt}.
 
 \subsection{Optimizing the existing approach}
 The reference implementation\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/ref/src/bitstream.c}} for filling the bitstream is generalized to work with up to 32 bits per value and therefore has to keep track of and update the current bit position in the bitstream. This means that we can save some time by using a specialized approach for filling bitstreams with 12-bit values.
@@ -1451,16 +1438,16 @@ Our optimization relies on the observation that two 12-bit values can be convert
 \label{sec:hashfunctionoptimization}
 The result of the computation of each commitment is a large matrix. To convert these commitments into a set of challenges (as is required by the Fiat-Shamir structure, see Section \ref{sec:fiatshamir}), the commitments are hashed (using the SHAKE256 hash function) into a single KECCAK state. This state is then converted into an array of $t$ challenges.
 
-The commitment matrices are hashed in a sequential manner, meaning that to hash commitment $i$, we are dependent on the hash output of commitment $i - 1$. The structure of this hashing process is depicted in Figure \ref{fig:hashstructure}. In this figure, $\tilde{\textbf{G}}_i$ represents the commitment matrix for commitment $i$, converted such that it is stored in an array of $k(mn - k)$ unsigned 8-bit integers (see Section \ref{sec:parametersets} for values of $m$, $n$, and $k$). $\textit{Hash}_1$ represents a call to SHAKE256, which in turn calls the Keccak-f[1600] permutation until the entire input array is absorbed. $s_i$ represents the intermediate KECCAK state after hashing commitment $i$, where $s_0$ is 0. The resulting state $s_t$ is used to generate the array of challenges.
+The commitment matrices are hashed sequentially, meaning that to hash commitment $i$, we are dependent on the hash output of commitment $i - 1$. The structure of this hashing process is depicted in Figure \ref{fig:hashstructure}. In this figure, $\tilde{\textbf{G}}_i$ represents the commitment matrix for commitment $i$, converted such that it is stored in an array of $k(mn - k)$ unsigned 8-bit integers (see Section \ref{sec:parametersets} for values of $m$, $n$, and $k$). $\textit{Hash}_1$ represents a call to SHAKE256, which in turn calls the Keccak-f[1600] permutation until the entire input array is absorbed. $s_i$ represents the intermediate KECCAK state after hashing commitment $i$, where $s_0$ is 0. The resulting state $s_t$ is used to generate the array of challenges.
 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{hash/hash_struct_seq.png}
-  \caption{MEDS commitment hashing structure.}
+  \caption{MEDS commitment hashing structure. $\tilde{\textbf{G}_i}$ represents the commitment matrix for commitment $i$, $\textit{Hash}_1$ represents a call to SHAKE256, and $s_i$ represents the intermediate KECCAK state after hashing commitment $i$.}
   \label{fig:hashstructure}
 \end{figure}
 
-The hashing process for a single commitment is already quite computationally expensive, as it requires $\frac{8 \cdot k(mn-k)}{1600}$ calls to the Keccak-f[1600] permutation (which operates on 1600 bits at a time). For parameter set 3 (see Section \ref{sec:parametersets}), this results in over 196 calls to the permutation. Additionally, the hashing process is not parallelizable because of the sequantial structure of the process. The profiling results (see Section \ref{sec:medsprofilingresults}) show that the hashing process takes up a little over 5\% of the total execution time of signing and verification, which makes it worthwhile to explore possible optimizations.
+The hashing process for a single commitment is already quite computationally expensive, as it requires $\frac{8 \cdot k(mn-k)}{1600}$ calls to the Keccak-f[1600] permutation (which operates on 1600 bits at a time). For parameter set 3 (see Section \ref{sec:parametersets}), this results in over 196 calls to the permutation. Additionally, the hashing process is not parallelizable because of the sequential structure of the process. The profiling results (see Section \ref{sec:medsprofilingresults}) show that the hashing process takes up a little over 5\% of the total execution time of signing and verification, which makes it worthwhile to explore possible optimizations.
 
 \subsection{Hash structure optimization}
 There is little to no room for improvement in the actual SHAKE256 hash function, as it (and the underlying KECCAK permutation) is already widely studied and optimized. However, we can optimize the structure of the hashing process in such a way that we can compute the hashing result for multiple commitments in parallel. To do this, we need to alter the structure of the hashing process. This altered structure is depicted in Figure \ref{fig:hashstructureopt}. In this structure, the hashing structure is split into two stages:
@@ -1475,36 +1462,36 @@ The resulting structure introduces a small amount of overhead, as stage 2 requir
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{hash/hash_struct_par.png}
-  \caption{Optimized MEDS commitment hashing structure.}
+  \caption{Optimized MEDS commitment hashing structure. $\tilde{\textbf{G}_i}$ represents the commitment matrix for commitment $i$, $\textit{Hash}_1$ and $\textit{Hash}_2$ represent calls to SHAKE256, and $i_i$ and $s_t$ represent intermediate and final KECCAK states, respectively.}
   \label{fig:hashstructureopt}
 \end{figure}
 
-Unfortunately, the final state $s_t$ that the optimized structure generates is different from the final state that the original structure generates. This means that the resulting challenges will also be different between the two structures. Although this does not compromise the security of the scheme, it does meen that the optimized and reference implementations are not compatible with each other. Therefore, we leave this optimized hash structure as a suggested change to the MEDS scheme.
+Unfortunately, the final state $s_t$ that the optimized structure generates is different from the final state that the original structure generates. This means that the resulting challenges will also be different between the two structures. Although this does not compromise the security of the scheme, it does mean that the optimized and reference implementations are not compatible with each other. Therefore, we leave this optimized hash structure as a suggested change to the MEDS scheme.
 
 \subsection{Implementation}
-The implementation of the optimized hash structure into the MEDS implementation is trivial, and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package \cite{xkcp} does not contain vectorized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer \cite{becker2022hybrid} has resulted in a large set of optimized and vectorized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
+The implementation of the optimized hash structure into the MEDS implementation is trivial and requires only one important detail: a parallelized version of SHAKE256, optimized for the ARMv8 architecture. The extended KECCAK code package \cite{xkcp} does not contain vectorized implementations of the Keccak-f[1600] permutation for ARMv8 (only for ARMv7). Fortunately, recent research by Becker and Kannwischer \cite{becker2022hybrid} has resulted in a large set of optimized and vectorized implementations of the Keccak-f[1600] permutation for ARMv8 and various extensions of the ARMv8 architecture.
 
-We have benchmarked these implementations on the Cortex-A72 and found that the \texttt{keccak\_f1600\_x4\_hybrid\_asm\_v3p}\footnote{\url{https://gitlab.com/arm-research/security/pqax/-/blob/master/asm/manual/keccak\_f1600/keccak\_f1600\_x4\_hybrid\_asm\_v3p.s}} optimized permutation (which is able to process 4 states in parallel) requires the lowest amount of cycles per state permutation. As the number of challenges $t$ is a multiple of 4 for all MEDS parameter sets that we consider, this means that we can easily plug this optimized permutation into the new hash structure.
+We have benchmarked these implementations on the Cortex-A72 and found that the \texttt{keccak\_f1600\_x4\_hybrid\_asm\_v3p}\footnote{\url{https://gitlab.com/arm-research/security/pqax/-/blob/master/asm/manual/keccak\_f1600/keccak\_f1600\_x4\_hybrid\_asm\_v3p.s}} optimized permutation (which can process 4 states in parallel) requires the lowest amount of cycles per state permutation. As the number of challenges $t$ is a multiple of 4 for all MEDS parameter sets that we consider, this means that we can easily plug this optimized permutation into the new hash structure.
 
 \section{Non-constant-time implementations}
 \label{sec:nonconstanttime}
-To prevent timing and cache-based side-channel attacks (see Section \ref{sec:optimizingcrypto}), it is important that the MEDS implementation is constant-time. However, this is only the case for the key generation and signing phases of MEDS. The verification phase is not required to be constant-time, as it operates only on public data. This means that we can use non-constant time code for the verification phase. In this section, we will list the functions that can be optimized using non-constant time implementations. The implementation of each optimization is slightly different for the low-level and high-level approach, but the idea is the same.
+To prevent timing and cache-based side-channel attacks (see Section \ref{sec:optimizingcrypto}), the MEDS implementation must be constant-time. However, this is only the case for the key generation and signing phases of MEDS. The verification phase is not required to be constant-time, as it operates only on public data. This means that we can use non-constant time code for the verification phase. In this section, we list the functions that can be optimized using non-constant time implementations. The implementation of each optimization is slightly different for the low-level and high-level approaches, but the idea is the same.
 
 \subsection{Finite field inversion}
 MEDS requires the inversion of field elements over the finite field $\mathbb{F}_{4093}$. The constant-time algorithm used in the reference implementation utilizes an optimal addition chain which takes a few hundred cycles to execute. However, as the number of possible field elements is limited to 4093, we can precompute the inverse of each field element and store it in a lookup table. This allows us to invert a field element simply by executing an array lookup, which takes only a few cycles to execute.
 
 \subsection{Matrix systemization}
-During matrix systemization (shown in Algorithm \ref{alg:systemizer}), the algorithm spends some time on making sure the leading coefficient of each row is nonzero (it almost always is). As the implementation is constant time, this entire process is execute even if the leading coefficient is already nonzero. In a non-constant time implementation, we can add a check to see if the leading coefficient is zero, and if it is not, skip the entire process of making it nonzero.
+During matrix systemization (shown in Algorithm \ref{alg:systemizer}), the algorithm spends some time making sure the leading coefficient of each row is nonzero (it almost always is). As the implementation is constant time, this entire process is executed even if the leading coefficient is already nonzero. In a non-constant time implementation, we can add a check to see if the leading coefficient is zero, and if it is not, skip the entire process of making it nonzero.
 
 \chapter{Results}
 \label{ch:results}
-In this chapter, we will present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. The code was compiled for the ARMv8 architecture and was ran on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. In all tables and figures, the numbers shown represent the number of cycles or megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
+In this chapter, we present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. The code was compiled for the ARMv8 architecture and was run on a Raspberry Pi 4 Model B with a 64-bit quad-core ARM Cortex-A72 CPU clocked at 1.5 GHz. In all tables and figures, the numbers shown represent the number of cycles, kilocycles (KCycles, 1 KCycle = 1 thousand cycles), or megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
 
-We will first look at the performance results of the three algorithms that were optimized specifically for the low-level approach in Section \ref{sec:resultslowlevel}. After that, we will look at the post-optimization profiling results of the functions that originally took up the most time in the MEDS implementation in Section \ref{sec:profilingoptimizations}. Finally, we will look at the overall performance results of all three MEDS parameter sets for both the reference implementation, low-level optimized implementation, and high-level optimized implementation in Section \ref{sec:overallperformance}.
+We first look at the performance results of the three algorithms that were optimized specifically for the low-level approach in Section \ref{sec:resultslowlevel}. After that, we look at the post-optimization profiling results of the functions that originally took up the most time in the MEDS implementation in Section \ref{sec:profilingoptimizations}. Finally, we look at the overall performance results of all three MEDS parameter sets for both the reference implementation, low-level optimized implementation, and high-level optimized implementation in Section \ref{sec:overallperformance}.
 
 \section{Low-level optimizations}
 \label{sec:resultslowlevel}
-In our low-level optimization approach (see Section \ref{sec:lowleveloptimization}), we optimized matrix multiplication, matrix systemization, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. In order to determine how close we got to this lower bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the calculated minimum bound for each function (part), this gives us an understanding of how close we got to a perfect optimization. The results for these optimizations are shown in Table \ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the median of the timing results.
+In our low-level optimization approach (see Section \ref{sec:lowleveloptimization}), we optimized matrix multiplication, matrix systemization, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. To determine how close we got to this lower bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the calculated minimum bound for each function (part), this gives us an understanding of how close we got to a perfect optimization. The results for these optimizations are shown in Table \ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the median of the timing results.
 
 \begin{table}
   \centering
@@ -1537,7 +1524,7 @@ In our low-level optimization approach (see Section \ref{sec:lowleveloptimizatio
   \label{tab:lowleveloptimizationresults}
 \end{table}
 
-The results show that we were able to optimize the matrix multiplication function for the $32 \times 32$ case to within 2\% of the lower bound. This case is not actually used in MEDS, but we added it to show that the optimization works almost perfectly for matrices of which the dimensions are a multiple of 8. The other cases show that the optimization works fairly well for matrices with a number of rows and columns larger than 8. These cases are unable to reach the lower bound because of the overhead of having to deal with dimensions that are not a multiple of 8, but the results are still very good. The worst case arises when one of the input matrices has only 2 rows. This makes sense, as we are unable to use full 8-way parallelization and therefore lose performance. The optimization of matrix multiplication for these cases might be improved by using a different approach to parallelization, which we leave as future work (see Section \ref{sec:futureworkopt}).
+The results show that we were able to optimize the matrix multiplication function for the $32 \times 32$ case to within 2\% of the lower bound. This case is not used in MEDS, but we added it to show that the optimization works almost perfectly for matrices of which the dimensions are a multiple of 8. The other cases show that the optimization works fairly well for matrices with more than 8 rows and columns. These cases are unable to reach the lower bound because of the overhead of having to deal with dimensions that are not a multiple of 8, but the results are still very good. The worst case arises when one of the input matrices has only 2 rows. This makes sense, as we are unable to use full 8-way parallelization and therefore lose performance. The optimization of matrix multiplication for these cases might be improved by using a different approach to parallelization, which we leave as future work (see Section \ref{sec:futureworkopt}).
 
 When looking at matrix systemization, we see that we get very close to the lower bound for most cases. The exceptions are the cases where the matrix size is relatively small, which is to be expected. For these matrix sizes, the overhead of having to deal with dimensions that are not a multiple of 8 is relatively large, compared to the parallelization speedup.
 
@@ -1545,7 +1532,7 @@ Lastly, we consider the isometry derivation function. The results show that we w
 
 \section{Profiling implementation variants}
 \label{sec:profilingoptimizations}
-The results of profiling the reference implementation were shown earlier in Section \ref{sec:medsprofilingresults}. In this section, we profile the optimized implementations (both low-level and high-level) for parameter set MEDS-55520 to obtain an understanding of how much impact each optimization had. The relative results for the other two parameter sets are very similar and are therefore omitted. As the main goal of profiling does not revolve around getting accurate measurements but rather around understanding the relative performance of (functions within) the different implementations, we will not show the exact numbers here. We will instead depict the results through bar charts. It should be noted that the results are not completely accurate, as we only ran one profiling iteration for each of the three algorithms. The profiling results are shown in Figures \ref{fig:results_profile_keygen_MEDS-55520} (key generation), \ref{fig:results_profile_signing_MEDS-55520} (signing), and \ref{fig:results_profile_verify_MEDS-55520} (verification).
+The results of profiling the reference implementation were shown earlier in Section \ref{sec:medsprofilingresults}. In this section, we profile the optimized implementations (both low-level and high-level) for parameter set MEDS-55520 to obtain an understanding of how much impact each optimization had. The relative results for the other two parameter sets are very similar and are therefore omitted. As the main goal of profiling does not revolve around getting accurate measurements but rather around understanding the relative performance of (functions within) the different implementations, we do not show the exact numbers here. We instead depict the results through bar charts. It should be noted that the results are not completely accurate, as we only ran one profiling iteration for each of the three algorithms. The profiling results are shown in Figures \ref{fig:results_profile_keygen_MEDS-55520} (key generation), \ref{fig:results_profile_signing_MEDS-55520} (signing), and \ref{fig:results_profile_verify_MEDS-55520} (verification).
 
 \begin{figure}
   \centering
@@ -1571,15 +1558,15 @@ The results of profiling the reference implementation were shown earlier in Sect
 The figures show significant improvements for all three algorithms in both the low-level and high-level optimized implementations, with a few notable exceptions:
 \begin{itemize}
   \item The key generation algorithm used in the high-level optimized implementation is the same as the one in the reference implementation. This is because the parameter sets that we consider do not allow for large speedup factors for the high-level optimizations of this algorithm. We leave this as future work, where we explain this in more detail (see Section \ref{sec:futureworkopt}).
-  \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices can not be optimized, as it relies on the generation of random field elements using the SHAKE256 hash function (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section \ref{sec:bitstreamfilling}, which we leave as future work.
-  \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 hash function is already optimized and can not be further optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section \ref{sec:hashfunctionoptimization}.
+  \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices cannot be optimized, as it relies on the generation of random field elements using the SHAKE256 hash function (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section \ref{sec:bitstreamfilling}, which we leave as future work.
+  \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 hash function is already optimized and cannot be further optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section \ref{sec:hashfunctionoptimization}.
 \end{itemize}
 
 Besides these exceptions, the results show that the optimizations have been very effective. Particularly matrix multiplication shows a huge speedup, but the other functions also show significant improvements. We note the following observations:
 \begin{itemize}
-  \item The low-level optimized matrix multiplication function is faster than its high-level optimized counterpart. We believe that this is due to the fact that the high-level optimized function needs to access 8 times as many values in memory as the low-level optimized function. This results in a larger amount of cache misses, which slows down the function.
-  \item The high-level optimized matrix systemization function is faster than its low-level optimized counterpart. We believe that this is due to the fact that the low-level optimized function is not able to parallelize every aspect of the systemization process (such as the inversion of field elements), whereas the high-level optimized function is able to do this. This results in a larger speedup for the high-level optimized function.
-  \item The high-level optimized isometry derivation function is slightly faster than its low-level optimized counterpart. We believe that this is due to the fact that the high-level optimized function parallelizes the entire function, whereas the low-level optimized function only parallelizes the two most time-consuming loops. The low-level optimized function might therefore benefit from further optimization, which we leave as future work (see Section \ref{sec:futureworkopt}).
+  \item The low-level optimized matrix multiplication function is faster than its high-level optimized counterpart. We believe that this is because the high-level optimized function needs to access 8 times as many values in memory as the low-level optimized function. This results in a larger amount of cache misses, which slows down the function.
+  \item The high-level optimized matrix systemization function is faster than its low-level optimized counterpart. We believe that this is because the low-level optimized function is not able to parallelize every aspect of the systemization process (such as the inversion of field elements), whereas the high-level optimized function can do this. This results in a larger speedup for the high-level optimized function.
+  \item The high-level optimized isometry derivation function is slightly faster than its low-level optimized counterpart. We believe that this is because the high-level optimized function parallelizes the entire function, whereas the low-level optimized function only parallelizes the two most time-consuming loops. The low-level optimized function might therefore benefit from further optimization, which we leave as future work (see Section \ref{sec:futureworkopt}).
 \end{itemize}
 
 \section{Overall performance}
@@ -1602,37 +1589,70 @@ The exact results of the benchmarks are shown in Table \ref{tab:overall_benchmar
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{plots/barplot_MEDS-21595.png}
-  \caption{Overall performance of MEDS-21595 variants.}
+  \caption{Overall performance of MEDS-21595 variants. Low-Level refers to the low-level optimized implementation and High-Level to the high-level optimized implementation. The `New Hash Structure' variants refer to the optimized hash structure described in Section \ref{sec:hashfunctionoptimization}.}
   \label{fig:overal_performance_bar_chart_MEDS-21595}
 \end{figure}
 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{plots/barplot_MEDS-55520.png}
-  \caption{Overall performance of MEDS-55520 variants.}
+  \caption{Overall performance of MEDS-55520 variants. Low-Level refers to the low-level optimized implementation and High-Level to the high-level optimized implementation. The `New Hash Structure' variants refer to the optimized hash structure described in Section \ref{sec:hashfunctionoptimization}.}
   \label{fig:overal_performance_bar_chart_MEDS-55520}
 \end{figure}
 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{plots/barplot_MEDS-122000.png}
-  \caption{Overall performance of MEDS-122000 variants.}
+  \caption{Overall performance of MEDS-122000 variants. Low-Level refers to the low-level optimized implementation and High-Level to the high-level optimized implementation. The `New Hash Structure' variants refer to the optimized hash structure described in Section \ref{sec:hashfunctionoptimization}.}
   \label{fig:overal_performance_bar_chart_MEDS-122000}
 \end{figure}
 
-The results show that both the low-level and high-level optimizations have resulted in a significant speedup of the MEDS implementation (with the exception of high-level key generation). Crucially, low-level optimized implementation is faster than the high-level optimized implementation for all algorithms and parameter sets. This is due to the fact that the high-level optimized variant needs to transfer larger amounts of data to and from the various functions it uses, causing a larger amount of cache misses, which slows down the implementation.
+The results show that both the low-level and high-level optimizations have resulted in a significant speedup of the MEDS implementation (except for high-level key generation). Crucially, low-level optimized implementation is faster than the high-level optimized implementation for all algorithms and parameter sets. This is because the high-level optimized variant needs to transfer larger amounts of data to and from the various functions it uses, causing a larger amount of cache misses, which slows down the implementation.
 
 Additionally, the results show that the alternative hash structure presented in Section \ref{sec:hashfunctionoptimization} results in a small speedup for the signing and verification algorithms. It does not have a noticeable impact when applied to the reference implementation.
 
 \section{Comparison to similar schemes}
-\todo[inline]{Include a section that compares the performance of MEDS to similar schemes.}
+\label{sec:comparison}
+We compare the performance of MEDS to the performance of other digital signature schemes. Note that we compare to the self-reported performance of the schemes, which means the results are not directly comparable. Nevertheless, the comparison indicates the relative performance of the schemes. The results of the comparison are shown in Table \ref{tab:comparison}.
+
+\begin{table}
+  \centering
+  \begin{tabular}{p{1.1cm}lrrr}
+    \toprule
+    \textbf{NIST Level} & \textbf{Work} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+    \midrule
+    \multirow{3}{*}{I} & Falcon512 \cite{nguyen2023fast} & - & 1044.6 & 59.9 \\
+     & Dilithium2 \cite{becker2021neon} & 269.7 & 649.2 & 272.8 \\
+     & MEDS-21595 (ours) & 2821.4 & 248223.4 & 229793.6 \\
+    \midrule
+    \multirow{2}{*}{III} & Dilithium3 \cite{becker2021neon} & 515.8 & 1089.4 & 447.5 \\
+     & MEDS-55520 (ours) & 7184.6 & 927910.3 & 878268.2 \\
+    \midrule
+    \multirow{3}{*}{V} & Falcon1024 \cite{nguyen2023fast} & - & 2137.0 & 125.2 \\
+     & Dilithium5 \cite{becker2021neon} & 782.8 & 1437.0 & 764.9 \\
+     & MEDS-122000 (ours) & 16646.2 & 2794525.4 & 2693826.8 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Comparison of MEDS to (self-reported times of) other digital signature schemes that have been optimized for ARMv8. The numbers represent the number of KCycles that the key generation, signing, and verification algorithms take to execute on an ARM Cortex-A72 CPU.}
+  \label{tab:comparison}
+\end{table}
+
+These results are not particularly favourable for MEDS. For all NIST levels, MEDS is significantly slower than Falcon and Dilithium.
 
 \section{Discussion}
-\todo[inline]{Answer the research questions.}
+Throughout our research, we have found answers to all our research questions.
+\begin{itemize}[left=35pt,labelsep=15pt]
+  \item[RQ I.] From our profiling efforts in Chapter \ref{ch:profiling}, we have found that the matrix multiplication, matrix systemization, and isometry derivation functions are the most time-consuming functions in the MEDS implementation. Together, they account for over 87 \% of the total execution time of the MEDS implementation. After optimizing these functions, we have found that these functions still take up a significant amount of the total execution time. Additionally, we found that the KECCAK permutation now takes up a significant amount of time in all three algorithms.
+  \item[RQ II.] We have found that the low-level optimization approach results in a large speedup for all parameter sets. The high-level optimization approach is less effective but still results in a significant speedup. On architectures with larger cache sizes and/or larger SIMD registers, the high-level optimization approach might be more effective. As for the low-level approach, we optimized the matrix multiplication, matrix systemization, and isometry derivation functions using NEON instructions. Additionally, we obtained a speedup by optimizing the bitstream filling process and suggested a new hash structure that allows for parallelization of the hashing process, providing another small speedup.
+  \begin{itemize}
+    \item[a)] The bitstream filling and hash restructure speedups can be applied to the reference implementation as they do not require any ARMv8-specific instructions. The remaining optimizations (which make up the bulk of the speedup) are ARMv8-specific and can therefore not directly be applied to the reference implementation. However, most other architectures have their own SIMD instruction set, which can be used in the same way as NEON instructions and should achieve similar speedups.
+  \end{itemize}
+  \item[RQ III.] From the comparison to similar schemes, we have found that MEDS is significantly slower than Falcon and Dilithium. For NIST Levels 1 and 3, the difference is a factor of 1000. For Level 5, the difference becomes even larger: a factor of 10000. Although this suggests that MEDS is not a viable alternative to these schemes, it is important to note that MEDS relies on a different mathematical problem than Falcon and Dilithium. This means that MEDS is not directly comparable to these schemes and that the choice between these schemes should be based on the security requirements of the application.
+\end{itemize}
 
 \chapter{Future Work}
 \label{ch:futurework}
-Although we have optimized the MEDS implementation significantly, we have mentioned several limitations and possible improvements. In this chapter, we will discuss these ideas in more detail. Additionally, there are some other unexplored but interesting topics that we will discuss.
+Although we have optimized the MEDS implementation significantly, we have mentioned several limitations and possible improvements. In this chapter, we discuss these ideas in more detail. Additionally, there are some other unexplored but interesting topics that we discuss.
 
 \section{Further optimization possibilities}
 \label{sec:futureworkopt}
@@ -1656,17 +1676,17 @@ We have not applied high-level optimizations to the key generation function. The
 We have focused on optimizing the performance of the MEDS implementation, but we have not analyzed the memory and power usage of any of the implementations. It would be interesting to see what the impact of our optimizations on memory and power usage is. Additionally, the possibilities for further optimizations in these areas could be explored, which is especially relevant for embedded systems and IoT devices.
 
 \subsection*{Optimizing for other CPU architectures}
-We have optimized the MEDS implementation for the ARMv8 architecture, but there are many other CPU architectures that support SIMD instructions. One interesting architecture to explore is the AVX512 architecture, which is supported by Intel CPUs. AVX512 is able to process 4 times as many field elements in parallel compared to ARMv8, which could result in a significant speedup of the MEDS implementation.
+We have optimized the MEDS implementation for the ARMv8 architecture, but many other CPU architectures support SIMD instructions. One interesting architecture to explore is the AVX512 architecture, which is supported by Intel CPUs. AVX512 can process 4 times as many field elements in parallel compared to ARMv8, which could result in a significant speedup of the MEDS implementation.
 
 \chapter{Conclusion}
 \label{ch:conclusion}
-From our results in Chapter \ref{ch:results} (and more specifically Section \ref{sec:overallperformance}), it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with MEDS-21595 being sped up by a factor of 2.8, 3.5, and 3.7; MEDS-55520 by a factor of 3.1, 3.8, and 4.0; and MEDS-122000 by a factor of 4.2, 4.8, and 4.9, for key generation, signing, and verification, respectively. The high-level optimization approach (as described in Section \ref{sec:highleveloptimization}) has provided a smaller speedup due to the limitations in the cache size of the ARM Cortex-A72 CPU. This approach might provide a larger speedup on CPUs with larger cache sizes.
+From the results in Chapter \ref{ch:results}, it is clear that our optimizations have resulted in a significant speedup of the MEDS implementation. The low-level optimization approach (as described in Section \ref{sec:lowleveloptimization}) has provided the highest speedup, with MEDS-21595 being sped up by a factor of 2.9, 3.6, and 3.9; MEDS-55520 by a factor of 3.2, 3.9, and 4.1; and MEDS-122000 by a factor of 4.3, 4.9, and 5.1, for key generation, signing, and verification, respectively. The high-level optimization approach (as described in Section \ref{sec:highleveloptimization}) has provided a smaller speedup due to the limitations in the cache size of the ARM Cortex-A72 CPU. This approach might provide a larger speedup on CPUs with larger cache sizes.
 
 We present an alternative hash structure in Section \ref{sec:hashfunctionoptimization} that improves the performance of signing and verification by a small amount, at a negligible cost to the non-parallelized reference implementation. As this alternative hash structure results in different challenges and signatures, we leave it as a suggested change to the MEDS scheme.
 
 We have shown that the MEDS implementation is very suitable for optimization using SIMD instructions. The achieved speedup on ARMv8 is significant, but we expect that future research can achieve even larger speedups on other architectures that support SIMD instructions, such as AVX512 \cite{intel-avx512}, on which 4 times as many field elements can be processed in parallel compared to ARMv8.
 
-\todo[inline]{Add comparison information to other digital signature schemes.}
+Compared to other post-quantum digital signature schemes that have been optimized for ARMv8, MEDS is significantly slower, with the difference being at least a factor of 1000. However, MEDS relies on a different mathematical problem than these schemes, which means that MEDS is not directly comparable to these schemes. The choice between these schemes should be based on the security requirements of the application.
 
 \bibliographystyle{plain}
 \bibliography{bibliofile}
