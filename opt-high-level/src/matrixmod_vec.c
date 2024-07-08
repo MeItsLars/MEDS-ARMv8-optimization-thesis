@@ -120,7 +120,7 @@ pmod_mat_s_vec_t pmod_mat_syst_ct_partial_swap_backsub_vec(pmod_mat_vec_t *M, in
           pmod_mat_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
           pmod_mat_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-          pmod_mat_vec_t tmp = REDUCE_VEC_13BIT(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
+          pmod_mat_vec_t tmp = FREEZE_VEC(ADD_VEC(Mrc, AND_VEC(val, EQ0_VEC(Mrr))));
           pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
         }
       }

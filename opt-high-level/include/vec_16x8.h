@@ -66,7 +66,6 @@
 #define MEDS_p_VEC_16x8 vdupq_n_u16(MEDS_p)
 #define MEDS_p_VEC_32x4 vdupq_n_u32(MEDS_p)
 
-#define MAGIC_VEC_13BIT vdupq_n_u16(0x2007)     // k = 25
 #define MAGIC_VEC_32BIT vdupq_n_u32(0x80180481) // k = 43
 
 #define FREEZE_VEC(_v2)                    \
@@ -75,17 +74,6 @@
     _t2 = vcgeq_u16(_v2, MEDS_p_VEC_16x8); \
     _t2 = vandq_u16(_t2, MEDS_p_VEC_16x8); \
     vsubq_u16(_v2, _t2);                   \
-  })
-
-#define REDUCE_VEC_13BIT(_v4)                                               \
-  ({                                                                        \
-    uint16x8_t _t4_1 = _v4;                                                 \
-    uint16x8_t _t4_2 = MAGIC_VEC_13BIT;                                     \
-    uint32x4_t _t4_3 = vmull_u16(vget_low_u16(_t4_1), vget_low_u16(_t4_2)); \
-    uint32x4_t _t4_4 = vmull_high_u16(_t4_1, _t4_2);                        \
-    uint16x8_t _t4_5 = vuzp2q_u16((uint16x8_t)_t4_3, (uint16x8_t)_t4_4);    \
-    uint16x8_t _t4_6 = vshrq_n_u16(_t4_5, 25 - 16);                         \
-    vmlsq_u16(_t4_1, _t4_6, MEDS_p_VEC_16x8);                               \
   })
 
 #define REDUCE_VEC_32BIT(_v4)                                               \
@@ -102,14 +90,6 @@
 
 #else
 // Use a simple reduction technique in order for the 'toy' parameter set to function.
-#define REDUCE_VEC_13BIT(_v4)   \
-  ({                            \
-    uint16x8_t _t4;             \
-    for (int i = 0; i < 8; i++) \
-      _t4[i] = _v4[i] % MEDS_p; \
-    _t4;                        \
-  })
-
 #define REDUCE_VEC_32BIT(_v4)   \
   ({                            \
     uint16x4_t _t4;             \
@@ -117,7 +97,6 @@
       _t4[i] = _v4[i] % MEDS_p; \
     _t4;                        \
   })
-#define FREEZE_VEC(_v5) REDUCE_VEC_13BIT(_v5)
 #endif
 
 #define MUL_REDUCE_VEC(_v1, _V2)                               \
