@@ -79,6 +79,20 @@ static float median_2(long long arr[], int measurements, int print)
     return differences[n / 2];
 }
 
+static float min(long long arr[], int measurements)
+{
+  long long min = arr[1] - arr[0];
+  for (int i = 1; i < measurements - 1; i++)
+  {
+    long long diff = arr[i + 1] - arr[i];
+    if (diff < min)
+    {
+      min = diff;
+    }
+  }
+  return min;
+}
+
 static float standard_deviation(long long arr[], int n)
 {
   float mean = 0;

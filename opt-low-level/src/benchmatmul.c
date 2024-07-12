@@ -1135,17 +1135,17 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
   asm_matmul_cycles[ROUNDS] = get_cyclecounter();
 
   // Calculate results
-  double matmul_median_cc = median_2(matmul_cycles, ROUNDS + 1, 0);
-  double intrinsic_matmul_median_cc = median_2(intrinsic_matmul_cycles, ROUNDS + 1, 0);
-  double asm_matmul_median_cc = median_2(asm_matmul_cycles, ROUNDS + 1, 0);
+  double matmul_minimum_cc = min(matmul_cycles, ROUNDS + 1);
+  double intrinsic_matmul_minimum_cc = min(intrinsic_matmul_cycles, ROUNDS + 1);
+  double asm_matmul_minimum_cc = min(asm_matmul_cycles, ROUNDS + 1);
 
   double min_cycles = (double)min_cycle_bound(m, o, n);
-  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 8);
-  double intrinsic_cycle_multiplier = intrinsic_matmul_median_cc / (min_cycles / 8);
-  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 8);
+  double matmul_cycle_multiplier = matmul_minimum_cc / (min_cycles / 8);
+  double intrinsic_cycle_multiplier = intrinsic_matmul_minimum_cc / (min_cycles / 8);
+  double asm_cycle_multiplier = asm_matmul_minimum_cc / (min_cycles / 8);
 
-  double intrinsic_improvement = (intrinsic_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
-  double asm_improvement = (asm_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
+  double intrinsic_improvement = (intrinsic_matmul_minimum_cc - matmul_minimum_cc) / matmul_minimum_cc * 100;
+  double asm_improvement = (asm_matmul_minimum_cc - matmul_minimum_cc) / matmul_minimum_cc * 100;
 
   int intrinsic_inequalities = 0;
   int asm_inequalities = 0;
@@ -1176,9 +1176,9 @@ void test_performance(char name[], int m, int n, int o, void (*function)(pmod_ma
 
   printf("Minimum cycle amount: %f\n", min_cycles);
   printf("Minimum cycle amount (8-way) parallel: %f\n", min_cycles / 8);
-  printf("Matmul median: %f\t(x%f)\n", matmul_median_cc, matmul_cycle_multiplier);
-  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_matmul_median_cc, intrinsic_cycle_multiplier);
-  printf("ASM median: %f\t(x%f)\n", asm_matmul_median_cc, asm_cycle_multiplier);
+  printf("Matmul minimum: %f\t(x%f)\n", matmul_minimum_cc, matmul_cycle_multiplier);
+  printf("Intrinsic minimum: %f\t(x%f)\n", intrinsic_matmul_minimum_cc, intrinsic_cycle_multiplier);
+  printf("ASM minimum: %f\t(x%f)\n", asm_matmul_minimum_cc, asm_cycle_multiplier);
 
   printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
   printf("Improvement (ASM): %f%%\n", asm_improvement);
@@ -1241,17 +1241,17 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
   asm_matmul_cycles[ROUNDS] = get_cyclecounter();
 
   // Calculate results
-  double matmul_median_cc = median_2(matmul_cycles, ROUNDS + 1, 0);
-  double asm_matmul8_median_cc = median_2(asm_matmul8_cycles, ROUNDS + 1, 0);
-  double asm_matmul_median_cc = median_2(asm_matmul_cycles, ROUNDS + 1, 0);
+  double matmul_minimum_cc = min(matmul_cycles, ROUNDS + 1);
+  double asm_matmul8_minimum_cc = min(asm_matmul8_cycles, ROUNDS + 1);
+  double asm_matmul_minimum_cc = min(asm_matmul_cycles, ROUNDS + 1);
 
   double min_cycles = (double)min_cycle_bound(m, o, n);
-  double matmul_cycle_multiplier = matmul_median_cc / (min_cycles / 4);
-  double asm8_cycle_multiplier = asm_matmul8_median_cc / (min_cycles / 4);
-  double asm_cycle_multiplier = asm_matmul_median_cc / (min_cycles / 4);
+  double matmul_cycle_multiplier = matmul_minimum_cc / (min_cycles / 4);
+  double asm8_cycle_multiplier = asm_matmul8_minimum_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_matmul_minimum_cc / (min_cycles / 4);
 
-  double asm8_improvement = (asm_matmul8_median_cc - matmul_median_cc) / matmul_median_cc * 100;
-  double asm_improvement = (asm_matmul_median_cc - matmul_median_cc) / matmul_median_cc * 100;
+  double asm8_improvement = (asm_matmul8_minimum_cc - matmul_minimum_cc) / matmul_minimum_cc * 100;
+  double asm_improvement = (asm_matmul_minimum_cc - matmul_minimum_cc) / matmul_minimum_cc * 100;
 
   int asm8_inequalities = 0;
   int asm_inequalities = 0;
@@ -1289,9 +1289,9 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
 
   printf("Minimum cycle amount: %f\n", min_cycles);
   printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
-  printf("Matmul median: %f\t(x%f)\n", matmul_median_cc, matmul_cycle_multiplier);
-  printf("ASM-8 median: %f\t(x%f)\n", asm_matmul8_median_cc, asm8_cycle_multiplier);
-  printf("ASM median: %f\t(x%f)\n", asm_matmul_median_cc, asm_cycle_multiplier);
+  printf("Matmul minimum: %f\t(x%f)\n", matmul_minimum_cc, matmul_cycle_multiplier);
+  printf("ASM-8 minimum: %f\t(x%f)\n", asm_matmul8_minimum_cc, asm8_cycle_multiplier);
+  printf("ASM minimum: %f\t(x%f)\n", asm_matmul_minimum_cc, asm_cycle_multiplier);
 
   printf("Improvement (ASM-8): %f%%\n", asm8_improvement);
   printf("Improvement (ASM): %f%%\n", asm_improvement);
@@ -1358,23 +1358,23 @@ void test_performance2(char name[], int m, int n, int o, void (*function)(pmod_m
   }
   new_matmul_cycles[MATMUL_ROUNDS - 1] = get_cyclecounter();
 
-  double old_matmul_median_cc = median_2(old_matmul_cycles, MATMUL_ROUNDS, 0);
-  double new_matmul_median_cc = median_2(new_matmul_cycles, MATMUL_ROUNDS, 0);
+  double old_matmul_minimum_cc = median_2(old_matmul_cycles, MATMUL_ROUNDS, 0);
+  double new_matmul_minimum_cc = median_2(new_matmul_cycles, MATMUL_ROUNDS, 0);
 
   printf("Addresses of the matrices:\n");
   printf("A2: %p\n", A2);
   printf("B2: %p\n", B2);
   printf("C2: %p\n", C2);
   float cycle_bound = min_cycle_bound(C_ROWS, A_COLS, C_COLS);
-  float improvement_possible = (new_matmul_median_cc / cycle_bound) * 100;
+  float improvement_possible = (new_matmul_minimum_cc / cycle_bound) * 100;
   // float old_matmul_std = standard_deviation(old_matmul_cycles, MATMUL_ROUNDS);
   // float new_matmul_std = standard_deviation(new_matmul_cycles, MATMUL_ROUNDS);
-  double percentage = new_matmul_median_cc / old_matmul_median_cc * 100;
-  double improvement = (new_matmul_median_cc - old_matmul_median_cc) / old_matmul_median_cc * 100;
+  double percentage = new_matmul_minimum_cc / old_matmul_minimum_cc * 100;
+  double improvement = (new_matmul_minimum_cc - old_matmul_minimum_cc) / old_matmul_minimum_cc * 100;
   printf("Minimum cycle bound: %f\n", cycle_bound);
   printf("Improvement possible: -%f%% (x%f%%)\n", (improvement_possible - 100), improvement_possible / 100);
-  printf("Old median: %f\n", old_matmul_median_cc);
-  printf("New median: %f\n", new_matmul_median_cc);
+  printf("Old minimum: %f\n", old_matmul_minimum_cc);
+  printf("New minimum: %f\n", new_matmul_minimum_cc);
   // printf("Old std: %f\n", old_matmul_std);
   // printf("New std: %f\n", new_matmul_std);
   printf("Percentage: %f%%\n", percentage);

@@ -587,20 +587,20 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
   asm_systemizer_cycles_nct[ROUNDS] = get_cyclecounter();
 
   // Calculate results
-  double systemizer_median_cc = median_2(systemizer_cycles, ROUNDS + 1, 0);
-  double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS + 1, 0);
-  double asm_systemizer_median_cc = median_2(asm_systemizer_cycles, ROUNDS + 1, 0);
-  double asm_systemizer_median_nct_cc = median_2(asm_systemizer_cycles_nct, ROUNDS + 1, 0);
+  double systemizer_minimum_cc = min(systemizer_cycles, ROUNDS + 1);
+  double intrinsic_systemizer_minimum_cc = min(intrinsic_systemizer_cycles, ROUNDS + 1);
+  double asm_systemizer_minimum_cc = min(asm_systemizer_cycles, ROUNDS + 1);
+  double asm_systemizer_minimum_nct_cc = min(asm_systemizer_cycles_nct, ROUNDS + 1);
 
   double min_cycles = (double)min_cycle_bound(r, c, max_r, swap, backsub);
-  double systemizer_cycle_multiplier = systemizer_median_cc / (min_cycles / 4);
-  double intrinsic_cycle_multiplier = intrinsic_systemizer_median_cc / (min_cycles / 4);
-  double asm_cycle_multiplier = asm_systemizer_median_cc / (min_cycles / 4);
-  double asm_nct_cycle_multiplier = asm_systemizer_median_nct_cc / (min_cycles / 4);
+  double systemizer_cycle_multiplier = systemizer_minimum_cc / (min_cycles / 4);
+  double intrinsic_cycle_multiplier = intrinsic_systemizer_minimum_cc / (min_cycles / 4);
+  double asm_cycle_multiplier = asm_systemizer_minimum_cc / (min_cycles / 4);
+  double asm_nct_cycle_multiplier = asm_systemizer_minimum_nct_cc / (min_cycles / 4);
 
-  double intrinsic_improvement = (intrinsic_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
-  double asm_improvement = (asm_systemizer_median_cc - systemizer_median_cc) / systemizer_median_cc * 100;
-  double asm_nct_improvement = (asm_systemizer_median_nct_cc - systemizer_median_cc) / systemizer_median_cc * 100;
+  double intrinsic_improvement = (intrinsic_systemizer_minimum_cc - systemizer_minimum_cc) / systemizer_minimum_cc * 100;
+  double asm_improvement = (asm_systemizer_minimum_cc - systemizer_minimum_cc) / systemizer_minimum_cc * 100;
+  double asm_nct_improvement = (asm_systemizer_minimum_nct_cc - systemizer_minimum_cc) / systemizer_minimum_cc * 100;
 
   int intrinsic_inequalities = intrinsic_res == systemizer_res ? 0 : 1;
   int asm_inequalities = asm_res == systemizer_res ? 0 : 1;
@@ -640,10 +640,10 @@ void test_performance(char name[], int r, int c, int max_r, int swap, int backsu
 
   printf("Minimum cycle amount: %f\n", min_cycles);
   printf("Minimum cycle amount (4-way) parallel: %f\n", min_cycles / 4);
-  printf("Systemizer median: %f\t(x%f)\n", systemizer_median_cc, systemizer_cycle_multiplier);
-  printf("Intrinsic median: %f\t(x%f)\n", intrinsic_systemizer_median_cc, intrinsic_cycle_multiplier);
-  printf("ASM median: %f\t(x%f)\n", asm_systemizer_median_cc, asm_cycle_multiplier);
-  printf("ASM (NCT) median: %f\t(x%f)\n", asm_systemizer_median_nct_cc, asm_nct_cycle_multiplier);
+  printf("Systemizer minimum: %f\t(x%f)\n", systemizer_minimum_cc, systemizer_cycle_multiplier);
+  printf("Intrinsic minimum: %f\t(x%f)\n", intrinsic_systemizer_minimum_cc, intrinsic_cycle_multiplier);
+  printf("ASM minimum: %f\t(x%f)\n", asm_systemizer_minimum_cc, asm_cycle_multiplier);
+  printf("ASM (NCT) minimum: %f\t(x%f)\n", asm_systemizer_minimum_nct_cc, asm_nct_cycle_multiplier);
 
   printf("Improvement (intrinsic): %f%%\n", intrinsic_improvement);
   printf("Improvement (ASM): %f%%\n", asm_improvement);
@@ -724,17 +724,17 @@ int main(int argc, char *argv[])
   printf("A2: (%d)\n", res2);
   pmod_mat_fprint(stdout, A2, A_ROWS, A_COLS);
 
-  double old_systemizer_median_cc = median_2(old_systemizer_cycles, ROUNDS, 0);
-  double intrinsic_systemizer_median_cc = median_2(intrinsic_systemizer_cycles, ROUNDS, 0);
-  double new_systemizer_median_cc = median_2(new_systemizer_cycles, ROUNDS, 0);
+  double old_systemizer_minimum_cc = min(old_systemizer_cycles, ROUNDS, 0);
+  double intrinsic_systemizer_minimum_cc = min(intrinsic_systemizer_cycles, ROUNDS, 0);
+  double new_systemizer_minimum_cc = min(new_systemizer_cycles, ROUNDS, 0);
 
   // Print results
-  double percentage = new_systemizer_median_cc / old_systemizer_median_cc * 100;
-  double improvement = (new_systemizer_median_cc - old_systemizer_median_cc) / old_systemizer_median_cc * 100;
-  double improvement_intrinsics = (new_systemizer_median_cc - intrinsic_systemizer_median_cc) / intrinsic_systemizer_median_cc * 100;
-  printf("Old median: %f\n", old_systemizer_median_cc);
-  printf("Intrinsics median: %f\n", intrinsic_systemizer_median_cc);
-  printf("New median: %f\n", new_systemizer_median_cc);
+  double percentage = new_systemizer_minimum_cc / old_systemizer_minimum_cc * 100;
+  double improvement = (new_systemizer_minimum_cc - old_systemizer_minimum_cc) / old_systemizer_minimum_cc * 100;
+  double improvement_intrinsics = (new_systemizer_minimum_cc - intrinsic_systemizer_minimum_cc) / intrinsic_systemizer_minimum_cc * 100;
+  printf("Old minimum: %f\n", old_systemizer_minimum_cc);
+  printf("Intrinsics minimum: %f\n", intrinsic_systemizer_minimum_cc);
+  printf("New minimum: %f\n", new_systemizer_minimum_cc);
   printf("Minimum cycle bound: %f\n", min_cycle_bound(A_ROWS, A_COLS, A_ROWS));
   printf("Minimum cycle bound (4-way parallel): %f\n", min_cycle_bound(A_ROWS, A_COLS, A_ROWS) / 4);
   printf("Percentage: %f%%\n", percentage);

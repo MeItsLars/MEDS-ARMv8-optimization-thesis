@@ -28,6 +28,44 @@ int profiler_enabled = 0;
 
 int solve_opt_part(pmod_mat_t *N, GFq_t *sol, pmod_mat_t *P00nt)
 {
+  // Perfrom back-substution for all remaining blocks in bottom part.
+  for (int b = MEDS_m - 3; b >= 0; b--)
+    for (int c = MEDS_m - 1; c >= 0; c--)
+      for (int r = 0; r < MEDS_m; r++)
+      {
+        uint64_t tmp1 = pmod_mat_entry(N, MEDS_n - 1, MEDS_m, r, c);
+        uint64_t tmp2 = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + MEDS_m + c];
+
+        uint64_t prod = (tmp1 * tmp2) % MEDS_p;
+
+        uint64_t val = sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r];
+
+        val = ((MEDS_p + val) - prod) % MEDS_p;
+
+        sol[(MEDS_m + 1) * MEDS_n + b * MEDS_m + r] = val;
+      }
+
+  // Perfrom back-substution for all remaining blocks in top part.
+  for (int b = MEDS_m - 2; b >= 0; b--)
+    for (int c = MEDS_m - 1; c >= 0; c--)
+      for (int r = 0; r < MEDS_n; r++)
+      {
+        uint64_t tmp1 = pmod_mat_entry(P00nt, MEDS_n, MEDS_m, r, c);
+        uint64_t tmp2 = sol[2 * MEDS_m * MEDS_n - (MEDS_m - 1) - (MEDS_m - 1 - b) * MEDS_m + c];
+
+        uint64_t prod = (tmp1 * tmp2) % MEDS_p;
+
+        uint64_t val = sol[b * MEDS_n + r];
+
+        val = ((MEDS_p + val) - prod) % MEDS_p;
+
+        sol[b * MEDS_n + r] = val;
+      }
+  return 0;
+}
+
+int solve_opt_part_optimized(pmod_mat_t *N, GFq_t *sol, pmod_mat_t *P00nt)
+{
   _Static_assert(MEDS_n == MEDS_m + 1, "solve_opt requires MEDS_n == MEDS_m+1");
 
   for (int b = MEDS_m - 3; b >= 0; b--)
@@ -181,43 +219,6 @@ int solve_opt_part(pmod_mat_t *N, GFq_t *sol, pmod_mat_t *P00nt)
   return 0;
 }
 
-float min_cycle_bound_crude()
-{
-  int operations = 0;
-  int reduce_cost = 5;
-  int freeze_cost = 3;
-
-  for (int b = MEDS_m - 3; b >= 0; b--)
-    for (int c = MEDS_m - 1; c >= 0; c--)
-    {
-      operations++;
-      for (int r = 0; r < MEDS_m; r += 8)
-      {
-        operations += 8;
-        operations += 2 + 2 * reduce_cost + 1;
-        operations++;
-        operations += 2 + freeze_cost;
-        operations++;
-      }
-    }
-
-  for (int b = MEDS_m - 2; b >= 0; b--)
-    for (int c = MEDS_m - 1; c >= 0; c--)
-    {
-      operations++;
-      for (int r = 0; r < MEDS_n; r += 8)
-      {
-        operations += 8;
-        operations += 2 + 2 * reduce_cost + 1;
-        operations++;
-        operations += 2 + freeze_cost;
-        operations++;
-      }
-    }
-
-  return operations * 8;
-}
-
 float min_cycle_bound()
 {
   float result_vec8 = (1 / 8.0) * (MEDS_m - 3) * (MEDS_m - 1) * (28 * MEDS_m + 28 * MEDS_n + 16);
@@ -227,24 +228,37 @@ float min_cycle_bound()
 void test_performance(char name[])
 {
   // For the benchmarking, we can set all these values to 0, as the code runs in constant itme anyway.
-  pmod_mat_t N[MEDS_n * (2 * MEDS_m)] = {0};
-  GFq_t sol[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
-  pmod_mat_t P00nt[MEDS_n * MEDS_m] = {0};
+  pmod_mat_t N1[MEDS_n * (2 * MEDS_m)] = {0};
+  pmod_mat_t N2[MEDS_n * (2 * MEDS_m)] = {0};
+  GFq_t sol1[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
+  GFq_t sol2[MEDS_m * MEDS_m + MEDS_n * MEDS_n] = {0};
+  pmod_mat_t P00nt1[MEDS_n * MEDS_m] = {0};
+  pmod_mat_t P00nt2[MEDS_n * MEDS_m] = {0};
 
   long long solve_cycles[ROUNDS + 1];
+  long long solve_cycles_optimized[ROUNDS + 1];
 
   for (int round = 0; round < ROUNDS; round++)
   {
     solve_cycles[round] = get_cyclecounter();
-    solve_opt_part(N, sol, P00nt);
+    solve_opt_part(N1, sol1, P00nt1);
   }
   solve_cycles[ROUNDS] = get_cyclecounter();
 
+  for (int round = 0; round < ROUNDS; round++)
+  {
+    solve_cycles_optimized[round] = get_cyclecounter();
+    solve_opt_part_optimized(N2, sol2, P00nt2);
+  }
+  solve_cycles_optimized[ROUNDS] = get_cyclecounter();
+
   // Calculate results
-  double solve_median_cc = median_2(solve_cycles, ROUNDS + 1, 0);
+  double solve_minimum_cc = min(solve_cycles, ROUNDS + 1);
+  double solve_optimized_minimum_cc = min(solve_cycles_optimized, ROUNDS + 1);
 
   double min_cycles = (double)min_cycle_bound();
-  double solve_cycle_multiplier = solve_median_cc / (min_cycles / 8);
+  double solve_cycle_multiplier = solve_minimum_cc / (min_cycles / 8);
+  double solve_optimized_cycle_multiplier = solve_optimized_minimum_cc / (min_cycles / 8);
 
   // Print results
   printf("-----------------------------------\n");
@@ -252,7 +266,8 @@ void test_performance(char name[])
   printf("-----------------------------------\n");
   printf("Minimum cycle amount: %f\n", min_cycles);
   printf("Minimum cycle amount (8-way) parallel: %f\n", min_cycles / 8);
-  printf("Solve median: %f\t(x%f)\n", solve_median_cc, solve_cycle_multiplier);
+  printf("Solve minimum: %f\t(x%f)\n", solve_minimum_cc, solve_cycle_multiplier);
+  printf("Solve optimized minimum: %f\t(x%f)\n", solve_optimized_minimum_cc, solve_optimized_cycle_multiplier);
   printf("\n");
 }
 
