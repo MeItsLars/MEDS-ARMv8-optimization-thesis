@@ -4,7 +4,7 @@
 \section{Notations and functions}
 
 \subsection{Notations}
-In the algorithms in this appendix, we use the following notations in addition to the notations mentioned in Section \ref{sec:notations}:
+In the algorithms in this appendix, we use the following notations in addition to the notations mentioned in Section~\ref{sec:notations}:
 \begin{itemize}
   \item $\ell_{x}$: The size of the variable $x$ in bytes.
   \item $\mathcal{B}^{x}$: The set of all byte strings of length $x$.
@@ -275,7 +275,7 @@ $\quad\quad\quad\quad\quad\quad~~|~\text{Compress}(\hat{\textbf{G}}_{t-1}[;k,mn-
 The MEDS key generation, signing, and verification algorithms require some additional algorithms to function. In this section, we present a few algorithms that are used by the three MEDS algorithms. Note that we do not list all supplemental algorithms, but only those that are relevant to our research.
 
 \begin{algorithm}
-  \caption{MEDS Matrix Multiplication}
+  \caption{MEDS matrix multiplication}
   \label{alg:medsmatrixmultiplication}
   \begin{algorithmic}
     \Function{matrix\_mul}{$A \in \mathbb{F}_{4093}^{m \times n}, B \in \mathbb{F}_{4093}^{n \times o}$}
@@ -309,7 +309,7 @@ The MEDS key generation, signing, and verification algorithms require some addit
 \end{algorithm}
 
 \begin{algorithm}
-  \caption{MEDS Matrix Systemizer}
+  \caption{MEDS matrix systemizer}
   \label{alg:systemizer}
   \begin{algorithmic}
     \Function{systemize}{$A \in \mathbb{F}_{4093}^{m \times n}$, $r_\text{max}$, do\_swap, do\_backsub}
@@ -351,7 +351,7 @@ The MEDS key generation, signing, and verification algorithms require some addit
           \EndFor
         \EndFor
       \EndFor
-      \State \texttt{// Return if we don't need to do back substitution}
+      \State \texttt{// Return if we do not need to do back substitution}
       \If{!do\_backsub}
         \State \Return $ret$
       \EndIf

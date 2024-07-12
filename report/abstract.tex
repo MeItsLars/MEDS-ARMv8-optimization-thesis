@@ -1,6 +1,6 @@
 \renewcommand{\abstractname}{Abstract}
 \begin{abstract}
-    As the threat of quantum computers increases, the need for post-quantum cryptography becomes more pressing. The recent NIST competition on post-quantum signature schemes has led to the creation of MEDS, a signature scheme based on the Matrix Code Equivalence (MCE) problem. In this work, we optimize the existing MEDS implementation for the ARMv8 CPU architecture using parameter-specific optimizations and NEON SIMD instructions.\\
+    As the risk of quantum computers breaking current cryptographic schemes grows, the need for post-quantum cryptography becomes more pressing. The recent NIST competition on post-quantum signature schemes has led to the creation of MEDS, a signature scheme based on the Matrix Code Equivalence (MCE) problem. In this work, we optimize the existing MEDS implementation for the ARMv8 CPU architecture using parameter-specific optimizations and NEON SIMD instructions.\\
     We explore two approaches: a low-level approach that optimizes the individual operations of the scheme and a high-level approach that parallelizes over the main commitment loop. The low-level approach gives the best results, with a speedup of 3.2x for key generation, 3.9x for signing, and 4.1x for verification, in NIST category 3.\\
-    Additionally, we suggest an optimization to the hashing structure used in MEDS which increases the speedup for signing and verification to 4.1x and 4.4x, respectively, in NIST category 3.
+    Additionally, we suggest an optimization to the hashing structure used in MEDS which, when combined with the low-level optimizations, increases the speedup for signing and verification to 4.1x and 4.4x, respectively, in NIST category 3.
 \end{abstract}

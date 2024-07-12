@@ -1,11 +1,36 @@
 import csv
 import os
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgb, to_hex
 import seaborn as sns
 import numpy as np
 
+# Set the style of the plots
 sns.set_theme()
-# sns.set_palette(sns.color_palette(sns.color_palette(), desat=0.5))
+
+def lighten_color(color, amount=0.5):
+    try:
+        c = np.array(to_rgb(color))
+        white = np.array([1.0, 1.0, 1.0])
+        return to_hex((1 - amount) * c + amount * white)
+    except ValueError:
+        return color
+
+# Original "deep" colors
+deep_blue = '#4C72B0'
+deep_orange = '#DD8452'
+deep_green = '#55A868'
+
+# Lightened colors
+light_blue = lighten_color(deep_blue, 0.4)
+light_orange = lighten_color(deep_orange, 0.4)
+light_green = lighten_color(deep_green, 0.4)
+
+# Combine into a new palette
+custom_palette = [deep_blue, light_blue, deep_orange, light_orange, deep_green, light_green]
+
+# Set the custom palette in Seaborn
+sns.set_palette(custom_palette)
 
 THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 FILE_PATH = os.path.join(THIS_FILE_PATH, "results.csv")
@@ -23,7 +48,8 @@ def generate_barplot(parsed_data, filename):
     x1 = np.arange(len(subcategories1))
 
     for i, (_, values) in enumerate(parsed_data.items()):
-        ax1.bar(x1 + (i - num_techniques1 / 2 + 0.5) * width, values[:1], width)
+        extra = (i // 2 - 1) * 0.5
+        ax1.bar(x1 + (i - num_techniques1 / 2 + 0.5 + extra) * width, values[:1], width)
 
     # Add labels
     ax1.set_ylabel('MCycles')
@@ -37,7 +63,8 @@ def generate_barplot(parsed_data, filename):
     x2 = np.arange(len(subcategories2))
 
     for i, (_, values) in enumerate(parsed_data.items()):
-        ax2.bar(x2 + (i - num_techniques2 / 2 + 0.5) * width * 1.3, values[1:], width * 1.3)
+        extra = (i // 2 - 1) * 0.5
+        ax2.bar(x2 + (i - num_techniques2 / 2 + 0.5 + extra) * width * 1.3, values[1:], width * 1.3)
 
     # Add labels
     ax2.set_ylabel('MCycles')
@@ -52,7 +79,7 @@ def generate_barplot(parsed_data, filename):
     fig.subplots_adjust(wspace=0.2)
 
     # Create a single legend for both bar plots
-    handles = [plt.Rectangle((0, 0), 1, 1, color=plt.cm.tab10(i)) for i in range(num_techniques2)]
+    handles = [plt.Rectangle((0, 0), 1, 1, color=custom_palette[i]) for i in range(num_techniques2)]
     fig.legend(handles=handles, labels=parsed_data.keys(), loc='upper center', bbox_to_anchor=(0.5, 0.1), ncol=3)
 
     # Export images

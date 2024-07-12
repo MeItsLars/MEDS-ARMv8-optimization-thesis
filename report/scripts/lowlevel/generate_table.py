@@ -4,9 +4,10 @@ import os
 THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 TABLE_TEMPLATE = """
-  \\begin{tabular}{lllrrr}
+  \\begin{tabular}{lllR{1.35cm}R{1.2cm}R{1.2cm}r}
     \\toprule
-    \\textbf{Function} & \\multicolumn{2}{c}{\\textbf{Input Size}} & \\textbf{Cycles} & \\textbf{Bound} & \\textbf{Ratio}\\\\
+    \\textbf{Function} & \\multicolumn{2}{c}{\\textbf{Input size}} & \\textbf{Cycles} & \\textbf{Cycles} & \\textbf{Bound} & \\textbf{Ratio}\\\\
+    & \\multicolumn{1}{c}{\\textit{A}} & \\multicolumn{1}{c}{\\textit{B}} & \\text{(Ref.)} & \\text{(Opt.)} & & \\\\
     \\toprule
 %s
     \\bottomrule
@@ -67,7 +68,7 @@ def solve_cycles():
     meds_m = evaluate('m')
     return (1 / 8) * (meds_m - 3) * (meds_m - 1) * (28 * meds_m + 28 * meds_n + 16)
 
-def parse_matmul(function, cycles):
+def parse_matmul(function, cycles, opt_cycles):
     function_parts = function.split('_')
     m = function_parts[3]
     o = function_parts[4]
@@ -75,13 +76,14 @@ def parse_matmul(function, cycles):
     cycle_bound = matmul_cycles(evaluate(m), evaluate(o), evaluate(n))
     return {
         "name": "Matrix Multiplication",
-        "input": f"$A$: ${m} \\times {o}$ & $B$: ${o} \\times {n}$",
+        "input": f"${m} \\times {o}$ & ${o} \\times {n}$",
         "cycles": int(cycles),
+        "opt_cycles": int(opt_cycles),
         "bound": cycle_bound,
-        "ratio": int(cycles) / cycle_bound
+        "ratio": int(opt_cycles) / cycle_bound
     }
 
-def parse_matsyst(function, cycles, first):
+def parse_matsyst(function, cycles, opt_cycles, first):
     function_parts = function.split('_')
     m = function_parts[3]
     n = function_parts[4]
@@ -93,23 +95,25 @@ def parse_matsyst(function, cycles, first):
     name = f"{fun_name}{' (' + replace_minus(max_r) + '$^{**}$)' if max_r != m else ''}{' (swap$^{***}$)' if do_swap == 1 else ''}{' (bsub$^{*}$)' if do_backsub == 1 else ''}"
     return {
         "name": name,
-        "input": f"$A$: ${replace_minus(m)} \\times {replace_minus(n)}$&",
+        "input": f"${replace_minus(m)} \\times {replace_minus(n)}$&",
         "cycles": int(cycles),
+        "opt_cycles": int(opt_cycles),
         "bound": cycle_bound,
-        "ratio": int(cycles) / cycle_bound
+        "ratio": int(opt_cycles) / cycle_bound
     }
 
-def parse_solve(function, cycles):
+def parse_solve(function, cycles, opt_cycles):
     function_parts = function.split('_')
     m = function_parts[3]
     n = function_parts[4]
     cycle_bound = solve_cycles()
     return {
         "name": "Isometry Derivation (part)",
-        "input": f"$C$: ${m} \\times {n}$ &",
+        "input": f"${m} \\times {n}$ &",
         "cycles": int(cycles),
+        "opt_cycles": int(opt_cycles),
         "bound": cycle_bound,
-        "ratio": int(cycles) / cycle_bound
+        "ratio": int(opt_cycles) / cycle_bound
     }
 
 def parse_data(data):
@@ -119,14 +123,15 @@ def parse_data(data):
     for row in data:
         function = row[0]
         cycles = row[1]
+        opt_cycles = row[2]
         if function.startswith('pmod_mat_mul'):
-            new_line = parse_matmul(function, cycles)
+            new_line = parse_matmul(function, cycles, opt_cycles)
             new_stage = 'matmul'
         if function.startswith('pmod_mat_syst'):
-            new_line = parse_matsyst(function, cycles, stage != 'matsyst')
+            new_line = parse_matsyst(function, cycles, opt_cycles, stage != 'matsyst')
             new_stage = 'matsyst'
         if function.startswith('solve_opt_part'):
-            new_line = parse_solve(function, cycles)
+            new_line = parse_solve(function, cycles, opt_cycles)
             new_stage = 'solve'
         
         if new_stage != stage:
@@ -144,7 +149,7 @@ def generate_table(file: str) -> str:
         if row == 'rule':
             table_data.append("\\midrule")
         else:
-            table_data.append(f"    {row['name']} & {row['input']} & {row['cycles']:.0f} & {row['bound']:.0f} & {row['ratio']:.2f}\\\\")
+            table_data.append(f"    {row['name']} & {row['input']} & {row['cycles']:.0f} & {row['opt_cycles']:.0f} & {row['bound']:.0f} & {row['ratio']:.2f}\\\\")
     return TABLE_TEMPLATE % '\n'.join(table_data)
 
 print(generate_table('results.csv'))
