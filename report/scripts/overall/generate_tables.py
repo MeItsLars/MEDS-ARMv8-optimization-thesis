@@ -6,7 +6,7 @@ FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results.cs
 TABLE_TEMPLATE = """
     \\begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
         \\toprule
-        & \\multicolumn{2}{c}{\\textbf{Keygen}} & \\multicolumn{2}{c}{\\textbf{Sign}} & \\multicolumn{2}{c}{\\textbf{Verify}} \\\\
+        \\textbf{Variant} & \\multicolumn{2}{c}{\\textbf{Keygen}} & \\multicolumn{2}{c}{\\textbf{Sign}} & \\multicolumn{2}{c}{\\textbf{Verify}} \\\\
         \\midrule
 %s
         \\bottomrule
