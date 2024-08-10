@@ -20,21 +20,41 @@
 
 % Explains the concept of MEDS and its application in digital signatures
 @inproceedings{chou2023take,
-  title        = {{Take your MEDS: digital signatures from matrix code equivalence}},
-  author       = {Chou, Tung and Niederhagen, Ruben and Persichetti, Edoardo and Randrianarisoa, Tovohery Hajatiana and Reijnders, Krijn and Samardjiska, Simona and Trimoska, Monika},
-  booktitle    = {{International Conference on Cryptology in Africa}},
-  pages        = {28--52},
-  year         = {2023},
-  organization = {Springer}
+  author    = {Chou, Tung
+               and Niederhagen, Ruben
+               and Persichetti, Edoardo
+               and Randrianarisoa, Tovohery Hajatiana
+               and Reijnders, Krijn
+               and Samardjiska, Simona
+               and Trimoska, Monika},
+  editor    = {El Mrabet, Nadia
+               and De Feo, Luca
+               and Duquesne, Sylvain},
+  title     = {{Take Your MEDS: Digital Signatures from Matrix Code Equivalence}},
+  booktitle = {Progress in Cryptology - AFRICACRYPT 2023},
+  year      = {2023},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {28--52},
+  abstract  = {In this paper, we show how to use the Matrix Code Equivalence (MCE) problem as a new basis to construct signature schemes. This extends previous work on using isomorphism problems for signature schemes, a trend that has recently emerged in post-quantum cryptography. Our new formulation leverages a more general problem and allows for smaller data sizes, achieving competitive performance and great flexibility. Using MCE, we construct a zero-knowledge protocol which we turn into a signature scheme named Matrix Equivalence Digital Signature (MEDS). We provide an initial choice of parameters for MEDS, tailored to NIST's Category 1 security level, yielding public keys as small as 2.8 kB and signatures ranging from 18 kB to just around 6.5 kB, along with a reference implementation in C.},
+  isbn      = {978-3-031-37679-5}
 }
 
 % NIST MEDS submission
-@article{chou2023meds,
-  title   = {{MEDS: Matrix Equivalence Digital Signature}},
-  author  = {Chou, Tung and Niederhagen, Ruben and Persichetti, Edoardo and Ran, Lars and Randrianarisoa, Tovohery Hajatiana and Reijnders, Krijn and Samardjiska, Simona and Trimoska, Monika},
-  journal = {NIST PQC},
-  pages   = {69},
-  year    = {2023}
+@misc{chou2023meds,
+  title        = {{Matrix Equivalence Digital Signature}},
+  author       = {Chou, Tung and Niederhagen, Ruben and Persichetti, Edoardo and Ran, Lars and Randrianarisoa, Tovohery Hajatiana and Reijnders, Krijn and Samardjiska, Simona and Trimoska, Monika},
+  year         = {2023},
+  howpublished = {\url{https://www.meds-pqc.org/spec/MEDS-2023-07-26.pdf}}
+}
+
+@incollection{gorla2021rank,
+  title     = {Rank-metric codes},
+  author    = {Gorla, Elisa},
+  booktitle = {Concise Encyclopedia of Coding Theory},
+  pages     = {227--250},
+  year      = {2021},
+  publisher = {Chapman and Hall/CRC}
 }
 
 % Hardness of MCE
@@ -55,24 +75,27 @@
   year         = {2008}
 }
 
-% LESS code-based signatures without syndromes
-@inproceedings{biasse2020less,
-  title        = {{LESS is more: code-based signatures without syndromes}},
-  author       = {Biasse, Jean-Fran{\c{c}}ois and Micheli, Giacomo and Persichetti, Edoardo and Santini, Paolo},
-  booktitle    = {{Progress in Cryptology-AFRICACRYPT 2020: 12th International Conference on Cryptology in Africa, Cairo, Egypt, July 20--22, 2020, Proceedings 12}},
-  pages        = {45--65},
+@misc{biasse2020less,
+  author       = {Jean-Francois Biasse and Giacomo Micheli and Edoardo Persichetti and Paolo Santini},
+  title        = {{LESS is More: Code-Based Signatures without Syndromes}},
+  howpublished = {Cryptology ePrint Archive, Paper 2020/594},
   year         = {2020},
-  organization = {Springer}
+  note         = {\url{https://eprint.iacr.org/2020/594}},
+  url          = {https://eprint.iacr.org/2020/594}
 }
+
 
 % Fiat-Shamir transformation
 @inproceedings{fiat1986prove,
-  title        = {{How to prove yourself: Practical solutions to identification and signature problems}},
-  author       = {Fiat, Amos and Shamir, Adi},
-  booktitle    = {{Conference on the theory and application of cryptographic techniques}},
-  pages        = {186--194},
-  year         = {1986},
-  organization = {Springer}
+  title     = {{How to Prove Yourself: Practical Solutions to Identification and Signature Problems}},
+  booktitle = {Advances in Cryptology - CRYPTO '86, Santa Barbara, California, USA, 1986, Proceedings},
+  series    = {Lecture Notes in Computer Science},
+  publisher = {Springer},
+  volume    = {263},
+  pages     = {186-194},
+  doi       = {10.1007/3-540-47721-7_12},
+  author    = {Amos Fiat and Adi Shamir},
+  year      = 1986
 }
 
 % ARM Cortex-A Series Programmer's Guide for ARMv8-A
@@ -115,11 +138,14 @@
   publisher = {ACM New York, NY, USA}
 }
 
-@article{chou2024reducing,
-  title   = {{Reducing Signature Size of Matrix-code-based Signature Schemes}},
-  author  = {Chou, Tung and Niederhagen, Ruben and Ran, Lars and Samardjiska, Simona},
-  journal = {Cryptology ePrint Archive},
-  year    = {2024}
+@misc{chou2024reducing,
+  author       = {Tung Chou and Ruben Niederhagen and Lars Ran and Simona Samardjiska},
+  title        = {Reducing Signature Size of Matrix-code-based Signature Schemes},
+  howpublished = {Cryptology ePrint Archive, Paper 2024/495},
+  year         = {2024},
+  doi          = {10.1007/978-3-031-62743-9_4},
+  note         = {\url{https://eprint.iacr.org/2024/495}},
+  url          = {https://eprint.iacr.org/2024/495}
 }
 
 @misc{dworkin2015sha,
@@ -130,12 +156,20 @@
 }
 
 @inproceedings{bertoni2013keccak,
-  title        = {{Keccak}},
-  author       = {Bertoni, Guido and Daemen, Joan and Peeters, Micha{\"e}l and Van Assche, Gilles},
-  booktitle    = {{Annual international conference on the theory and applications of cryptographic techniques}},
-  pages        = {313--314},
-  year         = {2013},
-  organization = {Springer}
+  author    = {Bertoni, Guido
+               and Daemen, Joan
+               and Peeters, Micha{\"e}l
+               and Van Assche, Gilles},
+  editor    = {Johansson, Thomas
+               and Nguyen, Phong Q.},
+  title     = {{Keccak}},
+  booktitle = {Advances in Cryptology -- EUROCRYPT 2013},
+  year      = {2013},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {313--314},
+  abstract  = {In October 2012, the American National Institute of Standards and Technology (NIST) announced the selection of Keccak as the winner of the SHA-3 Cryptographic Hash Algorithm Competition [10,11]. This concluded an open competition that was remarkable both for its magnitude and the involvement of the cryptographic community. Public review is of paramount importance to increase the confidence in the new standard and to favor its quick adoption. The SHA-3 competition explicitly took this into account by giving open access to the candidate algorithms and everyone in the cryptographic community could try to break them, compare their performance, or simply give comments.},
+  isbn      = {978-3-642-38348-9}
 }
 
 @inproceedings{shor1994algorithms,
@@ -166,12 +200,16 @@
 }
 
 @inproceedings{barrett1986implementing,
-  title        = {{Implementing the Rivest Shamir and Adleman public key encryption algorithm on a standard digital signal processor}},
-  author       = {Barrett, Paul},
-  booktitle    = {{Conference on the Theory and Application of Cryptographic Techniques}},
-  pages        = {311--323},
-  year         = {1986},
-  organization = {Springer}
+  author    = {Barrett, Paul},
+  editor    = {Odlyzko, Andrew M.},
+  title     = {{Implementing the Rivest Shamir and Adleman Public Key Encryption Algorithm on a Standard Digital Signal Processor}},
+  booktitle = {Advances in Cryptology --- CRYPTO' 86},
+  year      = {1987},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {311--323},
+  abstract  = {A description of the techniques employed at Oxford University to obtain a high speed implementation of the RSA encryption algorithm on an ``off-the-shelf'' digital signal processing chip. Using these techniques a two and a half second (average) encrypt time (for 512 bit exponent and modulus) was achieved on a first generation DSP (The Texas Instruments TMS 32010) and times below one second are achievable on second generation parts. Furthermore the techniques of algorithm development employed lead to a provably correct implementation.},
+  isbn      = {978-3-540-47721-1}
 }
 
 @article{strassen1969gaussian,
@@ -203,13 +241,13 @@
   note         = {Accessed: 08-07-2024}
 }
 
-@inproceedings{becker2022hybrid,
-  title        = {{Hybrid scalar/vector implementations of Keccak and SPHINCS+ on AArch64}},
-  author       = {Becker, Hanno and Kannwischer, Matthias J},
-  booktitle    = {{International Conference on Cryptology in India}},
-  pages        = {272--293},
+@misc{becker2022hybrid,
+  author       = {Hanno Becker and Matthias J. Kannwischer},
+  title        = {Hybrid scalar/vector implementations of Keccak and SPHINCS$^+$ on AArch64},
+  howpublished = {Cryptology ePrint Archive, Paper 2022/1243},
   year         = {2022},
-  organization = {Springer}
+  note         = {\url{https://eprint.iacr.org/2022/1243}},
+  url          = {https://eprint.iacr.org/2022/1243}
 }
 
 @misc{xkcp,
@@ -249,18 +287,23 @@
 }
 
 @inproceedings{kocher1996timing,
-  title        = {{Timing attacks on implementations of Diffie-Hellman, RSA, DSS, and other systems}},
-  author       = {Kocher, Paul C},
-  booktitle    = {{Advances in Cryptology—CRYPTO'96: 16th Annual International Cryptology Conference Santa Barbara, California, USA August 18--22, 1996 Proceedings 16}},
-  pages        = {104--113},
-  year         = {1996},
-  organization = {Springer}
+  author    = {Kocher, Paul C.},
+  editor    = {Koblitz, Neal},
+  title     = {{Timing Attacks on Implementations of Diffie-Hellman, RSA, DSS, and Other Systems}},
+  booktitle = {Advances in Cryptology --- CRYPTO '96},
+  year      = {1996},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {104--113},
+  abstract  = {By carefully measuring the amount of time required to perform private key operations, attackers may be able to find fixed Diffie-Hellman exponents, factor RSA keys, and break other cryptosystems. Against a vulnerable system, the attack is computationally inexpensive and often requires only known ciphertext. Actual systems are potentially at risk, including cryptographic tokens, network-based cryptosystems, and other applications where attackers can make reasonably accurate timing measurements. Techniques for preventing the attack for RSA and Diffie-Hellman are presented. Some cryptosystems will need to be revised to protect against the attack, and new protocols and algorithms may need to incorporate measures to prevent timing attacks.},
+  isbn      = {978-3-540-68697-2}
 }
 
 @misc{bernstein2005cache,
-  title  = {{Cache-timing attacks on AES}},
-  author = {Bernstein, Daniel J},
-  year   = {2005}
+  title        = {{Cache-timing attacks on AES}},
+  author       = {Bernstein, Daniel J},
+  year         = {2005},
+  howpublished = {\url{https://cr.yp.to/antiforgery/cachetiming-20050414.pdf}}
 }
 
 @misc{langley2010checking,
@@ -350,12 +393,19 @@
 }
 
 @inproceedings{de1998performance,
-  title        = {{On the performance of signature schemes based on elliptic curves}},
-  author       = {De Win, Erik and Mister, Serge and Preneel, Bart and Wiener, Michael},
-  booktitle    = {{Algorithmic Number Theory: Third International Symposiun, ANTS-III Portland, Oregon, USA, June 21--25, 1998 Proceedings 3}},
-  pages        = {252--266},
-  year         = {1998},
-  organization = {Springer}
+  author    = {De Win, Erik
+               and Mister, Serge
+               and Preneel, Bart
+               and Wiener, Michael},
+  editor    = {Buhler, Joe P.},
+  title     = {{On the performance of signature schemes based on elliptic curves}},
+  booktitle = {Algorithmic Number Theory},
+  year      = {1998},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {252--266},
+  abstract  = {This paper describes a fast software implementation of the elliptic curve version of DSA, as specified in draft standard documents ANSI X9.62 and IEEE P1363. We did the implementations for the fields GF(2n), using a standard basis, and GF(p). We discuss various design decisions that have to be made for the operations in the underlying field and the operations on elliptic curve points. In particular, we conclude that it is a good idea to use projective coordinates for GF(p), but not for GF(2n). We also extend a number of exponentiation algorithms, that result in considerable speed gains for DSA, to ECDSA, using a signed binary representation. Finally, we present timing results for both types of fields on a PPro-200 based PC, for a C/C++ implementation with small assembly-language optimizations, and make comparisons to other signature algorithms, such as RSA and DSA. We conclude that for practical sizes of fields and moduli, GF(p) is roughly twice as fast as GF(2n). Furthermore, the speed of ECDSA over GF(p) is similar to the speed of DSA; it is approximately 7 times faster than RSA for signing, and 40 times slower than RSA for verification (with public exponent 3).},
+  isbn      = {978-3-540-69113-6}
 }
 
 @misc{armv8m,
@@ -382,12 +432,16 @@
 }
 
 @inproceedings{schnorr1990efficient,
-  title        = {{Efficient identification and signatures for smart cards}},
-  author       = {Schnorr, Claus-Peter},
-  booktitle    = {{Advances in Cryptology—CRYPTO'89 Proceedings 9}},
-  pages        = {239--252},
-  year         = {1990},
-  organization = {Springer}
+  author    = {Schnorr, C. P.},
+  editor    = {Brassard, Gilles},
+  title     = {{Efficient Identification and Signatures for Smart Cards}},
+  booktitle = {Advances in Cryptology --- CRYPTO' 89 Proceedings},
+  year      = {1990},
+  publisher = {Springer New York},
+  address   = {New York, NY},
+  pages     = {239--252},
+  abstract  = {We present an efficient interactive identification scheme and a related signature scheme that are based on discrete logarithms and which are particularly suited for smart cards. Previous cryptoschemes, based on the discrete logarithm, have been proposed by El Gamal (1985), Chaum, Evertse, Graaf (1988), Beth (1988) and G{\"u}nter (1989). The new scheme comprises the following novel features.},
+  isbn      = {978-0-387-34805-6}
 }
 
 @misc{fips186,
@@ -429,21 +483,38 @@
   publisher = {Springer}
 }
 
+
+
 @inproceedings{bernstein2015sphincs,
-  title        = {{SPHINCS: practical stateless hash-based signatures}},
-  author       = {Bernstein, Daniel J and Hopwood, Daira and H{\"u}lsing, Andreas and Lange, Tanja and Niederhagen, Ruben and Papachristodoulou, Louiza and Schneider, Michael and Schwabe, Peter and Wilcox-O'Hearn, Zooko},
-  booktitle    = {{Annual international conference on the theory and applications of cryptographic techniques}},
-  pages        = {368--397},
-  year         = {2015},
-  organization = {Springer}
+  author    = {Bernstein, Daniel J.
+               and Hopwood, Daira
+               and H{\"u}lsing, Andreas
+               and Lange, Tanja
+               and Niederhagen, Ruben
+               and Papachristodoulou, Louiza
+               and Schneider, Michael
+               and Schwabe, Peter
+               and Wilcox-O'Hearn, Zooko},
+  editor    = {Oswald, Elisabeth
+               and Fischlin, Marc},
+  title     = {{SPHINCS: Practical Stateless Hash-Based Signatures}},
+  booktitle = {Advances in Cryptology -- EUROCRYPT 2015},
+  year      = {2015},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {368--397},
+  abstract  = {This paper introduces a high-security post-quantum stateless hash-based signature scheme that signs hundreds of messages per second on a modern 4-core 3.5GHz Intel CPU. Signatures are 41 KB, public keys are 1 KB, and private keys are 1 KB. The signature scheme is designed to provide long-term {\$}{\$}2^{\{}128{\}}{\$}{\$}security even against attackers equipped with quantum computers. Unlike most hash-based designs, this signature scheme is stateless, allowing it to be a drop-in replacement for current signature schemes.},
+  isbn      = {978-3-662-46800-5}
 }
 
-@article{ducas2018crystals,
-  title   = {{Crystals-dilithium: A lattice-based digital signature scheme}},
-  author  = {Ducas, L{\'e}o and Kiltz, Eike and Lepoint, Tancrede and Lyubashevsky, Vadim and Schwabe, Peter and Seiler, Gregor and Stehl{\'e}, Damien},
-  journal = {IACR Transactions on Cryptographic Hardware and Embedded Systems},
-  pages   = {238--268},
-  year    = {2018}
+
+@misc{ducas2018crystals,
+  author       = {Leo Ducas and Tancrede Lepoint and Vadim Lyubashevsky and Peter Schwabe and Gregor Seiler and Damien Stehle},
+  title        = {{CRYSTALS -- Dilithium: Digital Signatures from Module Lattices}},
+  howpublished = {Cryptology ePrint Archive, Paper 2017/633},
+  year         = {2017},
+  note         = {\url{https://eprint.iacr.org/2017/633}},
+  url          = {https://eprint.iacr.org/2017/633}
 }
 
 @article{fouque2018falcon,
@@ -457,7 +528,7 @@
 }
 
 @article{kim2022accelerating,
-  title     = {{Accelerating falcon on ARMv8}},
+  title     = {{Accelerating Falcon on ARMv8}},
   author    = {Kim, Youngbeom and Song, Jingyo and Seo, Seog Chung},
   journal   = {IEEE Access},
   volume    = {10},
@@ -467,7 +538,7 @@
 }
 
 @article{kim2022crystals,
-  title     = {{Crystals-Dilithium on ARMv8}},
+  title     = {{CRYSTALS-Dilithium on ARMv8}},
   author    = {Kim, Youngbeom and Song, Jingyo and Youn, Taek-Young and Seo, Seog Chung},
   journal   = {Security and Communication Networks},
   volume    = {2022},
@@ -478,28 +549,44 @@
 }
 
 @inproceedings{nguyen2023fast,
-  title        = {{Fast falcon signature generation and verification using ARMv8 NEON instructions}},
-  author       = {Nguyen, Duc Tri and Gaj, Kris},
-  booktitle    = {{International Conference on Cryptology in Africa}},
-  pages        = {417--441},
-  year         = {2023},
-  organization = {Springer}
+  author    = {Nguyen, Duc Tri
+               and Gaj, Kris},
+  editor    = {El Mrabet, Nadia
+               and De Feo, Luca
+               and Duquesne, Sylvain},
+  title     = {{Fast Falcon Signature Generation and Verification Using ARMv8 NEON Instructions}},
+  booktitle = {Progress in Cryptology - AFRICACRYPT 2023},
+  year      = {2023},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {417--441},
+  abstract  = {We present our speed records for Falcon signature generation and verification on ARMv8-A architecture. Our implementations are benchmarked on Apple M1 `Firestorm', Raspberry Pi 4 Cortex-A72, and Jetson AGX Xavier. Our optimized signature generation is {\$}{\$}2{\backslash}times {\$}{\$}2{\texttimes}slower, but signature verification is 3--3.9{\$}{\$}{\backslash}times {\$}{\$}{\texttimes}faster than the state-of-the-art CRYSTALS-Dilithium implementation on the same platforms. Faster signature verification may be particularly useful for the client side on constrained devices. Our Falcon implementation outperforms the previous work targeting Jetson AGX Xavier by the factors {\$}{\$}1.48{\backslash}times {\$}{\$}1.48{\texttimes}for signing in falcon512 and falcon1024, {\$}{\$}1.52{\backslash}times {\$}{\$}1.52{\texttimes}for verifying in falcon512, and {\$}{\$}1.70{\backslash}times {\$}{\$}1.70{\texttimes}for verifying in falcon1024. We achieve improvement in Falcon signature generation by supporting a larger subset of possible parameter values for FFT-related functions and applying our compressed twiddle-factor table to reduce memory usage. We also demonstrate that the recently proposed signature scheme Hawk, sharing optimized functionality with Falcon, has {\$}{\$}3.3{\backslash}times {\$}{\$}3.3{\texttimes}faster signature generation and 1.6--1.9{\$}{\$}{\backslash}times {\$}{\$}{\texttimes}slower signature verification when implemented on the same ARMv8 processors as Falcon.},
+  isbn      = {978-3-031-37679-5}
 }
+
 
 @inproceedings{kolbl2018putting,
-  title        = {{Putting wings on SPHINCS}},
-  author       = {K{\"o}lbl, Stefan},
-  booktitle    = {{Post-Quantum Cryptography: 9th International Conference, PQCrypto 2018, Fort Lauderdale, FL, USA, April 9-11, 2018, Proceedings 9}},
-  pages        = {205--226},
-  year         = {2018},
-  organization = {Springer}
+  author    = {K{\"o}lbl, Stefan},
+  editor    = {Lange, Tanja
+               and Steinwandt, Rainer},
+  title     = {{Putting Wings on SPHINCS}},
+  booktitle = {Post-Quantum Cryptography},
+  year      = {2018},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {205--226},
+  abstract  = {SPHINCS is a recently proposed stateless hash-based signature scheme and promising candidate for a post-quantum secure digital signature scheme. In this work we provide a comparison of the performance when instantiating SPHINCS with different cryptographic hash functions on both recent Intel and AMD platforms found in personal computers and the ARMv8-A platform which is prevalent in mobile phones.},
+  isbn      = {978-3-319-79063-3}
 }
 
-@article{becker2021neon,
-  title   = {{Neon ntt: Faster dilithium, kyber, and saber on cortex-a72 and apple m1}},
-  author  = {Becker, Hanno and Hwang, Vincent and Kannwischer, Matthias J and Yang, Bo-Yin and Yang, Shang-Yi},
-  journal = {Cryptology ePrint Archive},
-  year    = {2021}
+
+@misc{becker2021neon,
+  author       = {Hanno Becker and Vincent Hwang and Matthias J.  Kannwischer and Bo-Yin Yang and Shang-Yi Yang},
+  title        = {{Neon NTT: Faster Dilithium, Kyber, and Saber on Cortex-A72 and Apple M1}},
+  howpublished = {Cryptology ePrint Archive, Paper 2021/986},
+  year         = {2021},
+  note         = {\url{https://eprint.iacr.org/2021/986}},
+  url          = {https://eprint.iacr.org/2021/986}
 }
 
 @misc{ArmNeonIntrinsicsRef,
@@ -510,4 +597,79 @@
   version      = {2023Q2},
   howpublished = {\url{https://arm-software.github.io/acle/neon_intrinsics/advsimd.html}},
   note         = {Accessed: 12-07-2024}
+}
+
+@misc{kumar2024algorithms,
+  author       = {Anand Kumar Narayanan and Youming Qiao and Gang Tang},
+  title        = {Algorithms for Matrix Code and Alternating Trilinear Form Equivalences via New Isomorphism Invariants},
+  howpublished = {Cryptology ePrint Archive, Paper 2024/368},
+  year         = {2024},
+  note         = {\url{https://eprint.iacr.org/2024/368}},
+  url          = {https://eprint.iacr.org/2024/368}
+}
+
+@misc{ARM_Cortex_A72_TRM,
+  title        = {{ARM\textsuperscript{\textregistered} Cortex\textsuperscript{\textregistered}-A72 MPCore Processor: Technical Reference Manual}},
+  author       = {{ARM Limited}},
+  year         = {2016},
+  version      = {r0p3},
+  howpublished = {\url{https://developer.arm.com/documentation/100095/0003/?lang=en}},
+  note         = {Accessed: 08-09-2024}
+}
+
+@misc{baldi2024cross,
+  author       = {Marco Baldi and Alessandro Barenghi and Sebastian Bitzer and Patrick Karl and Felice Manganiello and Alessio Pavoni and Gerardo Pelosi and Paolo Santini and Jonas Schupp and Freeman Slaughter and Antonia Wachter-Zeh and Violetta Weger},
+  title        = {{CROSS: Codes and Restricted Objects Signature Scheme}},
+  year         = {2024},
+  month        = feb,
+  howpublished = {\url{https://www.cross-crypto.com/CROSS_Specification_v1.2.pdf}},
+  note         = {Accessed: 2024-08-09}
+}
+
+@misc{cho2022enhanced,
+  author       = {Jinkyu Cho and Jong-Seon No and Yongwoo Lee and Zahyun Koo and Young-Sik Kim},
+  title        = {{Enhanced pqsigRM: Code-Based Digital Signature Scheme with Short Signature and Fast Verification for Post-Quantum Cryptography}},
+  howpublished = {Cryptology ePrint Archive, Paper 2022/1493},
+  year         = {2022},
+  note         = {\url{https://eprint.iacr.org/2022/1493}},
+  url          = {https://eprint.iacr.org/2022/1493}
+}
+
+@misc{baldi2024less,
+  author = {Marco Baldi and Alessandro Barenghi and Luke Beckwith and Jean-François Biasse and Andre Esser and Kris Gaj and Kamyar Mohajerani and Gerardo Pelosi and Edoardo Persichetti and Markku-Juhani O. Saarinen and Paolo Santini and Robert Wallace},
+  title = {{LESS: Linear Equivalence Signature Scheme}},
+  year = {2024},
+  month = feb,
+  howpublished = {\url{https://www.less-project.com/LESS-2024-02-19.pdf}},
+  note = {Accessed: 2024-08-09},
+}
+
+@misc{banegas2023wave,
+  author = {Gustavo Banegas and Pierre Karpman and Kévin Carrier and Johanna Loyer and André Chailloux and Ruben Niederhagen and Alain Couvreur and Nicolas Sendrier and Thomas Debris-Alazard and Benjamin Smith and Philippe Gaborit and Jean-Pierre Tillich},
+  title = {{WAVE}},
+  year = {2023},
+  month = jun,
+  howpublished = {\url{https://wave-sign.org/wave_documentation.pdf}},
+  note = {Accessed: 2024-08-09},
+}
+
+@inproceedings{ritterhoff2023fuleeca,
+  author    = {Ritterhoff, Stefan
+               and Maringer, Georg
+               and Bitzer, Sebastian
+               and Weger, Violetta
+               and Karl, Patrick
+               and Schamberger, Thomas
+               and Schupp, Jonas
+               and Wachter-Zeh, Antonia},
+  editor    = {Esser, Andre
+               and Santini, Paolo},
+  title     = {{FuLeeca: A Lee-Based Signature Scheme}},
+  booktitle = {Code-Based Cryptography},
+  year      = {2023},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {56--83},
+  abstract  = {In this work, we introduce a new code-based signature scheme, called FuLeeca, based on the NP-hard problem of finding codewords of given Lee-weight. The scheme follows the Hash-and-Sign approach applied to quasi-cyclic codes. Similar approaches in the Hamming metric have suffered statistical attacks, which revealed the small support of the secret basis. Using the Lee metric, we are able to thwart such attacks. We use existing hardness results on the underlying problem and study adapted statistical attacks. We propose parameters for FuLeeca and compare them to an extensive list of proposed post-quantum secure signature schemes including the ones already standardized by NIST. This comparison reveals that FuLeeca is competitive. For example, for NIST category I, i.e., 160 bit of classical security, we obtain an average signature size of 1100 bytes and public key sizes of 1318 bytes. Comparing the total communication cost, i.e., the sum of the signature and public key size, we see that FuLeeca is only outperformed by Falcon while the other standardized schemes Dilithium and SPHINCS+ show higher communication costs than FuLeeca.},
+  isbn      = {978-3-031-46495-9}
 }

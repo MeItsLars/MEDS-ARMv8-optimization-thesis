@@ -159,7 +159,7 @@
       \begin{flushright} \large
         \textit{First supervisor/assessor:}\\
         prof. dr. Peter Schwabe\\
-        \texttt{\href{mailto:p.schwabe@cs.ru.nl}{p.schwabe@cs.ru.nl}}\\[1.3cm]
+        \texttt{\href{mailto:peter@cryptojedi.org}{peter@cryptojedi.org}}\\[1.3cm]
         \textit{Second supervisor:}\\
         dr. Simona Samardjiska\\
         \texttt{\href{mailto:simonas@cs.ru.nl}{simonas@cs.ru.nl}}
@@ -181,21 +181,21 @@
 \label{ch:introduction}
 
 \section{Context}
-As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm~\cite{shor1994algorithms} and Grover's algorithm~\cite{grover1996fast} to break various cryptographic schemes, causing the absolute collapse of the present public key algorithms that are considered secure~\cite{mavroeidis2018impact}. As the majority of the internet's security relies on these cryptographic schemes, this will have devastating consequences for the security of the internet.
+As the research on quantum computers progresses, we are getting increasingly closer to the point where quantum computers will be able to utilize algorithms such as Shor's algorithm~\cite{shor1994algorithms} and Grover's algorithm~\cite{grover1996fast} to break various cryptographic schemes, causing the absolute collapse of the present public key algorithms that are considered secure~\cite{mavroeidis2018impact}. As the majority of the digital world relies on the security of these cryptographic schemes, this will have devastating consequences for the security of not only the internet, but also financial transactions, secure communication, and many other critical sectors.
 
 The solution to this problem lies in the development of cryptographic schemes that are secure against quantum computers. Such algorithms have been around for a long time, but this area of research has experienced a boost in attention ever since the National Institute of Standards and Technology (NIST) started the post-quantum cryptography (PQC) standardization process in 2017~\cite{nist2017pqc}. The goal of this process is to standardize cryptographic schemes that are secure against quantum computers.
 
-In 2022, NIST announced the set of selected PQC algorithms, which included three digital signature schemes: CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS+~\cite{bernstein2015sphincs}. As two of these schemes are based on structured lattices, NIST announced a second competition in the PQC standardization process, which aims to find additional general-purpose signature schemes that are not based on structured lattices. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS)~\cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence. In this thesis, we aim to optimize the performance of the MEDS implementation for the ARMv8 architecture.
+In 2022, NIST announced the set of selected PQC algorithms, which included three digital signature schemes: CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS$^+$~\cite{bernstein2015sphincs}. As two of these schemes are based on structured lattices, NIST announced a second competition in the PQC standardization process, which aims to find additional general-purpose signature schemes that are not based on structured lattices. One of the candidates in this competition is Matrix Equivalence Digital Signature (MEDS)~\cite{chou2023take}. MEDS is a code-based digital signature scheme based on the notion of Matrix Code Equivalence. In this thesis, we aim to optimize the performance of the MEDS implementation for the ARMv8 architecture.
 
 \section{Motivation}
-The need for secure digital signature schemes that are secure against quantum computers is increasing. Of course, the security of these schemes is the most important aspect, but the speed at which an implementation can create or verify a signature is also important. The speed of a digital signature scheme is essential for many applications, such as TLS/SSL certificate verification, electronic payments, and blockchain transactions.
+The need for digital signature schemes that are secure against quantum computers is increasing. Of course, the security of these schemes is the most important aspect, but the speed at which an implementation can create or verify a signature is also important. The speed of a digital signature scheme is essential for many applications, such as TLS/SSL certificate verification, electronic payments, and blockchain transactions.
 
-Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds, sometimes even seconds. Traditional digital signature schemes such as RSA~\cite{rivest1978method} and ECDSA~\cite{johnson2001elliptic} can verify thousands of signatures per second on both modern and even older hardware~\cite{de1998performance,koppl2021performance}. The new post-quantum digital signature schemes must eventually achieve similar performance levels.
+Although the MEDS scheme is actively being optimized in terms of key and signature sizes, the performance of the scheme is still lacking. The reported signature verification times are in the order of hundreds of milliseconds and sometimes even seconds, depending on the security level and the chosen parameters. Traditional digital signature schemes such as RSA~\cite{rivest1978method} and ECDSA~\cite{johnson2001elliptic} can verify thousands of signatures per second on both modern and even older hardware~\cite{de1998performance,koppl2021performance}. The new post-quantum digital signature schemes must eventually achieve similar performance levels.
 
-The two most widely used CPU architectures in the world are x86 (used in Intel and AMD processors) and ARM. ARM is used in a wide variety of devices, among which:
+The two most widely used CPU architectures in the world are x86 (used in Intel and AMD processors) and ARM. ARM is used in a wide variety of devices, for example,
 \begin{itemize}
-  \item Mobile devices and tablets such as the Apple iPhone and iPad, Samsung Galaxy, and Google Pixel;
-  \item Embedded and Internet of Things (IoT) devices such as smart light bulbs, smart thermostats, and smart doorbells;
+  \item mobile devices and tablets such as the Apple iPhone and iPad, Samsung Galaxy, and Google Pixel;
+  \item embedded and Internet of Things (IoT) devices such as smart light bulbs, smart thermostats, and smart doorbells;
   \item Apple M1/M2/M3 chips used in Apple MacBooks.
 \end{itemize}
 Optimizing the MEDS implementation for the ARMv8 architecture will improve the MEDS performance for these devices, as well as provide valuable insights into the performance of MEDS on ARMv8.
@@ -220,9 +220,9 @@ Since the submission of the original MEDS implementation to the NIST PQC competi
 In this thesis, when talking about the MEDS implementation, we refer to the new reference implementation that was provided by the authors in~\cite{chou2024reducing}, unless stated otherwise.
 
 \section{Outline}
-In Chapter~\ref{ch:preliminaries}, we provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture, as well as a selection of related work. In Chapter~\ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS. In this chapter, we also present the profiling results of the MEDS implementation. Following that, in Chapter~\ref{ch:methodology}, we discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter~\ref{ch:results}, we present and discuss the benchmarking and profiling results of our optimizations. We conclude the thesis in Chapter~\ref{ch:conclusion}, where we reflect on the results that we obtained. Finally, we discuss the remaining future work in Chapter~\ref{ch:futurework}.
+In Chapter~\ref{ch:preliminaries}, we provide the necessary background information on the functioning of MEDS and the specific details of the ARMv8 architecture, as well as an overview of related work. In Chapter~\ref{ch:profiling}, we discuss the profiling techniques that we use to obtain an understanding of the performance of MEDS and present the profiling results of the MEDS implementation. Following that, in Chapter~\ref{ch:methodology}, we discuss the optimization techniques that we use to optimize the MEDS implementation. In Chapter~\ref{ch:results}, we present and discuss the benchmarking and profiling results of our optimizations. We conclude the thesis in Chapter~\ref{ch:conclusion}, where we reflect on the results that we obtained. Finally, we discuss the remaining future work in Chapter~\ref{ch:futurework}.
 
-All code used in this thesis is available on GitHub for reference.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis}}
+All code used in this thesis is available on GitHub for reference under the GPL-3.0 license.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis}}
 
 % \chapter{Research Objectives}
 % \label{ch:researchobjectives}
@@ -248,6 +248,7 @@ In the MEDS scheme and this thesis, we use the following notations and definitio
 \begin{itemize}
   \item $\mathbb{F}_q$: The finite field of size $q$.
   \item $\mathbb{F}_q^{m \times n}$: The set of matrices of size $m \times n$ ($m$ rows and $n$ columns) over $\mathbb{F}_q$, meaning that each element of the matrix is an element of $\mathbb{F}_q$.
+  \item $\text{GL}_k(q)$: The set of all invertible $k \times k$ matrices over $\mathds{F}_q$.
   \item $\textbf{A} \in \mathbb{F}_q^{m \times n}$: A matrix $\textbf{A}$ of size $m \times n$ over $\mathbb{F}_q$.
   \item $\textbf{I}_n$: The identity matrix of size $n \times n$.
   \item $\textbf{A}[i][j]$: The element in the $i$-th row and $j$-th column of matrix $\textbf{A}$.
@@ -272,7 +273,7 @@ A digital signature scheme consists of three algorithms:
 \begin{itemize}
   \item \textbf{Key generation}: This algorithm generates 2 keys, a private key and a public key. The private key is used to sign the data, and the public key is used to verify the signature.
   \item \textbf{Signature generation}: Given a message and the private (and sometimes public) key, this algorithm generates a signature for the message.
-  \item \textbf{Signature verification}: Given a message, a signature, and the public key, this algorithm verifies the signature.
+  \item \textbf{Signature verification}: Given a message, a signature, and the public key, this algorithm verifies the signature over the message.
 \end{itemize}
 The formal definition of a digital signature scheme is given in Definition~\ref{def:signaturescheme}.
 
@@ -281,8 +282,8 @@ The formal definition of a digital signature scheme is given in Definition~\ref{
   A digital signature scheme is a tuple of algorithms $(\text{Keygen}, \text{Sign}, \text{Verify})$ where:
   \begin{itemize}
     \item $\text{Keygen}(1^n)$ generates a key pair $(pk, sk)$, where $pk$ is the public key and $sk$ is the private key. The parameter $n$ represents the security parameter which determines the security level of the scheme.
-    \item $\text{Sign}(sk, m)$ generates a tag $T$ which represents the signature of the message $m$ using the private key $sk$.
-    \item $\text{Verify}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature of the message $m$ using the public key $pk$, and 0 otherwise.
+    \item $\text{Sign}(sk, m)$ generates a tag $T$ which represents the signature over the message $m$ using the private key $sk$.
+    \item $\text{Verify}(pk, m, T)$ outputs 1 if the tag $T$ is a valid signature over the message $m$ using the public key $pk$, and 0 otherwise.
   \end{itemize}
   \pagebreak
   Such that, given $(pk, sk) \leftarrow \text{Keygen}(1^n)$:
@@ -292,38 +293,95 @@ The formal definition of a digital signature scheme is given in Definition~\ref{
   for all $m$ (with a negligible probability of error).
 \end{definition}
 
-\subsection{How MEDS works}
-\label{sec:medsworks}
-Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence (MCE), which is closely related to the notion of Code Equivalence that is used in LESS~\cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition.
+\subsection{Codes and Matrix Code Equivalence (MCE)}
+\label{sec:codes}
+Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence (MCE), which is closely related to the notion of Code Equivalence that is used in LESS~\cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition. In this section, we provide background information on codes and the MCE problem. A more detailed explanation on matrix codes can be found in~\cite{gorla2021rank}. A study on the hardness of the MCE problem, as well as related problems, can be found in~\cite{reijnders2024hardness}.
 
-\subsubsection{The Matrix Code Equivalence (MCE) problem}
+\subsubsection{Codes}
+Each matrix has a so-called rank, of which the definition is given in Definition~\ref{def:matrixrank}.
+
+\begin{definition}[Matrix Rank]~\\
+  \label{def:matrixrank}
+  The rank of a matrix $\textbf{A} \in \mathbb{F}_q^{m \times n}$, denoted as $\text{rank}(\textbf{A})$, is the maximum number of linearly independent rows (or columns) of $\textbf{A}$.
+\end{definition}
+
+The matrix rank can be used to create a distance metric between matrices. This metric is called the rank metric, and its definition is provied in Definition~\ref{def:rankmetric}.
+
+\begin{definition}[Rank Metric, following~\cite{gorla2021rank}]~\\
+  \label{def:rankmetric}
+  The rank metric between two matrices $\textbf{A}, \textbf{B} \in \mathbb{F}_q^{m \times n}$ is defined as:
+  \[
+    d(\textbf{A}, \textbf{B}) = \text{rank}(\textbf{A} - \textbf{B})
+  \]
+  where $\textbf{A} - \textbf{B}$ is the element-wise difference of the matrices.
+\end{definition}
+
+Using the rank metric, we can define a (matrix) rank metric code: the underlying mathematical object of MEDS. The definition of a rank metric code is given in Definition~\ref{def:rankmetriccode}.
+
+\begin{definition}[(Matrix) Rank Metric Code, following~\cite{gorla2021rank}]~\\
+  \label{def:rankmetriccode}
+  A rank metric code (also called matrix code) $\mathcal{C}$ is a subspace of $\mathbb{F}_q^{m \times n}$, meaning it is a set of matrices of size $m \times n$ over $\mathbb{F}_q$ that are closed under addition and scalar multiplication.
+\end{definition}
+
+A `codeword' of a rank metric code is a matrix that is an element of the code. Codewords in a rank metric code can have different ranks.
+
+A mapping, also called an isometry, can be applied to a code $\mathcal{C}$ to create a new code $\mathcal{D}$. An isometry is denoted by $\phi$ and is defined in Definition~\ref{def:isometry}.
+
+\begin{definition}[Isometry, following~\cite{gorla2021rank}]~\\
+  \label{def:isometry}
+  An isometry $\phi$ is a bijective transformation on $\mathbb{F}_q^{m \times n}$, defined by a pair of matrices $(\textbf{A}, \textbf{B})$ where $\textbf{A} \in \text{GL}_m(q)$ and $\textbf{B} \in \text{GL}_n(q)$, having the following form:
+  \[
+    \textbf{M} \mapsto \textbf{A} \textbf{M} \textbf{B}
+  \]
+  $\phi$ can be applied to a code $\mathcal{C}$ to obtain a new code $\mathcal{D}$: $\phi(\mathcal{C}) = \mathcal{D}$. For every codeword $\textbf{C}$ in $\mathcal{C}$, the matrix $\textbf{D} = \textbf{A} \textbf{C} \textbf{B}$ is in $\mathcal{D}$. All codewords in $\mathcal{D}$ can be obtained by applying $\phi$ to the codewords in $\mathcal{C}$.
+\end{definition}
+
+\subsubsection{Matrix Code Equivalence (MCE)}
+MEDS, just like many other (post-quantum) signature schemes, is based on an equivalence problem, which asks if there exists a mapping (isometry) between two mathematical objects that preserves certain properties. When given two objects, it is usually hard to find such a mapping, but it is easy to verify if a given mapping is correct. This is the underlying principle of the security of many cryptographic schemes.
+
+In the case of MEDS, these mathematical objects are rank metric codes. Two rank metric codes $\mathcal{C}$ and $\mathcal{D}$ are called equivalent if there exists an isometry $\phi$ with $\phi(\mathcal{C}) = \mathcal{D}$. The isometry should preserve the rank of the matrices in the code. This means that after applying $\phi$, the rank distance between any two matrices in $\mathcal{C}$ should be the same as the rank distance between the corresponding matrices in $\mathcal{D}$.
+
 The computational form of the MCE problem is shown in Definition~\ref{def:mceproblem}.
 
 \begin{definition}[Matrix Code Equivalence Problem, following~\cite{chou2023meds}]~\\
   \label{def:mceproblem}
-  Given two rank metric codes $\mathcal{C}, \mathcal{D}$ of size $[m \times n, k]$,\\
-  find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$.\\
-  An isometry $\phi$ is an $\mathbb{F}_q$-linear map that preserves the rank of matrices.
+  Given two rank metric codes $\mathcal{C}, \mathcal{D} \in \mathbb{F}_q^{m \times n}$, find an isometry $\phi$ on $\mathbb{F}_q^{m \times n}$ such that $\mathcal{C} = \phi(\mathcal{D})$ and $\phi$ preserves the rank metric.
 \end{definition}
 
-For more information, we refer the reader to~\cite{reijnders2024hardness}, where the problem is explained in more detail and its hardness is studied.
+\subsection{Sigma protocol and Fiat-Shamir transform}
+\label{sec:medsworks}
+
 
 \subsubsection{Sigma protocol}
 \label{sec:sigmaprotocol}
-The MCE problem is used in MEDS to construct a 3-pass Sigma protocol~\cite{damgaard2002sigma}. A Sigma protocol is a variant of a zero-knowledge proof, which is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies the MCE problem. The Sigma protocol for the optimized version of MEDS is provided in~\cite[Section~4.2]{chou2024reducing}.
+The MCE problem is used in MEDS to construct a 3-pass Sigma protocol~\cite{damgaard2002sigma}. A Sigma protocol ($\Sigma$-protocol) is a variant of a zero-knowledge proof, which is a protocol between a prover and a verifier where the prover convinces the verifier that it knows a piece of information without revealing the information itself. A slightly simplified definition of a Sigma protocol is given in Definition~\ref{def:sigmaprotocol}.
+
+\begin{definition}[Sigma Protocol, following~\cite{damgaard2002sigma}]~\\
+  \label{def:sigmaprotocol}
+  A Sigma protocol for a relation $R$ over a pair $(x, w)$ where $x$ is a statement (an instance of some computational problem) and $w$ is a witness (a solution to that instance) is a 3-pass protocol between a prover $P$ and a verifier $V$ consisting of the following steps:
+  \begin{itemize}
+    \item \textbf{Commitment}: The prover $P$ generates a commitment $a$ based on generated values of $x$ and $w$ and sends it to the verifier $V$.
+    \item \textbf{Challenge}: The verifier $V$ sends a random challenge $e$ to the prover $P$.
+    \item \textbf{Response}: The prover $P$ sends a reply $z$ based on the challenge $e$, the commitment $a$, and the information $x$ and $w$. The verifier $V$ can verify $z$ based on $a$ and $e$.
+  \end{itemize}
+\end{definition}
+
+In the above definition, a prover $P$ can cheat the verifier $V$ with some probability by guessing the challenge $e$ before sending the initial commitment.
+
+In the case of MEDS, the prover convinces the verifier that it knows a certain isometry $\phi$ that satisfies an instance of the MCE problem, without revealing the isometry itself. In the definition of the Sigma protocol, $x$ is an instance of the MCE problem (two rank metric codes $\mathcal{C}$ and $\mathcal{D}$), and $w$ is an isometry $\phi$ (such that $\phi(\mathcal{C}) = \mathcal{D}$). The Sigma protocol for the optimized version of MEDS is provided in~\cite[Section~4.2]{chou2024reducing}.
 
 \subsubsection{Fiat-Shamir transform}
 \label{sec:fiatshamir}
-To convert a Sigma protocol into a usable digital signature scheme, the Fiat-Shamir transform~\cite{fiat1986prove} is used. The initial Sigma protocol is interactive, meaning that the prover and verifier exchange messages, which is not suitable for a digital signature. The Fiat-Shamir transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier, making it non-interactive. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitments for each round.
+To convert a Sigma protocol into a digital signature scheme, the Fiat-Shamir transform~\cite{fiat1986prove} is used. The initial Sigma protocol is interactive, meaning that the prover and verifier exchange messages, which is not suitable for a digital signature. The Fiat-Shamir transform converts the Sigma protocol such that the prover can show knowledge of the isometry while only sending a single message to the verifier, making it non-interactive. This is achieved by creating the challenge based on a collision-resistant hash of the message to be signed and the commitment. The bits in the resulting digest are used as the challenge in the Sigma protocol.
 
 When working with the Fiat-Shamir transform, various techniques and optimizations can be used to increase the security or lower the size of the public key and the signature. The following techniques are considered in the MEDS scheme:
 \begin{itemize}
   \item \textbf{Multiple challenges}:\\
-        Following the structure of a Sigma protocol, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To prevent this, the scheme can use $t$ challenges, reducing the probability of impersonation to $\frac{1}{2^t}$.
+        Following the structure of a Sigma protocol used in MEDS, where a challenge is either $0$ or $1$, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. This can be prevented by extracting not one, but $t$ challenges from the bits in the digest that was created by the hash of the message and the commitment. This reduces the probability of impersonation to $\frac{1}{2^t}$.
   \item \textbf{Multiple public keys}:\\
         As mentioned before, an attacker can impersonate an honest prover with $\frac{1}{2}$ probability. To reduce this probability, the scheme can use multiple public keys, each of which is used to compute a different isometry. This increases the challenge space from $2$ to $s + 1$, reducing the probability of impersonation to $\frac{1}{s + 1}$ ($s$ is the number of public keys used in the scheme).
   \item \textbf{Fixed-weight challenge strings}:\\
-        If a challenge is 0, the response consists of matrices that are generated uniformly at random. In this case, it is sufficient to set the response to the seed that was used to generate the matrices, greatly reducing the size of the signature. By fixing a certain number $w$ of challenges to 0, the average size of a response can be reduced. This technique has a slightly negative impact on the security of the scheme, but this can be compensated by increasing the number of challenges.
+        A challenge is a number in the range $[0, s]$. If a challenge is 0, the response consists of matrices that are generated uniformly at random. In this case, it is sufficient to set the response to the seed that was used to generate the matrices, greatly reducing the size of the signature. By fixing a certain number $w$ of challenges to 0, the average size of a response can be reduced. This technique has a slightly negative impact on the security of the scheme, but this can be compensated by increasing the number of challenges.
   \item \textbf{Seed tree}:\\
         If a scheme requires sending multiple seeds for the generation of matrices (or other objects), a seed tree can be used to reduce the size of the public key and the signature. This is a structure that allows the prover to transmit a smaller amount of bits than the size of the seeds, at the cost of an increased computational complexity.
 \end{itemize}
@@ -362,7 +420,7 @@ The team behind MEDS has proposed three parameter sets for the new optimized ver
 
 \begin{table}
   \centering
-  \caption{MEDS security levels. \textbf{FS} denotes the claimed security of a MEDS parameter set in bits.}
+  \caption{MEDS security levels. \textbf{FS} denotes the claimed security of a MEDS parameter set in bits, following the currently best known attack of~\cite{kumar2024algorithms}.}
   \begin{tabular}{lcc}
     \toprule
     \textbf{Parameter Set} & \textbf{NIST Category} & \textbf{FS} \\
@@ -530,7 +588,7 @@ In ARM, the SIMD instruction set is called NEON or Advanced SIMD (both terms ref
 
 In assembly code, we can refer to a NEON register by using the register prefix \texttt{v0}-\texttt{v31} followed by a suffix that indicates the lane size. For example, \texttt{v0.4s} refers to a 128-bit NEON register that contains 4 lanes of 32 bits each and can therefore store 4 32-bit values.
 
-The NEON instruction set contains a wide range of instructions that can be used to perform various operations on these vectors. Some illustrative examples are included in Algorithm~\ref{alg:neoninstructions}. A graphical depiction of the instructions in the code snippet above is shown in Figure~\ref{fig:neonexample}. 
+The NEON instruction set contains a wide range of instructions that can be used to perform various operations on these vectors. Some illustrative examples are included in Algorithm~\ref{alg:neoninstructions}. A graphical depiction of the instructions in the code snippet above is shown in Figure~\ref{fig:neonexample}.
 
 \begin{algorithm}
   \caption{NEON instruction example (assembly)}
@@ -621,13 +679,13 @@ As the Cortex-A72 uses an out-of-order execution model, it is impossible to prov
 \end{table}
 
 \subsubsection{Instruction scheduling}
-At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand-tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence optimally without the need for hand-tuning the instruction order~\cite{CortexA72OptGuide}. This means that the CPU can `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
+At first glance, it might seem that the order in which instructions of a certain instruction sequence are written in the assembly/intrinsic code influences the performance of the code, as the latencies and throughputs of the various instructions can influence the execution time of the code. This is the case for earlier ARM architectures, where hand-tuning of the instruction order could lead to performance improvements. However, the out-of-order pipeline of the Cortex-A72 can schedule and execute the instructions of a certain instruction sequence optimally without the need for hand-tuning the instruction order~\cite{ARM_Cortex_A72_TRM}. This means that the CPU can `hide' the latencies of instructions (by executing other micro-ops in the meantime) at least as well as hand-tuned code would be able to do. This is very beneficial for our work, as it means that we can focus on writing clean and readable code without having to worry about the order of the instructions.
 
 It is important to note that this does not mean that there are no benefits to knowing the latencies and throughputs of instructions. Choosing a different sequence of instructions to compute the same result can still have an impact on the performance of the code because some instructions might be better suited for that specific computation.
 
 \section{Optimizing cryptographic schemes}
 \label{sec:optimizingcrypto}
-When programming or optimizing cryptographic schemes or primitives, it is essential that the security of the scheme is not compromised because of vulnerabilities that are introduced in the code. One of the most important aspects in this context is the notion of constant-time execution~\cite{kocher1996timing}. A cryptographic function is said to be executed in constant-time if there exist no side-channel attacks that can extract secret information (such as a private key) by looking at the execution time of the function. In this section, we go over the main pitfalls that can lead to non-constant-time execution.
+When programming or optimizing cryptographic schemes or primitives, it is essential that the security of the scheme is not compromised because of vulnerabilities that are introduced in the code. One of the most important aspects in this context is the notion of constant-time execution~\cite{kocher1996timing}. A cryptographic function is said to be executed in constant-time if there exist no side-channel attacks that can extract secret information (such as a private key) by looking at the execution time of the function or any sub-sequence of the instructions in the function. In this section, we go over the main pitfalls that can lead to non-constant-time execution.
 
 \subsection{Branching and conditional execution}
 \label{sec:branching}
@@ -698,7 +756,7 @@ The most important technique to mitigate timing attacks on conditional execution
   \end{algorithmic}
 \end{algorithm}
 
-In this code snippet, if `secret\_data' is 1, $x = x \oplus (x \oplus y) = y$. Otherwise, $x = x \oplus 0 = x$. This way, the code does not branch (on secret data) and is therefore safe from timing attacks.
+In this code snippet, if `secret\_data' is 1, $x = x \oplus (x \oplus y) = y$. Otherwise, $x = x \oplus 0 = x$. This way, the code does not branch (on secret data) and is therefore safe from timing attacks, assuming the compiler does not optimize the code in such a way that the branch is reintroduced.
 
 \subsection{Data-dependent memory access}
 \label{sec:datadependentmemoryaccess}
@@ -724,7 +782,7 @@ A final common cause for non-constant-time execution is the use of CPU instructi
 \label{sec:valgrindtimecop}
 It has been shown that even if you write code that should theoretically compile to a constant-time binary, the compiler might still optimize the code in such a way that it is vulnerable to various kinds of timing attacks~\cite{barthe2019formal, simon2018you}. Therefore, it is good practice to make sure the resulting binary is indeed constant-time.
 
-Vulnerabilities to timing attacks described in Section~\ref{sec:branching} and Section~\ref{sec:datadependentmemoryaccess} can be detected using Valgrind~\cite{nethercote2007valgrind} using a technique that was described by Langley~\cite{langley2010checking}. Valgrind is a programming tool that is used to detect memory leaks, buffer overflows, and other memory-related problems. Among many other things, Valgrind can detect branching on uninitialized data and memory accessing at an uninitialized index. Using the following routine, we can use Valgrind to detect timing attack vulnerabilities:
+Vulnerabilities to timing attacks described in Section~\ref{sec:branching} and Section~\ref{sec:datadependentmemoryaccess} can be detected using Valgrind~\cite{nethercote2007valgrind} using a technique that was described by Langley~\cite{langley2010checking}. Valgrind is a programming tool that is used to detect memory leaks, buffer overflows, and other memory-related problems. Among many other things, Valgrind can detect branching on uninitialized data and memory accessing at an uninitialized index. Valgrind is unable to detect timing attack vulnerabilities caused by non-constant-time operations such as mentioned in Section~\ref{sec:nonconstanttimeoperations}. Using the following routine, we can use Valgrind to detect timing attack vulnerabilities:
 \begin{enumerate}
   \item \textbf{Uninitialized secret data}: Make sure our code does not initialize any secret data. Normal operations (such as arithmetic operations) on uninitialized data are ignored by Valgrind.
   \item \textbf{Run Valgrind}: Run Valgrind on our code. Any resulting complaints about uninitialized data are possible locations at which a vulnerability to a timing attack might exist.
@@ -781,9 +839,9 @@ RSA received its first optimizations in the early 1990s~\cite{shand1993fast, mau
 
 The next notable innovation was the introduction of EdDSA in 2011~\cite{bernstein2012high}, which (like ECDSA) is based on elliptic curve cryptography but has a different structure that allows for far more efficient implementations.
 
-With the introduction of the NIST post-quantum cryptography standardization process in 2016, many new digital signature schemes have been proposed that are based on various mathematical problems that are believed to be secure against quantum computers. In 2022, the final round of the standardization process was completed. The selected winners in the digital signature category were CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS+~\cite{bernstein2015sphincs}.
+With the introduction of the NIST post-quantum cryptography standardization process in 2016, many new digital signature schemes have been proposed that are based on various mathematical problems that are believed to be secure against quantum computers. In 2022, the final round of the standardization process was completed. The selected winners in the digital signature category were CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS$^+$~\cite{bernstein2015sphincs}.
 
-These three schemes have all received optimizations for various platforms, but the focus has mostly been on x86 and ARM CPUs. Both CRYSTALS-Dilithium and Falcon have received extensive optimizations for ARMv8 CPUs~\cite{becker2021neon, kim2022crystals, kim2022accelerating, nguyen2023fast} and also the performance of SPHINCS (the predecessor of SPHINCS+) on ARM CPUs has been studied~\cite{kolbl2018putting}.
+These three schemes have all received optimizations for various platforms, but the focus has mostly been on x86 and ARM CPUs. Both CRYSTALS-Dilithium and Falcon have received extensive optimizations for ARMv8 CPUs~\cite{becker2021neon, kim2022accelerating, kim2022crystals, nguyen2023fast} and also the performance of SPHINCS (the predecessor of SPHINCS$^+$) on ARM CPUs has been studied~\cite{kolbl2018putting}.
 
 These optimizations often rely on the use of SIMD instructions such as NEON for ARMv8~\cite{ARMv8A-ProgrammersGuide} and AVX2/AVX512~\cite{intel-avx512} for x86. Additionally, the use of already optimized cryptographic primitives such as the KECCAK permutation~\cite{bertoni2013keccak} can greatly improve the performance of a digital signature scheme.
 
@@ -1257,7 +1315,7 @@ Unfortunately, the function is also extremely large, with the reference code con
 \label{sec:isometryderivationcomplexity}
 As mentioned in Section~\ref{sec:derivingisometry}, the complexity of the entire \texttt{solve\_opt} function is $\mathcal{O}(n^3)$. Analyzing the complexity of the two time-consuming loops specifically is trivial as they are both triple-nested loops that start and end at specific values. As can be derived from Algorithm~\ref{alg:systemsolving1}, the first loop has a complexity of:
 \[
-   \mathcal{O}((m-3)(m-1)m) = \mathcal{O}(3m - 4m^2 + m^3) = \mathcal{O}(m^3)
+  \mathcal{O}((m-3)(m-1)m) = \mathcal{O}(3m - 4m^2 + m^3) = \mathcal{O}(m^3)
 \]
 Using the same approach, we find that the second loop has a complexity of $\mathcal{O}(m^2n)$.
 
@@ -1311,7 +1369,7 @@ In this section, we discuss the high-level optimization of the MEDS implementati
 \label{sec:highleveldataalgorithms}
 In the reference implementation of MEDS, the main datatypes used are defined as follows:
 \begin{samepage}
-\begin{verbatim}
+  \begin{verbatim}
   #define GFq_t uint16_t
   #define pmod_mat_t GFq_t
 \end{verbatim}
@@ -1320,7 +1378,7 @@ These two datatypes represent a field element and a matrix element, respectively
 
 To parallelize the algorithms that use these datatypes, we adjust the datatypes such that they represent multiple field/matrix elements at the same time. In our implementation, we add a \texttt{vec\_16x8.h} file\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-high-level/include/vec\_16x8.h}} containing these new datatypes, which are defined as follows:
 \begin{samepage}
-\begin{verbatim}
+  \begin{verbatim}
   #define GFq_vec_t uint16x8_t
   #define pmod_mat_vec_t GFq_vec_t
 \end{verbatim}
@@ -1329,7 +1387,7 @@ These two datatypes represent eight field elements and eight matrix elements, re
 
 Additionally, we define a wide range of functions that operate on these vectorized datatypes in the \texttt{vec\_16x8.h} file. Examples of such definitions include:
 \begin{samepage}
-\begin{verbatim}
+  \begin{verbatim}
   #define ADD_VEC(a, b) vaddq_u16(a, b)
   #define MUL_VEC_LOW(a, b) vmull_u16(vget_low_u16(a), 
                                       vget_low_u16(b))
@@ -1382,7 +1440,7 @@ As can be seen from the code, the vectorized version is essentially the same as 
 \label{sec:commitmentparallelization}
 Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm~\ref{alg:medssignoverview}) and verification (Algorithm~\ref{alg:medsverifyoverview}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while loop that runs until the commitment is successfully generated. This is why the signing and verification code exhibits the following structure:
 \begin{samepage}
-\begin{verbatim}
+  \begin{verbatim}
   // Initial definitions and loading
   for (int i = 0; i < t; i++) {
     while (1) {
@@ -1401,7 +1459,7 @@ This structure introduces a problem if we want to parallelize the computation of
 \label{sec:commitmentparallelizationoptimization}
 We can overcome the aforementioned problems by using a different approach to parallelize the commitment computations. Instead of finishing the computation for a commitment before moving on to the next, we start by running the first computation attempt for each commitment. If a computation fails, we store the necessary information to retry the computation later. After the first computation attempt for all commitments is done, we run the second computation attempt for all commitments that failed the first time. This process is repeated until all commitments are successfully computed. This approach is inspired by~\cite{IIS2023HighLevel}. It is suitable for parallelization and has the following structure:
 \begin{samepage}
-\begin{verbatim}
+  \begin{verbatim}
   // Initial definitions and loading
   while (there are uncomputed/failed commitments) {
     // 1. Load data for next 8 uncomputed/failed commitments
@@ -1530,25 +1588,25 @@ To determine how close we got to our calculated bound, we benchmarked the optimi
     %
     \begin{tabular}{lllR{1.35cm}R{1.2cm}R{1.2cm}r}
       \toprule
-      \textbf{Function} & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
-      & \multicolumn{1}{c}{\textit{A}} & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)} & \text{(Opt.)} & & \\
+      \textbf{Function}                        & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles}                & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}        \\
+                                               & \multicolumn{1}{c}{\textit{A}}          & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)}   & \text{(Opt.)}  &                &      \\
       \toprule
-      Matrix Multiplication & $2 \times k$ & $k \times k$ & 6450 & 1348 & 744 & 1.81\\
-      Matrix Multiplication & $2 \times mn$ & $mn \times k$ & 226217 & 39234 & 22852 & 1.72\\
-      Matrix Multiplication & $k \times mn$ & $mn \times k$ & 3757155 & 489947 & 388488 & 1.26\\
-      Matrix Multiplication & $m \times n$ & $n \times m$ & 109556 & 15947 & 12969 & 1.23\\
-      Matrix Multiplication & $m \times n$ & $n \times n$ & 111334 & 16794 & 13350 & 1.26\\
-      Matrix Multiplication & $32 \times 32$ & $32 \times 32$ & 89725 & 10750 & 10624 & 1.01\\
-  \midrule
-      Matrix Systemization & $k \times k$& & 169141 & 95299 & 71438 & 1.33\\
-      Matrix Syst. & $k \times 2k$& & 292309 & 175155 & 170710 & 1.03\\
-      Matrix Syst. (bsub$^{*}$) & $n \times 2n$& & 453498 & 292422 & 274242 & 1.07\\
-      Matrix Syst. (bsub$^{*}$) & $m \times 2m$& & 407491 & 261331 & 251704 & 1.04\\
-      Matrix Syst. (bsub$^{*}$) & $k \times 2k$& & 407583 & 261028 & 251704 & 1.04\\
-      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $n \times 2m$& & 422529 & 269895 & 260463 & 1.04\\
-      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$& & 190097 & 123796 & 73106 & 1.69\\
-  \midrule
-      Isometry Derivation (part) & $2 \times mn$ & & 1142883 & 350909 & 249100 & 1.41\\
+      Matrix Multiplication                    & $2 \times k$                            & $k \times k$                   & 6450            & 1348           & 744            & 1.81 \\
+      Matrix Multiplication                    & $2 \times mn$                           & $mn \times k$                  & 226217          & 39234          & 22852          & 1.72 \\
+      Matrix Multiplication                    & $k \times mn$                           & $mn \times k$                  & 3757155         & 489947         & 388488         & 1.26 \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times m$                   & 109556          & 15947          & 12969          & 1.23 \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times n$                   & 111334          & 16794          & 13350          & 1.26 \\
+      Matrix Multiplication                    & $32 \times 32$                          & $32 \times 32$                 & 89725           & 10750          & 10624          & 1.01 \\
+      \midrule
+      Matrix Systemization                     & $k \times k$                            &                                & 169141          & 95299          & 71438          & 1.33 \\
+      Matrix Syst.                             & $k \times 2k$                           &                                & 292309          & 175155         & 170710         & 1.03 \\
+      Matrix Syst. (bsub$^{*}$)                & $n \times 2n$                           &                                & 453498          & 292422         & 274242         & 1.07 \\
+      Matrix Syst. (bsub$^{*}$)                & $m \times 2m$                           &                                & 407491          & 261331         & 251704         & 1.04 \\
+      Matrix Syst. (bsub$^{*}$)                & $k \times 2k$                           &                                & 407583          & 261028         & 251704         & 1.04 \\
+      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$)   & $n \times 2m$                           &                                & 422529          & 269895         & 260463         & 1.04 \\
+      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$                          &                                & 190097          & 123796         & 73106          & 1.69 \\
+      \midrule
+      Isometry Derivation (part)               & $2 \times mn$                           &                                & 1142883         & 350909         & 249100         & 1.41 \\
       \bottomrule
     \end{tabular}
     %
@@ -1590,7 +1648,7 @@ The results of profiling the reference implementation were shown earlier in Sect
 The figures show major improvements for all three algorithms in both the low-level and high-level optimized implementations, with a few notable exceptions:
 \begin{itemize}
   \item The key generation algorithm used in the high-level optimized implementation is the same as the one in the reference implementation, because the parameter sets that we consider do not allow for large speedup factors for the high-level optimizations of this algorithm. We leave this as future work (see Section~\ref{sec:futureworkopt}).
-  \pagebreak
+        \pagebreak
   \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices cannot be optimized, as it relies on the generation of random field elements using the SHAKE256 hash function (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section~\ref{sec:bitstreamfilling}, which we leave as future work.
   \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 hash function is already heavily optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section~\ref{sec:hashfunctionoptimization}.
 \end{itemize}
@@ -1646,11 +1704,13 @@ Additionally, the results show that the alternative hash structure presented in 
 
 \section{Comparison to similar schemes}
 \label{sec:comparison}
-We compare the performance of MEDS to the performance of other digital signature schemes. Note that we compare to the self-reported performance of the schemes, which means the results are not directly comparable. Nevertheless, the comparison indicates the relative performance of the schemes. The results of the comparison are shown in Table~\ref{tab:comparison}.
+We compare the performance of MEDS to the performance of other digital signature schemes. Note that we compare to the self-reported performance of the schemes, which means the results are not directly comparable. Nevertheless, the comparison indicates the relative performance of the schemes. Besides this, note that the comparison is only based on the performance of the schemes and does not take key and signature sizes into account.
+
+We compare in two categories: standardized post-quantum digital signature schemes that have been optimized for ARMv8 (in Table~\ref{tab:stdcomparison}) and code-based post-quantum digital signature schemes (in Table~\ref{tab:codebasedcomparison}). In the latter category, the self-reported performance is given for various CPUs, which means that the results should only be interpreted as a rough indication of the relative performance of the schemes.
 
 \begin{table}
   \centering
-  \caption{Comparison of MEDS to (self-reported times of) other digital signature schemes that have been optimized for ARMv8. The numbers represent the number of KCycles that the key generation, signing, and verification algorithms take to execute on an ARM Cortex-A72 CPU.}
+  \caption{Comparison of MEDS performance to self-reported times of standardized post-quantum digital signature schemes that have been optimized for ARMv8. The numbers represent the number of KCycles that the key generation, signing, and verification algorithms take to execute on an ARM Cortex-A72 CPU.}
   \begin{tabular}{p{1.1cm}lrrr}
     \toprule
     \textbf{NIST Level}  & \textbf{Work}                    & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
@@ -1667,11 +1727,51 @@ We compare the performance of MEDS to the performance of other digital signature
                          & MEDS-122000 (ours)               & 16646.2         & 2794525.4     & 2693826.8       \\
     \bottomrule
   \end{tabular}
-  \label{tab:comparison}
+  \label{tab:stdcomparison}
 \end{table}
 
-These results are not particularly favourable for MEDS. For all NIST levels, MEDS is significantly slower than Falcon and Dilithium.
-\todo[inline]{This section will be expanded with more information and explanation based on Simona's comments on these results.}
+\begin{table}
+  \centering
+  \caption{Comparison of MEDS performance to self-reported times of other code-based signature schemes in the NIST standardization process. The numbers represent the number of MCycles that the key generation, signing, and verification algorithms take on the mentioned CPUs: (1) AMD Ryzen 5 Pro 3500U, (2) Intel Core i7-12700, (3) Intel Comet Lake, (4) ARM Cortex-A72, (5) Intel i5-1135G7.\\}
+  \resizebox{\textwidth}{!}{
+    %
+    \begin{tabular}{p{1.1cm}lrrrr}
+      \toprule
+      \textbf{NIST Level}  & \textbf{Scheme}                         & \textbf{CPU} & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+      \midrule
+      \multirow{6}{*}{I}   & CROSS-R-SDP-b~\cite{baldi2024cross}     & (1)          & 0.04            & 2.38          & 1.44            \\
+                           & Enhanced pqsigRM~\cite{cho2022enhanced} & (2)          & 2038.36         & 2.23          & 0.24            \\
+                           & FuLeeca~\cite{ritterhoff2023fuleeca}    & (3)          & 49.35           & 1846.78       & 1.26            \\
+                           & LESS-1b (AVX2)~\cite{baldi2024less}     & (2)          & 0.90            & 263.60        & 271.40          \\
+                           & MEDS-21595 (reference)                  & (4)          & 7.97            & 890.71        & 889.77          \\
+                           & MEDS-21595 (ours)                       & (4)          & 2.82            & 248.22        & 229.79          \\
+                           & Wave822~\cite{banegas2023wave}          & (5)          & 13946.20        & 1156.18       & 206.10          \\
+      \midrule
+      \multirow{5}{*}{III} & CROSS-R-SDP-b~\cite{baldi2024cross}     & (1)          & 0.08            & 4.97          & 2.89            \\
+                           & FuLeeca~\cite{ritterhoff2023fuleeca}    & (3)          & 110.92          & 2111.16       & 2.45            \\
+                           & LESS-3b (AVX2)~\cite{baldi2024less}     & (2)          & 2.80            & 2446.90       & 2521.40         \\
+                           & MEDS-55520 (reference)                  & (4)          & 22.66           & 3623.80       & 3628.16         \\
+                           & MEDS-55520 (ours)                       & (4)          & 7.18            & 927.91        & 878.27          \\
+                           & Wave1249~\cite{banegas2023wave}         & (5)          & 46285.89        & 3534.75       & 467.36          \\
+      \midrule
+      \multirow{5}{*}{V}   & CROSS-R-SDP-b~\cite{baldi2024cross}     & (1)          & 0.14            & 8.26          & 5.00            \\
+                           & FuLeeca~\cite{ritterhoff2023fuleeca}    & (3)          & 192.39          & 12327.26      & 3.79            \\
+                           & LESS-5b (AVX2)~\cite{baldi2024less}     & (2)          & 6.40            & 10212.60      & 10458.80        \\
+                           & MEDS-122000 (reference)                 & (4)          & 71.02           & 13748.90      & 13731.38        \\
+                           & MEDS-122000 (ours)                      & (4)          & 16.65           & 2794.53       & 2693.83         \\
+                           & Wave1644~\cite{banegas2023wave}         & (5)          & 106260.00       & 7851.48       & 806.86          \\
+      \bottomrule
+    \end{tabular}
+    %
+  }
+  \label{tab:codebasedcomparison}
+\end{table}
+
+When comparing the performance of MEDS to standardized post-quantum digital signature schemes (see Table~\ref{tab:stdcomparison}), we see that MEDS is significantly slower than Falcon and Dilithium: for all three security levels, the signing and verification difference is at least a factor of 1000. However, it is important to note that MEDS relies on a different mathematical problem than Falcon and Dilithium, and therefore provides a different level of confidence in the security of the scheme.
+
+When comparing the performance of MEDS to other code-based post-quantum digital signature schemes (see Table~\ref{tab:codebasedcomparison}), the results are more comparable. For key generation, MEDS is comparable to LESS and CROSS and significantly outperforms Enhanced pqsigRM, FuLeeca, and Wave. For signing, MEDS is outperformed by CROSS and Enhanced pqsigRM, but outperforms FuLeeca, LESS, and Wave. For verification, MEDS is comparable to Wave, outperforms LESS, but is outperformed by the other schemes. The only code-based post-quantum digital signature scheme that outperforms MEDS for all three algorithms is CROSS.
+
+\pagebreak
 
 \section{Discussion}
 Throughout our research, we have found answers to all our research questions.
@@ -1681,7 +1781,7 @@ Throughout our research, we have found answers to all our research questions.
         \begin{itemize}
           \item[a)] The bitstream filling and hash restructure speedups can be applied to the reference implementation as they do not require any ARMv8-specific instructions. The remaining optimizations (which make up the bulk of the speedup) are ARMv8-specific and can therefore not directly be applied to the reference implementation. However, most other architectures have their own SIMD instruction set, which can be used in the same way as NEON instructions and should achieve similar speedups.
         \end{itemize}
-  \item[RQ III.] From the comparison to similar schemes, we have found that MEDS is significantly slower than Falcon and Dilithium. For NIST Levels 1 and 3, the difference is a factor of 1000. For Level 5, the difference becomes even larger: a factor of 10000. Although this suggests that MEDS is not a viable alternative to these schemes, it is important to note that MEDS relies on a different mathematical problem than Falcon and Dilithium. This means that MEDS is not directly comparable to these schemes and that the choice between these schemes should be based on the security requirements of the application.\todo{Make more concrete}
+  \item[RQ III.] From the comparison to other code-based post-quantum digital signature schemes, we have found that the performance of MEDS is mixed. Based on the requirements of the application, MEDS is a viable competitor to most of these schemes in terms of performance. The only code-based post-quantum digital signature scheme that outperforms MEDS for all three algorithms is CROSS, for which it is important to note that MEDS provides smaller signature sizes. Comparing MEDS to optimized versions of standardized post-quantum signature schemes, we have found that MEDS is significantly slower than Falcon and Dilithium. Although this suggests that MEDS is not a viable alternative to these schemes, it is important to note that MEDS relies on a different mathematical problem and therefore provides a different level of confidence in the security of the scheme.
 \end{itemize}
 
 \chapter{Conclusions}
@@ -1692,7 +1792,7 @@ We present an alternative hash structure in Section~\ref{sec:hashfunctionoptimiz
 
 We have shown that the MEDS implementation is very suitable for optimization using SIMD instructions. The achieved speedup on ARMv8 is big, but we expect that future research can achieve even larger speedups on other architectures that support SIMD instructions, such as AVX512~\cite{intel-avx512}, on which 4 times as many field elements can be processed in parallel compared to ARMv8.
 
-Compared to other post-quantum digital signature schemes that have been optimized for ARMv8, MEDS is significantly slower, with the difference being at least a factor of 1000. However, MEDS relies on a different mathematical problem than these schemes, which means that MEDS is not directly comparable to these schemes. The choice between these schemes should be based on the security requirements of the application.\todo{Make more concrete}
+Compared to standardized post-quantum signature schemes, MEDS is heavily outperformed. However, MEDS relies on a different mathematical problem than these schemes, and therefore provides a different level of confidence in the security of the scheme. When compared to other code-based post-quantum signature schemes, MEDS is a viable competitor in terms of performance. The choice between all these schemes should be based on a wide range of factors, among which are the security requirements of the application, the performance requirements of the key generation, signing, and verification algorithms, the private and public key sizes, and the signature size.
 
 \chapter{Future Work}
 \label{ch:futurework}
