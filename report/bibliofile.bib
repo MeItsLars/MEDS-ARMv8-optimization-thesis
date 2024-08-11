@@ -243,7 +243,7 @@
 
 @misc{becker2022hybrid,
   author       = {Hanno Becker and Matthias J. Kannwischer},
-  title        = {Hybrid scalar/vector implementations of Keccak and SPHINCS$^+$ on AArch64},
+  title        = {{Hybrid scalar/vector implementations of Keccak and SPHINCS$^+$ on AArch64}},
   howpublished = {Cryptology ePrint Archive, Paper 2022/1243},
   year         = {2022},
   note         = {\url{https://eprint.iacr.org/2022/1243}},
@@ -636,21 +636,21 @@
 }
 
 @misc{baldi2024less,
-  author = {Marco Baldi and Alessandro Barenghi and Luke Beckwith and Jean-François Biasse and Andre Esser and Kris Gaj and Kamyar Mohajerani and Gerardo Pelosi and Edoardo Persichetti and Markku-Juhani O. Saarinen and Paolo Santini and Robert Wallace},
-  title = {{LESS: Linear Equivalence Signature Scheme}},
-  year = {2024},
-  month = feb,
+  author       = {Marco Baldi and Alessandro Barenghi and Luke Beckwith and Jean-François Biasse and Andre Esser and Kris Gaj and Kamyar Mohajerani and Gerardo Pelosi and Edoardo Persichetti and Markku-Juhani O. Saarinen and Paolo Santini and Robert Wallace},
+  title        = {{LESS: Linear Equivalence Signature Scheme}},
+  year         = {2024},
+  month        = feb,
   howpublished = {\url{https://www.less-project.com/LESS-2024-02-19.pdf}},
-  note = {Accessed: 2024-08-09},
+  note         = {Accessed: 2024-08-09}
 }
 
 @misc{banegas2023wave,
-  author = {Gustavo Banegas and Pierre Karpman and Kévin Carrier and Johanna Loyer and André Chailloux and Ruben Niederhagen and Alain Couvreur and Nicolas Sendrier and Thomas Debris-Alazard and Benjamin Smith and Philippe Gaborit and Jean-Pierre Tillich},
-  title = {{WAVE}},
-  year = {2023},
-  month = jun,
+  author       = {Gustavo Banegas and Pierre Karpman and Kévin Carrier and Johanna Loyer and André Chailloux and Ruben Niederhagen and Alain Couvreur and Nicolas Sendrier and Thomas Debris-Alazard and Benjamin Smith and Philippe Gaborit and Jean-Pierre Tillich},
+  title        = {{WAVE}},
+  year         = {2023},
+  month        = jun,
   howpublished = {\url{https://wave-sign.org/wave_documentation.pdf}},
-  note = {Accessed: 2024-08-09},
+  note         = {Accessed: 2024-08-09}
 }
 
 @inproceedings{ritterhoff2023fuleeca,
@@ -673,3 +673,245 @@
   abstract  = {In this work, we introduce a new code-based signature scheme, called FuLeeca, based on the NP-hard problem of finding codewords of given Lee-weight. The scheme follows the Hash-and-Sign approach applied to quasi-cyclic codes. Similar approaches in the Hamming metric have suffered statistical attacks, which revealed the small support of the secret basis. Using the Lee metric, we are able to thwart such attacks. We use existing hardness results on the underlying problem and study adapted statistical attacks. We propose parameters for FuLeeca and compare them to an extensive list of proposed post-quantum secure signature schemes including the ones already standardized by NIST. This comparison reveals that FuLeeca is competitive. For example, for NIST category I, i.e., 160 bit of classical security, we obtain an average signature size of 1100 bytes and public key sizes of 1318 bytes. Comparing the total communication cost, i.e., the sum of the signature and public key size, we see that FuLeeca is only outperformed by Falcon while the other standardized schemes Dilithium and SPHINCS+ show higher communication costs than FuLeeca.},
   isbn      = {978-3-031-46495-9}
 }
+
+@inproceedings{xu2001efficient,
+  author    = {Xu, Sheng-Bo
+               and Batina, Lejla},
+  editor    = {Davida, George I.
+               and Frankel, Yair},
+  title     = {{Efficient Implementation of Elliptic Curve Cryptosystems on an ARM7 with Hardware Accelerator}},
+  booktitle = {Information Security},
+  year      = {2001},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {266--279},
+  abstract  = {This paper presents an efficient implementation of elliptic curve cryptosystems over a prime field on ARM7 with the help of a hardware accelerator. The hardware accelerator has two dedicated large number arithmetic units (LNAU's). Three different implementation platforms are considered: ARM7, ARM7 with one LNAU, and ARM7 with two LNAU's. The time costs for performing point multiplication are measured for all three platforms. On ARM7 with 2 LNAU's platform, we achieved the point multiplication in 18 ms with the chip running at 50 MHz clock frequency.},
+  isbn      = {978-3-540-45439-7}
+}
+
+@article{seo2016efficient,
+  author   = {Seo, Hwajeong and Liu, Zhe and Großschädl, Johann and Kim, Howon},
+  title    = {Efficient arithmetic on ARM-NEON and its application for high-speed RSA implementation},
+  journal  = {Security and Communication Networks},
+  volume   = {9},
+  number   = {18},
+  pages    = {5401-5411},
+  keywords = {public-key cryptography, modular arithmetic, SIMD-level parallelism, vector instructions, ARM-NEON, RSA},
+  doi      = {https://doi.org/10.1002/sec.1706},
+  url      = {https://onlinelibrary.wiley.com/doi/abs/10.1002/sec.1706},
+  eprint   = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/sec.1706},
+  abstract = {Abstract Advanced modern processors support single instruction, multiple data instructions (e.g., Intel-AVX and ARM-NEON) and a massive body of research on vector-parallel implementations of modular arithmetic, which are crucial components for modern public-key cryptography ranging from Rivest, Shamir, and Adleman (RSA), ElGamal, Digital Signature Algorithm (DSA), and elliptic curve cryptography, have been conducted. In this paper, we introduce a novel double operand scanning method to speed up multi-precision squaring with non-redundant representations on single instruction, multiple data architecture where the part of the operands are doubled to compute the squaring operation without read-after-write dependencies between source and destination variables. Afterwards, Karatsuba algorithm is applied to both multiplication and squaring operations. For modular multiplication, separated Montgomery algorithm is chosen. Finally, the Rivest, Shamir, and Adleman (RSA) implementations outperform the best-known results on the ARM-NEON platforms. Copyright © 2017 John Wiley \& Sons, Ltd.},
+  year     = {2016}
+}
+
+@article{tanik2001ecdsa,
+  title        = {{ECDSA Optimizations on an ARM Processor for a NIST Curve Over GF(p)}},
+  author       = {Tanik, Haluk Kent},
+  year         = {2001},
+  note         = {Master's Thesis, Oregon State University},
+  howpublished = {\url{http://security.ece.orst.edu/papers/01Turan.html}}
+}
+
+@inproceedings{talal2009efficient,
+  author    = {Talal, Ahmed and Sobh, Mohamed A. and Eldin, Ayman M. Bahaa},
+  booktitle = {2009 4th International Design and Test Workshop (IDT)},
+  title     = {{An efficient implementation of RSA for low cost microprocessors}},
+  year      = {2009},
+  volume    = {},
+  number    = {},
+  pages     = {1-4},
+  keywords  = {Costs;Microprocessors;Public key cryptography;Testing;Elliptic curve cryptography;Security;Cryptographic protocols;Random number generation;Energy consumption;Application software;RSA;Cryptography;Optimization;Profiling},
+  doi       = {10.1109/IDT.2009.5404094}
+}
+
+@inproceedings{bernstein2012neon,
+  author    = {Bernstein, Daniel J.
+               and Schwabe, Peter},
+  editor    = {Prouff, Emmanuel
+               and Schaumont, Patrick},
+  title     = {{NEON Crypto}},
+  booktitle = {Cryptographic Hardware and Embedded Systems -- CHES 2012},
+  year      = {2012},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {320--339},
+  abstract  = {NEON is a vector instruction set included in a large fraction of new ARM-based tablets and smartphones. This paper shows that NEON supports high-security cryptography at surprisingly high speeds; normally data arrives at lower speeds, giving the CPU time to handle tasks other than cryptography. In particular, this paper explains how to use a single 800MHz Cortex A8 core to compute the existing NaCl suite of high-security cryptographic primitives at the following speeds: 5.60 cycles per byte (1.14 Gbps) to encrypt using a shared secret key, 2.30 cycles per byte (2.78 Gbps) to authenticate using a shared secret key, 527102 cycles (1517/second) to compute a shared secret key for a new public key, 624846 cycles (1280/second) to verify a signature, and 244655 cycles (3269/second) to sign a message. These speeds make no use of secret branches and no use of secret memory addresses.},
+  isbn      = {978-3-642-33027-8}
+}
+
+@misc{azarderaksh2015neon,
+  author       = {Reza Azarderakhsh and Zhe Liu and Hwajeong Seo and Howon Kim},
+  title        = {{NEON PQCryto: Fast and Parallel Ring-LWE Encryption on ARM NEON Architecture}},
+  howpublished = {Cryptology ePrint Archive, Paper 2015/1081},
+  year         = {2015},
+  note         = {\url{https://eprint.iacr.org/2015/1081}},
+  url          = {https://eprint.iacr.org/2015/1081}
+}
+
+@inproceedings{seo2014parallel,
+  author    = {Seo, Hwajeong
+               and Liu, Zhe
+               and Park, Taehwan
+               and Kim, Hyunjin
+               and Lee, Yeoncheol
+               and Choi, Jongseok
+               and Kim, Howon},
+  editor    = {Lee, Hyang-Sook
+               and Han, Dong-Guk},
+  title     = {{Parallel Implementations of LEA}},
+  booktitle = {Information Security and Cryptology -- ICISC 2013},
+  year      = {2014},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {256--274},
+  abstract  = {LEA is a new lightweight and low-power encryption algorithm. This algorithm has a certain useful features which are especially suitable for parallel hardware and software implementations, i.e., simple ARX operations, non-S-BOX architecture, and 32-bit word size. In this paper we evaluate the performance of the LEA algorithm on ARM-NEON and GPUs by taking advantage of both the desirable features of LEA and a parallel computing platform and programming model by NEON and CUDA. Specifically, we propose novel parallel LEA implementations on representative SIMT and SIMD architectures such as CUDA and NEON. In case of CUDA, we firstly designed a thread-based computation model to fall into functional parallelism by computing several encryptions over one thread. To alleviate the memory transfer delay, we allocate memory to satisfy coalescing memory access. Secondly our method is block cipher implementation written in assembly language, which provides efficient and flexible programming environments. With these optimization techniques, we achieved 17.352 and 2.5 GBps (bytes per second) throughput without/with memory transfer. In case of NEON, we adopted pipeline instructions and SIMD-based execution models, which enhanced encryption by 49.85 {\%} compared to previous ARM implementations.},
+  isbn      = {978-3-319-12160-4}
+}
+
+
+@inproceedings{gouvea2015implementing,
+  author    = {Gouv{\^e}a, Conrado P. L.
+               and L{\'o}pez, Julio},
+  editor    = {Nyberg, Kaisa},
+  title     = {{Implementing GCM on ARMv8}},
+  booktitle = {Topics in Cryptology --- CT-RSA 2015},
+  year      = {2015},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {167--180},
+  abstract  = {The Galois/Counter Mode is an authenticated encryption scheme which is included in protocols such as TLS and IPSec. Its implementation requires multiplication over a binary finite field, an operation which is costly to implement in software. Recent processors have included instructions aimed to speed up binary polynomial multiplication, an operation which can be used to implement binary field multiplication. Some processors of the ARM architecture, which was reported in 2014 to be present in 95 {\%} of smartphones, include such instructions. In particular, recent devices such as the iPhone 5 s and Galaxy Note 4 have ARMv8 processors, which provide instructions able to multiply two 64-bit binary polynomials and to encrypt using the AES cipher. In this work we present an optimized and timing-resistant implementation of GCM over AES-128 using these instructions. We have obtained timings of 1.71 cycles per byte for GCM authenticated encryption (9 times faster than the timing on ARMv7), 0.51 cycles per byte for GCM authentication only (11 times faster) and 1.21 cycles per byte for AES-128 encryption (8 times faster).},
+  isbn      = {978-3-319-16715-2}
+}
+
+@inproceedings{wang2015higher,
+  author    = {Wang, Junwei
+               and Vadnala, Praveen Kumar
+               and Gro{\ss}sch{\"a}dl, Johann
+               and Xu, Qiuliang},
+  editor    = {Nyberg, Kaisa},
+  title     = {{Higher-Order Masking in Practice: A Vector Implementation of Masked AES for ARM NEON}},
+  booktitle = {Topics in Cryptology --- CT-RSA 2015},
+  year      = {2015},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {181--198},
+  abstract  = {Real-world software implementations of cryptographic algorithms need to be able to resist various kinds of side-channel attacks, in particular Differential Power Analysis (DPA). Masking is a widely-used countermeasure to protect block ciphers like the Advanced Encryption Standard (AES) against DPA attacks. The basic principle is to split all sensitive intermediate variables manipulated by the algorithm into two shares and process these shares separately. However, this approach still succumbs to higher-order DPA attacks, which exploit the joint leakage of a number of intermediate variables. A viable solution is to generalize masking such that at least {\$}{\$}d+1{\$}{\$}shares are used to protect against {\$}{\$}d{\$}{\$}-th order attacks. Unfortunately, all current higher-order masking schemes introduce a significant computational overhead compared to unmasked implementations. To facilitate the deployment of higher-order masking for the AES in practice, we developed a vector implementation of Coron et al's masking scheme (FSE 2012) for ARM NEON processors. After a comprehensive complexity analysis, we found that Coron et al's scheme with {\$}{\$}n{\$}{\$}shares for each sensitive variable needs {\$}{\$}{\backslash}mathcal {\{}O{\}}(n^2){\$}{\$}multiplications in the field GF({\$}{\$}2^8{\$}{\$}) and {\$}{\$}{\backslash}mathcal {\{}O{\}}(n^2){\$}{\$}random-number generations. Both of these performance-critical operations are executed with only 15 instructions in our software, which is possible thanks to the rich functionality of the NEON instruction set. Our experimental results demonstrate that the performance penalty caused by the integration of higher-order masking is significantly lower than in generally assumed and reported in previous papers. For example, our second-order DPA-protected AES (with three shares for each sensitive variable) is merely eight times slower than an unmasked baseline implementation that resists cache-timing attacks.},
+  isbn      = {978-3-319-16715-2}
+}
+
+@article{streit2018post,
+  author   = {Streit, Silvan and De Santis, Fabrizio},
+  journal  = {IEEE Transactions on Computers},
+  title    = {{Post-Quantum Key Exchange on ARMv8-A: A New Hope for NEON Made Simple}},
+  year     = {2018},
+  volume   = {67},
+  number   = {11},
+  pages    = {1651-1662},
+  keywords = {Protocols;Neon;Transforms;Cryptography;Program processors;Quantum computing;ARMv8-A;NEON;ARM cortex-A53;post-quantum key exchange;ring-LWE;NewHope;NewHope-Simple;NTT},
+  doi      = {10.1109/TC.2017.2773524}
+}
+
+@inproceedings{nguyen2021fast,
+  author    = {Nguyen, Duc Tri
+               and Gaj, Kris},
+  editor    = {Cheon, Jung Hee
+               and Tillich, Jean-Pierre},
+  title     = {{Fast NEON-Based Multiplication for Lattice-Based NIST Post-quantum Cryptography Finalists}},
+  booktitle = {Post-Quantum Cryptography},
+  year      = {2021},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {234--254},
+  abstract  = {This paper focuses on high-speed NEON-based constant-time implementations of multiplication of large polynomials in the NIST PQC KEM Finalists: NTRU, Saber, and CRYSTALS-Kyber. We use the Number Theoretic Transform (NTT)-based multiplication in Kyber, the Toom-Cook algorithm in NTRU, and both types of multiplication in Saber. Following these algorithms and using Apple M1, we improve the decapsulation performance of the NTRU, Kyber, and Saber-based KEMs at the security level 3 by the factors of 8.4, 3.0, and 1.6, respectively, compared to the reference implementations. On Cortex-A72, we achieve the speed-ups by factors varying between 5.7 and 7.5{\$}{\$}{\backslash}times {\$}{\$}{\texttimes}for the Forward/Inverse NTT in Kyber, and between 6.0 and 7.8{\$}{\$}{\backslash}times {\$}{\$}{\texttimes}for Toom-Cook in NTRU, over the best existing implementations in pure C. For Saber, when using NEON instructions on Cortex-A72, the implementation based on NTT outperforms the implementation based on the Toom-Cook algorithm by {\$}{\$}14{\backslash}{\%}{\$}{\$}14{\%}in the case of the MatrixVectorMul function but is slower by {\$}{\$}21{\backslash}{\%}{\$}{\$}21{\%}in the case of the InnerProduct function. Taking into account that in Saber, keys are not available in the NTT domain, the overall performance of the NTT-based version is very close to the performance of the Toom-Cook version. The differences for the entire decapsulation at the three major security levels (1, 3, and 5) are {\$}{\$}-4{\$}{\$}-4, {\$}{\$}-2{\$}{\$}-2, and {\$}{\$}+2{\backslash}{\%}{\$}{\$}+2{\%}, respectively. Our benchmarking results demonstrate that our NEON-based implementations run on an Apple M1 ARM processor are comparable to those obtained using the best AVX2-based implementations run on an AMD EPYC 7742 processor. Our work is the first NEON-based ARMv8 implementation of each of the three NIST PQC KEM finalists.},
+  isbn      = {978-3-030-81293-5}
+}
+
+@inproceedings{ortiz2022evaluation,
+  title        = {{Evaluation of CRYSTALS-Kyber and Saber on the ARMv8 architecture}},
+  author       = {Ortiz, Jheyne N and Rodrigues, F{\'e}lix Carvalho and Gazzoni Filho, D{\'e}cio and Teixeira, Caio and L{\'o}pez, Julio and Dahab, Ricardo},
+  booktitle    = {Anais do XXII Simp{\'o}sio Brasileiro em Seguran{\c{c}}a da Informa{\c{c}}{\~a}o e de Sistemas Computacionais},
+  pages        = {372--377},
+  year         = {2022},
+  organization = {SBC}
+}
+
+@inproceedings{nguyen2021optimized,
+  title     = {{Optimized software implementations of CRYSTALS-Kyber, NTRU, and Saber using NEON-based special instructions of ARMv8}},
+  author    = {Nguyen, Duc Tri and Gaj, Kris},
+  booktitle = {Proceedings of the NIST 3rd PQC Standardization Conference (NIST PQC 2021)},
+  year      = {2021}
+}
+
+@article{kwon2023look,
+  author     = {Kwon, Hyeokdong and Kim, Hyunjun and Sim, Minjoo and Lee, Wai-Kong and Seo, Hwajeong},
+  title      = {{Look-up the Rainbow: Table-based Implementation of Rainbow Signature on 64-bit ARMv8 Processors}},
+  year       = {2023},
+  issue_date = {September 2023},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {22},
+  number     = {5},
+  issn       = {1539-9087},
+  url        = {https://doi.org/10.1145/3607140},
+  doi        = {10.1145/3607140},
+  abstract   = {The Rainbow Signature Scheme is one of the finalists in the National Institute of Standards and Technology (NIST) Post-Quantum Cryptography (PQC) standardization competition, but failed to win because it has lack of stability in the parameter selection. It is the only signature candidate based on a multivariate quadratic equation. Rainbow signatures have smaller signature sizes compared with other post-quantum cryptography candidates. However, they require expensive tower-field based polynomial multiplications. In this article, we propose an efficient implementation of Rainbow signatures using a look-up table–based multiplication method. The polynomial multiplications in Rainbow signatures are performed on the 𝔽16 field, which is divided into sub-fields 𝔽4 and 𝔽2 under the tower-field method. To accelerate the multiplication process on target processors, we propose a look-up table–based tower-field multiplication technique. In 𝔽16, all values are expressed in 4-bit data format and can be implemented using a 256-byte look-up table access. The implementation uses the TBL and TBX instructions of the 64-bit ARMv8 target processor. For Rainbow III and Rainbow V, they are computed on the 𝔽256 field using an additional 16-byte table instead of creating a new look-up table. The proposed technique uses the vector registers of 64-bit ARMv8 processors and can calculate 16 result values with a single instruction. We also proposed implementations that are resistant to timing attacks. There are two types of implementations. The first one is the cache side-attack resistant implementation, which utilizes the 128-byte cache lines of the M1 processor. In this implementation, cache misses do not occur, and cache hits always occur. The second type is the constant-time implementation. This method takes a step-by-step approach to finding the required look-up table value and ensures that the same number of accesses is made regardless of which look-up table value is called. This implementation is designed to be constant-time, meaning it does not leak timing information. Our experiments on modern Apple M1 processors showed up to 428.73\texttimes{} and 114.16\texttimes{} better performance for finite field multiplications and Rainbow signatures schemes, respectively, compared with previous reference implementations. To the best of our knowledge, this proposed Rainbow implementation is the first optimized Rainbow implementation for 64-bit ARMv8 processors.},
+  journal    = {ACM Trans. Embed. Comput. Syst.},
+  month      = {sep},
+  articleno  = {80},
+  numpages   = {19},
+  keywords   = {64-bit ARMv8 processors, software implementations, rainbow signature, Post-quantum cryptography}
+}
+
+@inproceedings{ding2005rainbow,
+  author    = {Ding, Jintai
+               and Schmidt, Dieter},
+  editor    = {Ioannidis, John
+               and Keromytis, Angelos
+               and Yung, Moti},
+  title     = {{Rainbow, a New Multivariable Polynomial Signature Scheme}},
+  booktitle = {Applied Cryptography and Network Security},
+  year      = {2005},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {164--175},
+  abstract  = {Balanced Oil and Vinegar signature schemes and the unbalanced Oil and Vinegar signature schemes are public key signature schemes based on multivariable polynomials. In this paper, we suggest a new signature scheme, which is a generalization of the Oil-Vinegar construction to improve the efficiency of the unbalanced Oil and Vinegar signature scheme. The basic idea can be described as a construction of multi-layer Oil-Vinegar construction and its generalization. We call our system a Rainbow signature scheme. We propose and implement a practical scheme, which works better than Sflash{\$}^{\{}v{\_}2{\}}{\$}, in particular, in terms of signature generating time.},
+  isbn      = {978-3-540-31542-1}
+}
+
+@inproceedings{bos2014montgomery,
+  author    = {Bos, Joppe W.
+               and Montgomery, Peter L.
+               and Shumow, Daniel
+               and Zaverucha, Gregory M.},
+  editor    = {Lange, Tanja
+               and Lauter, Kristin
+               and Lison{\v{e}}k, Petr},
+  title     = {{Montgomery Multiplication Using Vector Instructions}},
+  booktitle = {Selected Areas in Cryptography -- SAC 2013},
+  year      = {2014},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {471--489},
+  abstract  = {In this paper we present a parallel approach to compute interleaved Montgomery multiplication. This approach is particularly suitable to be computed on 2-way single instruction, multiple data platforms as can be found on most modern computer architectures in the form of vector instruction set extensions. We have implemented this approach for tablet devices which run the x86 architecture (Intel Atom Z2760) using SSE2 instructions as well as devices which run on the ARM platform (Qualcomm MSM8960, NVIDIA Tegra 3 and 4) using NEON instructions. When instantiating modular exponentiation with this parallel version of Montgomery multiplication we observed a performance increase of more than a factor of 1.5 compared to the sequential implementation in OpenSSL for the classical arithmetic logic unit on the Atom platform for 2048-bit moduli.},
+  isbn      = {978-3-662-43414-7}
+}
+
+@inproceedings{seo2015montgomery,
+  author    = {Seo, Hwajeong
+               and Liu, Zhe
+               and Gro{\ss}sch{\"a}dl, Johann
+               and Choi, Jongseok
+               and Kim, Howon},
+  editor    = {Lee, Jooyoung
+               and Kim, Jongsung},
+  title     = {{Montgomery Modular Multiplication on ARM-NEON Revisited}},
+  booktitle = {Information Security and Cryptology - ICISC 2014},
+  year      = {2015},
+  publisher = {Springer International Publishing},
+  address   = {Cham},
+  pages     = {328--342},
+  abstract  = {Montgomery modular multiplication constitutes the ``arithmetic foundation'' of modern public-key cryptography with applications ranging from RSA, DSA and Diffie-Hellman over elliptic curve schemes to pairing-based cryptosystems. The increased prevalence of SIMD-type instructions in commodity processors (e.g. Intel SSE, ARM NEON) has initiated a massive body of research on vector-parallel implementations of Montgomery modular multiplication. In this paper, we introduce the Cascade Operand Scanning (COS) method to speed up multi-precision multiplication on SIMD architectures. We developed the COS technique with the goal of reducing Read-After-Write (RAW) dependencies in the propagation of carries, which also reduces the number of pipeline stalls (i.e. bubbles). The COS method operates on 32-bit words in a row-wise fashion (similar to the operand-scanning method) and does not require a ``non-canonical'' representation of operands with a reduced radix. We show that two COS computations can be ``coarsely'' integrated into an efficient vectorized variant of Montgomery multiplication, which we call Coarsely Integrated Cascade Operand Scanning (CICOS) method. Due to our sophisticated instruction scheduling, the CICOS method reaches record-setting execution times for Montgomery modular multiplication on ARM-NEON platforms. Detailed benchmarking results obtained on an ARM Cortex-A9 and Cortex-A15 processors show that the proposed CICOS method outperforms Bos et al's implementation from SAC 2013 by up to 57 {\%} (A9) and 40 {\%} (A15), respectively.},
+  isbn      = {978-3-319-15943-0}
+}
+
+
