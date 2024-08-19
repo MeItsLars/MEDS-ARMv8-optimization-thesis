@@ -1,7 +1,3 @@
-// a is saved in v0.4s
-// m is saved in v1.4s
-// MEDS_p is saved in v2.4s
-
 // Compute a*m for the lower and higher registers
 umull v3.2d, v0.2s, v1.2s
 umull2 v4.2d, v0.4s, v1.4s

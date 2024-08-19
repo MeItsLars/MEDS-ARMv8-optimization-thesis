@@ -3,7 +3,7 @@
 % REMAINING TODO SELF
 % Adust the 2 Python generation files with an abstract file for clarity
 % Cite ARM Calling Convention PDF \url{https://github.com/ARM-software/abi-aareleases}
-% Assuming I get the Apple device in time, I will also benchmark the optimised MEDS implementation on that CPU. Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100A64-Instruction-Set-Reference/A64-Cryptographic-AlgorithmsA64-Cryptographic-instructions?lang=en}
+% Assuming I get the Apple device in time, I will also benchmark the optimised MEDS implementation on that CPU. Explore the speedup possibilities on other ARM-based CPUs (such as Apple M1) which can utilize larger caches and/or the better KECCAK primitives possible on Armv8.2-A (Cortex-A72 uses Armv8-A). See: \url{https://developer.arm.com/documentation/100076/0100A64-Instruction-Set-Reference/A64-Cryptographic-AlgorithmsA64-Cryptographic-instructions?lang=en}
 
 \usepackage[chapter]{algorithm}
 \usepackage[noend]{algpseudocode}
@@ -841,7 +841,7 @@ Besides the use of NEON instructions, the use of already optimized algorithms ca
 
 \chapter{Profiling}
 \label{ch:profiling}
-In this chapter, we discuss and execute the profiling of the MEDS implementation, with the goal of identifying the code sections that take up the most time. We use this information to optimize the code in the next chapter.
+In this chapter, we discuss and execute the profiling of the optimized MEDS implementation from~\cite{chou2024reducing}, with the goal of identifying the code sections that take up the most time. We use this information to optimize the code in the next chapter.
 
 \section{Profiling techniques}
 To obtain a better understanding of the performance of (specific functions of) MEDS, we need to profile the implementation. Profiling is the process of measuring the space or time complexity of a program or a specific function. The goal of profiling is to identify the bottlenecks in the speed or memory usage of a program: these are the parts of the program that take the most time or memory. Usually, we hope that a small part of the program is responsible for a large part of the time or memory usage and that this part can be optimized to improve the overall performance.
@@ -854,7 +854,7 @@ Cycle counting is a technique that is used to measure the number of CPU cycles t
 \subsubsection{Advantages}
 The advantages of profiling the code using a cycle counter are:
 \begin{itemize}
-  \item \textbf{Exact}: Measuring the cycle counter results in the most exact measurement of time. For comparison, using a technique that measures the current time in (nano)seconds is less accurate, because the CPU is capable of executing multiple cycles in a single nanosecond.
+  \item \textbf{Accurate}: Measuring the cycle counter results in the most accurate measurement of time. For comparison, using a technique that measures the current time in (nano)seconds is less accurate, because the CPU is capable of executing multiple cycles in a single nanosecond.
   \item \textbf{Low overhead}: Measuring the cycle counter has a very low additional performance overhead to the program, as it usually consists of reading a single register.
   \item \textbf{Precise}: By annotating the code with our own cycle counter, we can measure the performance of specific functions or even specific lines of code.
 \end{itemize}
@@ -871,7 +871,7 @@ There are a few problems with cycle counting that we need to mitigate. First of 
 
 \pagebreak
 
-Another problem is program interference (see above). Unfortunately, this is a problem that is hard to prevent completely, but we can work around it. By running the program multiple times and taking the median of the results, we can reduce the impact of interference on the results. This is a common technique in benchmarking.
+Another problem is program interference (see above). Unfortunately, this is a problem that is hard to prevent completely, but we can work around it. By running the program multiple times and taking the median of the results, we can reduce the impact of interference on the results. This is a common technique in benchmarking and is used in many other cryptographic papers~\cite{becker2021neon,ducas2018crystals}.
 
 \section{MEDS profiling results}
 \label{sec:medsprofilingresults}
@@ -976,7 +976,7 @@ The \texttt{bs\_fill} section is responsible for about 6\% of the total number o
 
 \subsubsection{SHAKE256}
 \label{sec:shake256}
-A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. SHAKE256 is a cryptographic hash function that can be used as an extendable output function (XOF). It is part of the SHA-3 family~\cite{dworkin2015sha} and is based on the KECCAK sponge construction~\cite{bertoni2013keccak}. MEDS uses SHAKE256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section~\ref{sec:medsworks}).
+A small percentage of the total number of cycles in each of the three operations is used by either \texttt{shake256\_squeeze} or \texttt{shake256\_absorb}. SHAKE256 is an extendable output function (XOF). It is part of the SHA-3 family~\cite{dworkin2015sha} and is based on the KECCAK sponge construction~\cite{bertoni2013keccak}. MEDS uses SHAKE256 to generate random field elements and to hash the challenge strings that are used in the Fiat-Shamir transform (see Section~\ref{sec:medsworks}).
 
 \subsubsection{Random systemized matrix generation}
 The \texttt{rnd\_sys\_mat} function is responsible for about 9\% of the total number of cycles for key generation. This function is used to generate a random systemized matrix over a finite field $\mathbb{F}_q$. Nearly all of its cycles are spent on generating random field elements using the \texttt{shake256\_squeeze} function (see above).
@@ -988,7 +988,7 @@ We have established two approaches to optimize the MEDS implementation. These ap
   \item \textbf{Low-level optimization}:\\
         This approach focuses on optimizing the MEDS implementation at a low level. This means that we look at individual functions (such as matrix multiplication and matrix systemization) that take up a significant amount of time and optimize them. The input and output of these functions are thus not changed, but the way in which the result is computed is optimized using techniques such as vectorization.
   \item \textbf{High-level optimization}:\\
-        This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section~\ref{sec:fiatshamir}) uses $t$ challenges to increase the security of the scheme. The values of $t$ for each parameter set are displayed in Table~\ref{tab:medsparametersets} (Section~\ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section~\ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
+        This approach focuses on optimizing the MEDS implementation at a high level. The Fiat-Shamir transform used in MEDS (see Section~\ref{sec:fiatshamir}) uses $t$ challenges, where $t$ is a parameter set according to the target security level. The values of $t$ for each parameter set are displayed in Table~\ref{tab:medsparametersets} (Section~\ref{sec:parametersets}). As can be seen from the algorithmic overviews in Section~\ref{sec:medsalgorithms}, the computation of each challenge (and commitment for that challenge) is done in the same way. This means that we can compute multiple commitments in parallel, which can greatly increase the performance of the scheme. As opposed to low-level optimization, this approach changes the input and output of the underlying functions to take in and return the inputs and outputs of multiple commitments at once.
 \end{itemize}
 
 \pagebreak
@@ -997,7 +997,7 @@ In this chapter, we start by discussing how we implement modular reduction, an o
 
 \section{Modular reduction}
 \label{sec:modularreduction}
-Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements so they fit in the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we cannot rely on this operator, as it is not defined for NEON registers and there is no single-instruction alternative in assembly.
+Throughout the entirety of the MEDS implementation, modular reduction is used extensively to reduce the size of the elements modulo $q$, where $q$ is the modulus of the finite field $\mathbb{F}_q$. The finite field that is used in MEDS for the parameter sets that we consider is $\mathbb{F}_{4093}$, which means that all elements are reduced modulo 4093. In the reference implementation of MEDS, all modulo operations are done using the \texttt{\%} operator in C. As we use NEON assembly instructions and C intrinsics to optimize the MEDS implementation, we cannot rely on this operator, as it is not defined for NEON registers and there is no single-instruction alternative in assembly.
 
 Because of this, we need to implement our own modular reduction function that can be used with NEON registers. This function must be as fast as possible, as it is used in many places in the MEDS implementation. The various modular reduction algorithms are considered in Section~\ref{sec:preliminariesmodularreduction}. Although the structure of MEDS does allow us to convert the entire input to Montgomery representation and perform all multiplications in this representation, we decide to use Barrett reduction (see Section~\ref{sec:barrettreduction}) instead, as the number of instructions required for the reduction of a single element is lower than for Montgomery reduction.
 
@@ -1033,13 +1033,18 @@ The NEON version of the Barrett reduction algorithm is shown in Algorithm~\ref{a
 \begin{algorithm}
   \caption{NEON Barrett reduction (assembly)}
   \label{alg:neonbarretreductionasm}
+  \textbf{Input:}
+  $a_i \in [0, 2^{29.5})$ for $0 \leq i < 4$ (in \texttt{v0.4s})\\
+  \hphantom\quad\quad\quad~~$m = 0\text{x}80180481$ (in \texttt{v1.4s})\\
+  \hphantom\quad\quad\quad~~$\texttt{MEDS\_p} = 4093$ (in \texttt{v2.4s})\\
+  \textbf{Output}: $a_i \bmod \texttt{MEDS\_p}$ for $0 \leq i < 4$ (in \texttt{v0.4s})
   \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/barrett_reduce_asm.s}
 \end{algorithm}
 
 From the assembly code, we can see that the reduction is done using five instructions (not counting the optional shrink).
 
 \subsection{Freeze operation}
-A useful operation when working with numbers outside of the finite field is the `freeze' operation. This operation takes a number $a \in [0, 2n-1]$ and returns $a \bmod n$. The advantage over the reduction functions mentioned before is that this operation can be executed with fewer instructions. Additionally, the operation can be executed over eight lanes of a 128-bit NEON register (as opposed to four lanes for the reduction operation). The freeze operation is useful after (for example) two field elements are added together and need to be reduced, in which case we can do a cheaper reduction operation. The freeze operation for MEDS is shown in Algorithm~\ref{alg:freezeoperation}.
+A useful operation when working with numbers outside of the finite field is the `freeze' operation. This operation takes a number $a \in [0, 2n-1]$ and returns $a \bmod n$, useful after the addition of two field elements. The advantage over the reduction functions mentioned before is that this operation can be executed with fewer instructions. Additionally, the operation can be executed over eight lanes of a 128-bit NEON register (as opposed to four lanes for the reduction operation). The freeze operation is useful after (for example) two field elements are added together and need to be reduced, in which case we can do a cheaper reduction operation. The freeze operation for MEDS is shown in Algorithm~\ref{alg:freezeoperation}.
 
 \begin{algorithm}
   \caption{MEDS Freeze Operation}
@@ -1064,6 +1069,9 @@ As explained in Section~\ref{sec:branching}, we cannot use branching in constant
 
 \begin{algorithm}
   \caption{NEON freeze operation (assembly)}
+  \textbf{Input:} $a_i \in [0, 2 \cdot 4093 - 1]$ for $0 \leq i < 4$ (in \texttt{v0.4s})\\
+  \hphantom\quad\quad\quad~~$\texttt{MEDS\_p} = 4093$ (in \texttt{v1.4s})\\
+  \textbf{Output}: $a_i \bmod \texttt{MEDS\_p}$ for $0 \leq i < 4$ (in \texttt{v0.4s})
   \label{alg:neonfreezeoperationasm}
   \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/freeze_asm.s}
 \end{algorithm}
@@ -1141,7 +1149,7 @@ Instead, we use an approach where 16 dot products are computed at the same time,
 \end{figure}
 
 \subsubsection{Handling non-multiples of eight}
-The algorithm in Algorithm~\ref{alg:vectorizedmatrixmultiplication} only works for matrices of which the dimensions are multiples of eight. Unfortunately, MEDS uses matrices of which the dimensions are usually not multiples of eight. To solve this problem, there are various approaches that we can take. An easy solution is to pad the matrices such that the dimensions become multiples of eight, but this would require additional memory and computation time.
+The algorithm in Algorithm~\ref{alg:vectorizedmatrixmultiplication} only works for matrices of which the dimensions are multiples of eight. Unfortunately, MEDS uses matrices of which the dimensions are usually not multiples of eight. To solve this problem, there are various approaches that we can take. An easy solution is to pad the matrices such that the dimensions become multiples of eight, but this would require additional memory and, if performed dynamically, additional computation time.
 
 Our solution to this problem is threefold, as three dimensions can be non-multiples of eight: $m$, $o$, and $n$. We handle each of these dimensions separately.
 \begin{itemize}
@@ -1165,7 +1173,7 @@ A very crude minimum cycle bound on the naive algorithm (see Algorithm~\ref{alg:
   \item $m \cdot o \cdot n$ multiplications and additions;
   \item $m \cdot o$ modulo operations.
 \end{itemize}
-The `multiply-accumulate' operation is a single instruction on ARMv8, and modular reduction can be done in five instructions (see Section~\ref{sec:barrettreduction}). This means that we can establish a minimum bound of $m \cdot o \cdot n + m \cdot o \cdot 5$ on the number of arithmetic instructions required for the naive algorithm. Any algorithm that follows this structure will require at least this number of instructions to execute, divided by the parallelization factor of that algorithm.
+The `multiply-accumulate' operation is a single instruction on ARMv8, and modular reduction can be done in five instructions (see Section~\ref{sec:barrettreduction}). This means that we can establish a minimum bound of $m \cdot o \cdot n + m \cdot o \cdot 5$ on the number of arithmetic instructions required for the naive algorithm. Any algorithm that follows this structure will require at least this number of instructions to execute, divided by the parallelization factor of that algorithm. In the case of the vectorized algorithm, this factor is eight.
 
 A more accurate minimum cycle bound can be established by looking at the number of instructions required for the vectorized algorithm (see Algorithm~\ref{alg:vectorizedmatrixmultiplication}). This algorithm obtains a speedup because of two factors:
 \begin{itemize}
@@ -1315,7 +1323,7 @@ Using the same approach, we find that the second loop has a complexity of $\math
 
 \subsubsection{Optimization}
 \label{sec:isometryderivationoptimization}
-Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization. This has the negative consequence that the C compiler might already have optimized the loops to a degree that we cannot improve upon. Nevertheless, we try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$ ($\texttt{MEDS\_n}$ for the second loop).
+Fortunately, the loop structure of the time-consuming loops in the algorithm is very suitable for vectorization, meaning the C compiler might already have optimized the loops to a degree that we cannot improve upon.  Nevertheless, we try to optimize the loops by applying vectorization to the innermost loop, which always loops from $0$ to $\texttt{MEDS\_m}$ ($\texttt{MEDS\_n}$ for the second loop).
 
 As the field elements are stored in 16 bits, we can compute eight elements at the same time using 128-bit NEON registers. Therefore, we compute the results for eight values of $r$ at the same time. We start by loading \texttt{tmp1}, which gives us a small problem, as these eight values are not stored sequentially in memory. Therefore, we load these values using normal load instructions and store them in a 128-bit NEON register. The remaining loads and stores can be done using vectorized instructions as those values are stored next to each other in memory.
 
@@ -1400,7 +1408,7 @@ To parallelize the commitment computations, we need to modify the supplemental a
   \item \textbf{Matrix systemization}: \texttt{pmod\_mat\_syst\_ct\_partial\_swap\_backsub}\\
         Responsible for converting a matrix into a systemized form (Algorithm~\ref{alg:systemizer}, Appendix~\ref{app:supplementalalgs}).
   \item \textbf{Field inversion}: \texttt{GF\_inv}\\
-        Responsible for inverting a field element over the finite field $\mathbb{F}_{4093}$.
+        Responsible for inverting an element over the finite field $\mathbb{F}_{4093}$.
   \item \textbf{Matrix inversion}: \texttt{pmod\_mat\_inv}\\
         Responsible for inverting a matrix over the finite field $\mathbb{F}_{4093}$.
   \item \textbf{Isometry derivation}: \texttt{solve\_opt}\\
@@ -1428,7 +1436,8 @@ To give a brief overview of the modifications that need to be made to these algo
 
 \pagebreak
 
-As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x8.h} file. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/tree/main/opt-high-level/src}}
+As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x8.h} file and thus perform 8 computations in
+parallel. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/tree/main/opt-high-level/src}}
 
 \subsection{Parallelization of commitment computations}
 \label{sec:commitmentparallelization}
@@ -1447,7 +1456,7 @@ Using the modified datatypes and supplemental algorithms, we can parallelize the
   // Final operations
 \end{verbatim}
 \end{samepage}
-This structure introduces a problem if we want to parallelize the computation of the commitments. We cannot simply parallelize the for-loop to use $\frac{t}{8}$ iterations, as the while loop might run for a different number of iterations for each commitment. Additionally, although the computation of two different commitments is independent, the computation of the same commitment (after a failure) is dependent on the previous computation of that commitment. This means that we also cannot parallelize the while-loop.
+This structure introduces a problem if we want to parallelize the computation of the commitments. We cannot simply parallelize the for-loop to use $\frac{t}{8}$ iterations, as the while loop might run for a different number of iterations for each commitment. Additionally, although the computation of two different commitments is independent, the computation of the same commitment (after a failure) is dependent on the previous computation of that commitment, as the seed for the random number generator is updated after each failure. This means that we also cannot parallelize the while-loop.
 
 \subsubsection{Optimization}
 \label{sec:commitmentparallelizationoptimization}
@@ -1514,21 +1523,21 @@ Our optimization relies on the observation that two 12-bit values can be convert
 
 \section{Hash structure}
 \label{sec:hashfunctionoptimization}
-The result of the computation of each commitment is a large matrix. To convert these commitments into a set of challenges (as is required by the Fiat-Shamir structure, see Section~\ref{sec:fiatshamir}), the commitments are hashed (using the SHAKE256 hash function) into a single KECCAK state. This state is then converted into an array of $t$ challenges.
+The result of the computation of each commitment is a large matrix. To convert these commitments into a set of challenges (as is required by the Fiat-Shamir structure, see Section~\ref{sec:fiatshamir}), the commitments are hashed (using the SHAKE256 XOF) into a single KECCAK state. This state is then converted into an array of $t$ challenges.
 
 The commitment matrices are hashed sequentially, meaning that to hash commitment $i$, we are dependent on the hash output of commitment $i - 1$. The structure of this hashing process is depicted in Figure~\ref{fig:hashstructure}. In this figure, $\tilde{\textbf{G}}_i$ represents the commitment matrix for commitment $i$, converted such that it is stored in an array of $k(mn - k)$ unsigned 8-bit integers (see Section~\ref{sec:parametersets} for values of $m$, $n$, and $k$). $\textit{Hash}_1$ represents a call to SHAKE256, which in turn calls the Keccak-f[1600] permutation until the entire input array is absorbed. $s_i$ represents the intermediate KECCAK state after hashing commitment $i$, where $s_0$ is 0. The resulting state $s_t$ is used to generate the array of challenges.
 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{hash/hash_struct_seq.png}
-  \caption{MEDS commitment hashing structure. $\tilde{\textbf{G}_i}$ represents the commitment matrix for commitment $i$, $\textit{Hash}_1$ represents a call to SHAKE256, and $s_i$ represents the intermediate KECCAK state after hashing commitment $i$.}
+  \caption{MEDS commitment hashing structure. $\tilde{\textbf{G}_i}$ represents the commitment matrix for commitment $i$, $\textit{Hash}_1$ represents a call to SHAKE256, and $s_i$ represents the intermediate KECCAK state after hashing commitment~$i$.}
   \label{fig:hashstructure}
 \end{figure}
 
 The hashing process for a single commitment is already quite computationally expensive, as it requires $\frac{8 \cdot k(mn-k)}{1600}$ calls to the Keccak-f[1600] permutation (which operates on 1600 bits at a time). For parameter set 3 (see Section~\ref{sec:parametersets}), this results in over 196 calls to the permutation. Additionally, the hashing process is not parallelizable because of the sequential structure of the process. The profiling results (see Section~\ref{sec:medsprofilingresults}) show that the hashing process takes up a little over 5\% of the total execution time of signing and verification, which makes it worthwhile to explore possible optimizations.
 
 \subsection{Hash structure optimization}
-There is little to no room for improvement in the actual SHAKE256 hash function, as it (and the underlying KECCAK permutation) is already widely studied and optimized. However, we can optimize the structure of the hashing process in such a way that we can compute the hashing result for multiple commitments in parallel. To do this, we need to alter the structure of the hashing process. This altered structure is depicted in Figure~\ref{fig:hashstructureopt}. In this structure, the hashing structure is split into two stages:
+There is little to no room for improvement in the actual SHAKE256 XOF, as it (and the underlying KECCAK permutation) is already widely studied and optimized. However, we can optimize the structure of the hashing process in such a way that we can compute the hashing result for multiple commitments in parallel. To do this, we need to alter the structure of the hashing process. This altered structure is depicted in Figure~\ref{fig:hashstructureopt}. In this structure, the hashing structure is split into two stages:
 \begin{enumerate}
   \item \textbf{Stage 1}: $\textit{Hash}_1$\\
         In the first stage, the commitment matrices are hashed into a set of intermediate states $i_0, i_1, \ldots, i_{t-1}$ using the same $\textit{Hash}_1$ function as in the original structure. This stage can be parallelized, as the hashing of each commitment no longer depends on other commitments.
@@ -1560,11 +1569,11 @@ To prevent timing and cache-based side-channel attacks (see Section~\ref{sec:opt
 MEDS requires the inversion of field elements over the finite field $\mathbb{F}_{4093}$. The constant-time algorithm used in the reference implementation utilizes an optimal addition chain which uses 115 instructions. However, as the number of possible field elements is limited to 4093, we can precompute the inverse of each field element and store it in a lookup table. This allows us to invert a field element simply by executing an array lookup, which takes only a few instructions to execute.
 
 \subsection{Matrix systemization}
-During matrix systemization (shown in Algorithm~\ref{alg:systemizer}), the algorithm spends some time making sure the leading coefficient of each row is nonzero (it almost always is). As the implementation is constant time, this entire process is executed even if the leading coefficient is already nonzero. In a non-constant time implementation, we can add a check to see if the leading coefficient is zero, and if it is not, skip the entire process of making it nonzero.
+During matrix systemization (shown in Algorithm~\ref{alg:systemizer}), the algorithm spends some time making sure the leading coefficient of each row is nonzero (it almost always is). As the implementation is constant time, this entire process is executed even if the leading coefficient is already nonzero. In a non-constant time implementation, we add a check to see if the leading coefficient is zero, and if it is not, skip the entire process of making it nonzero.
 
 \chapter{Results}
 \label{ch:results}
-In this chapter, we present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. In all tables and figures, the numbers shown represent the number of cycles, kilocycles (KCycles, 1 KCycle = 1 thousand cycles), or megacycles (MCycles, 1 MCycle = 1 million cycles) that that algorithm or function took to execute.
+In this chapter, we present the results of the optimizations that we have performed on the MEDS implementation. We compiled the code using gcc (Debian 12.2.0-14) 12.2.0 with the \texttt{-O3} optimization flag. In all tables and figures, the numbers shown represent the number of cycles, kilocycles (KCycles, 1 KCycle = 1 thousand cycles), or megacycles (MCycles, 1 MCycle = 1 million cycles) that the respective algorithm or function took to execute.
 
 We first look at the performance results of the three algorithms that were optimized specifically for the low-level approach in Section~\ref{sec:resultslowlevel}. After that, we look at the post-optimization profiling results of the functions that originally took up the most time in the MEDS implementation in Section~\ref{sec:profilingoptimizations}. Following this, we look at the overall performance results of all three MEDS parameter sets for both the reference implementation, low-level optimized implementation, and high-level optimized implementation in Section~\ref{sec:overallperformance}. Finally, we compare the performance of the optimized MEDS implementation to other state-of-the-art signature schemes in Section~\ref{sec:comparison}.
 
@@ -1572,7 +1581,7 @@ We first look at the performance results of the three algorithms that were optim
 \label{sec:resultslowlevel}
 In our low-level optimization approach (see Section~\ref{sec:lowleveloptimization}), we optimized matrix multiplication, matrix systemization, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. The calculated lower bounds are applicable to the algorithms that we used for the optimizations. Using a different algorithm might result in a different lower bound.
 
-To determine how close we got to our calculated bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the cycle count of the original function and the calculated minimum bound for each function (part), this gives us an understanding of how close we got to a perfect optimization of the function (with the specific algorithm that we used). The results for these optimizations are shown in Table~\ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the minimum of the timing results.
+To determine how close we got to our calculated bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the cycle count of the original function and the calculated minimum bound for each function (part), this gives us an understanding of how close we got to the optimal performance of the function (with the specific algorithm that we used). The results for these optimizations are shown in Table~\ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the minimum of the timing results.
 
 \begin{table}
   \centering
@@ -1643,8 +1652,8 @@ The figures show major improvements for all three algorithms in both the low-lev
 \begin{itemize}
   \item The key generation algorithm used in the high-level optimized implementation is the same as the one in the reference implementation, because the parameter sets that we consider do not allow for large speedup factors for the high-level optimizations of this algorithm. We leave this as future work (see Section~\ref{sec:futureworkopt}).
         \pagebreak
-  \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices cannot be optimized, as it relies on the generation of random field elements using the SHAKE256 hash function (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section~\ref{sec:bitstreamfilling}, which we leave as future work.
-  \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 hash function is already heavily optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section~\ref{sec:hashfunctionoptimization}.
+  \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices cannot be optimized, as it relies on the generation of random field elements using the SHAKE256 XOF (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section~\ref{sec:bitstreamfilling}, which we leave as future work.
+  \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 XOF is already heavily optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section~\ref{sec:hashfunctionoptimization}.
 \end{itemize}
 
 Besides these exceptions, the results show that the optimizations have been very effective. Particularly matrix multiplication shows a huge speedup, but the other functions also show major improvements. We note the following observations:
