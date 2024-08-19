@@ -9,7 +9,6 @@
 #include "api.h"
 #include "meds.h"
 #include "profiler.h"
-#include "poison.h"
 
 profileresult profileresults[1000];
 int number_of_profileresults = 0;
@@ -73,7 +72,7 @@ int main(int argc, char *argv[])
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
 
-    poison(sk, CRYPTO_SECRETKEYBYTES * sizeof(sk));
+    // poison(sk, CRYPTO_SECRETKEYBYTES * sizeof(sk));
 
     time = -get_cyclecounter();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
