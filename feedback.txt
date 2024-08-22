@@ -1,38 +1,6 @@
-* "as the number of instructions required for the reduction of a single
-  element is lower than for Montgomery reduction.": here it would be good to
-  add a figure showing the assembly code of both Montgomery and Barrett that
-  you use for this comparison.
 
-* Regarding Section 4.1.1.: Why do you need/want to fully reduce modulo q? Why
-  would you, with a smaller k, employ a conditional subtraction? Isn't enough
-  to reduce to something that is "small enough" and congruent mod q?
+* I'm pretty certain that it's possible to come up with a program where
+  the CPU is not able to schedule instructions optimally on the fly.
+  I'm happy with using the word "optimized", but my intuition is that the
+  "optimal" in the reference manual is just marketing BS.
 
-* page 44: It's tricky to include loads and stores in the lower bound beyond
-  loading inputs once at the beginning and storing outputs once at the end.
-  Who tells you that you need to go to and from memory every time between
-  loops...
-
-
-* Section 4.5: Are you sure about the number of permutation calls, shouldn't
-  it be considerably more? The size of the permutation does not matter so
-  much; what matters is the rate, i.e., how many bits are absorbed or squeezed
-  per permutation. For SHAKE256, that's 1088.
-
-* "utilizes an optimal addition chain which uses 115 instructions": maybe say
-  that it takes the approach of inversion by Fermat's little theorem?
-
-* It's a matter of taste, but I like to show to the reader that links are
-  hyperrefs but coloring, e.g., by using the following in the preamble:
-
-  \usepackage{xcolor}
-  \definecolor{linkcolor}{rgb}{0.65,0,0}
-  \definecolor{citecolor}{rgb}{0,0.65,0}
-  \definecolor{urlcolor}{rgb}{0,0,0.65}
-  \usepackage[colorlinks=true, backref=page, linkcolor=linkcolor, urlcolor=urlcolor, citecolor=citecolor]{hyperref}
-
-  In any case, thanks for making references hyperrefs!
-
-  * I'm pretty certain that it's possible to come up with a program where
-the CPU is not able to schedule instructions optimally on the fly.
-I'm happy with using the word "optimized", but my intuition is that the
-"optimal" in the reference manual is just marketing BS.

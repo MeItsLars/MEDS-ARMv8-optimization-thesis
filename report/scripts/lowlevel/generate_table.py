@@ -43,30 +43,39 @@ def replace_minus(value):
     return value.replace('r', '-')
 
 def matmul_cycles(m, o, n):
-    return (1 / 64.0) * m * n * (18 * o + 88)
+    return (1/4.0) * m * n * o + (1/8.0) * m * n + (11/8.0) * m * o + (1/8) * n * o
 
 def matsyst_cycles(m, n, r_max, do_swap, do_backsub):
     result = 0
-    
+
+    result = result + r_max * n * (1/4)
     result = result + 115 * r_max
-    result = result + (27/8) * (n * r_max - (r_max - 1) * r_max / 2)
-    result = result + (1/8) * ((m-1) * r_max - (r_max - 1) * r_max / 2)
-    result = result + (40/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+    result = result + (13/8) * (n * r_max - (r_max - 1) * r_max / 2)
+    result = result + (23/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
     
     if do_swap:
-        result = result + (2/8) * (m * r_max - (r_max - 1) * r_max / 2)
-        result = result + (4/8) * (r_max - 1) * r_max / 2
+        result = result + (1/8) * (m * r_max - (r_max - 1) * r_max / 2)
     
     if do_backsub:
-        result = result + (33/8) * (r_max - 1) * r_max / 2
-        result = result + (33/8) * (n - r_max) * (r_max - 1) * r_max / 2
+        result = result + (18/8) * (r_max - 1) * r_max / 2
+        result = result + (18/8) * (n - r_max) * (r_max - 1) * r_max / 2
     
     return result
 
 def solve_cycles():
     meds_n = evaluate('n')
     meds_m = evaluate('m')
-    return (1 / 8) * (meds_m - 3) * (meds_m - 1) * (28 * meds_m + 28 * meds_n + 16)
+    
+    result = 0
+    result += 9/4 * pow(meds_m, 3)
+    result += 9/4 * pow(meds_m, 2) * meds_n
+    result -= 23/4 * pow(meds_m, 2)
+    result -= 11/2 * meds_m * meds_n
+    result -= 2 * meds_m
+    result += 3 * meds_n
+    result += 5
+
+    return result
 
 def parse_matmul(function, cycles, opt_cycles):
     function_parts = function.split('_')
@@ -91,7 +100,7 @@ def parse_matsyst(function, cycles, opt_cycles, first):
     do_swap = int(function_parts[6])
     do_backsub = int(function_parts[7])
     cycle_bound = matsyst_cycles(evaluate(m), evaluate(n), evaluate(max_r), do_swap, do_backsub)
-    fun_name = "Matrix Systemization" if first else "Matrix Syst."
+    fun_name = "Matrix Systemizer" if first else "Matrix Syst."
     name = f"{fun_name}{' (' + replace_minus(max_r) + '$^{**}$)' if max_r != m else ''}{' (swap$^{***}$)' if do_swap == 1 else ''}{' (bsub$^{*}$)' if do_backsub == 1 else ''}"
     return {
         "name": name,
