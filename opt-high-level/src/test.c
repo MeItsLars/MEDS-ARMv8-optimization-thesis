@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     uint8_t pk[CRYPTO_PUBLICKEYBYTES] = {0};
 
     time = -get_cyclecounter();
-    crypto_sign_keypair(pk, sk);
+    crypto_sign_keypair_vec(pk, sk);
     time += get_cyclecounter();
 
     if (time < keygen_time)
