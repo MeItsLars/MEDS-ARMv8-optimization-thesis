@@ -54,7 +54,7 @@ long long get_cyclecounter()
   ioctl(perf_fd, PERF_EVENT_IOC_ENABLE, 0);
   return cpu_cycles;
 }
-#endif // __linux__
+#endif
 
 #ifdef __APPLE__
 
@@ -248,4 +248,4 @@ long long get_cyclecounter()
   return (rdtsc());
 }
 
-#endif // __APPLE__
+#endif

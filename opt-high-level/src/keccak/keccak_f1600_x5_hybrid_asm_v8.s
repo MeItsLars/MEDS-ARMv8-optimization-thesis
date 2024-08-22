@@ -28,6 +28,8 @@
 // Author: Matthias Kannwischer <matthias@kannwischer.eu>
 //
 
+#ifdef __LINUX__
+
 #include "macros.s"
 
 /********************** CONSTANTS *************************/
@@ -1633,3 +1635,5 @@ inner_loop:
     free_stack
 
     ret
+
+#endif

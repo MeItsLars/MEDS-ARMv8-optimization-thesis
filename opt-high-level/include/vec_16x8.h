@@ -51,8 +51,6 @@
 
 #define ZERO_S_VEC vdupq_n_s16(0)
 
-#define GET_LANE_S_VEC(a, i) vgetq_lane_s16(a, i)
-
 #define pmod_mat_s_vec_t int16x8_t
 
 // DEFINITIONS

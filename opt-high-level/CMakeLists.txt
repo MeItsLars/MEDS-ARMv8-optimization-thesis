@@ -69,7 +69,7 @@ if (NOT ${PARAM_GEN_RESULT} EQUAL 0)
     message(FATAL_ERROR "Failed to generate api.h")
 endif()
 
-set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR} ${PROJECT_INCLUDE_DIR}/keccak ${PARAM_INCLUDE_DIR} ${NIST_INCLUDE_DIR})
+set(INCLUDE_DIRECTORIES ${PROJECT_INCLUDE_DIR}  ${OPENSSL_INCLUDE_DIR} ${PROJECT_INCLUDE_DIR}/keccak ${PARAM_INCLUDE_DIR} ${NIST_INCLUDE_DIR})
 
 ##########################################################
 # Build library (common source files)

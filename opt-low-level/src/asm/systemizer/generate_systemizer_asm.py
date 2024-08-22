@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -695,10 +696,13 @@ def add_backsub_outer_loop(context, asm):
 def generate_systemizer_asm(context, fun_id):
     asm = []
     # Header and function information
-    add(asm, 0, ".cpu cortex-a72")
     add(asm, 0, ".arch armv8-a")
-    add(asm, 0, f".global {fun_id}")
-    add(asm, 0, f"{fun_id}:")
+    if platform.system() == 'Darwin':
+        add(asm, 0, f".global _{fun_id}")
+        add(asm, 0, f"_{fun_id}:")
+    else:
+        add(asm, 0, f".global {fun_id}")
+        add(asm, 0, f"{fun_id}:")
     # Set R_Mc
     add(asm, 1, f"mov {R_Mc}, #{context.Mc}")
     # Initialize magic value (0x8018_0481 = -2145909631) into RN_MAGIC registers

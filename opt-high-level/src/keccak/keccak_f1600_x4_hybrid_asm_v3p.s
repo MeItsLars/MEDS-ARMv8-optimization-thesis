@@ -28,6 +28,8 @@
 // Author: Matthias Kannwischer <matthias@kannwischer.eu>
 //
 
+#ifdef __linux__
+
 #include "macros.s"
 	
 /********************** CONSTANTS *************************/
@@ -1014,3 +1016,5 @@ _keccak_f1600_x4_hybrid_asm_v3p:
     restore_gprs
     free_stack
     ret
+
+#endif
