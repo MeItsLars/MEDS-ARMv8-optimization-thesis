@@ -505,6 +505,9 @@ int crypto_sign(
 #ifdef MEDS_hash_opt
   // Use parallel hashing to compute 4 digests at once
   uint8_t digest_G_tilde_ti[MEDS_t][MEDS_digest_bytes];
+
+  // Fastest parallel Keccak implementation for Cortex-A72
+#ifdef __LINUX__
   for (int i = 0; i < MEDS_t; i += 4)
   {
     keccak_state_vec4 h_shake_G_tilde_ti;
@@ -513,6 +516,20 @@ int crypto_sign(
     shake256_finalize_vec4(&h_shake_G_tilde_ti);
     shake256_squeeze_vec4(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], digest_G_tilde_ti[i + 2], digest_G_tilde_ti[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
   }
+#endif
+
+// Fastest parallel Keccak implementation for Apple M2
+#ifdef __APPLE__
+  for (int i = 0; i < MEDS_t; i += 2)
+  {
+    keccak_state_vec2 h_shake_G_tilde_ti;
+    shake256_init_vec2(&h_shake_G_tilde_ti);
+    shake256_absorb_vec2(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec2(&h_shake_G_tilde_ti);
+    shake256_squeeze_vec2(digest_G_tilde_ti[i], digest_G_tilde_ti[i + 1], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+  }
+#endif
+
   // Hash the digests into a single digest
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&h_shake, digest_G_tilde_ti[i], MEDS_digest_bytes);
@@ -905,14 +922,31 @@ int crypto_sign_open(
 #ifdef MEDS_hash_opt
   // Use parallel hashing to compute 4 digests at once
   uint8_t digest_G_hat[MEDS_t][MEDS_digest_bytes];
+
+  // Fastest parallel Keccak implementation for Cortex-A72
+#ifdef __LINUX__
   for (int i = 0; i < MEDS_t; i += 4)
   {
-    keccak_state_vec4 h_shake_G_tilde_ti;
-    shake256_init_vec4(&h_shake_G_tilde_ti);
-    shake256_absorb_vec4(&h_shake_G_tilde_ti, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
-    shake256_finalize_vec4(&h_shake_G_tilde_ti);
-    shake256_squeeze_vec4(digest_G_hat[i], digest_G_hat[i + 1], digest_G_hat[i + 2], digest_G_hat[i + 3], MEDS_digest_bytes, &h_shake_G_tilde_ti);
+    keccak_state_vec4 h_shake_G_hat;
+    shake256_init_vec4(&h_shake_G_hat);
+    shake256_absorb_vec4(&h_shake_G_hat, bs_buf[i], bs_buf[i + 1], bs_buf[i + 2], bs_buf[i + 3], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec4(&h_shake_G_hat);
+    shake256_squeeze_vec4(digest_G_hat[i], digest_G_hat[i + 1], digest_G_hat[i + 2], digest_G_hat[i + 3], MEDS_digest_bytes, &h_shake_G_hat);
   }
+#endif
+
+// Fastest parallel Keccak implementation for Apple M2
+#ifdef __APPLE__
+  for (int i = 0; i < MEDS_t; i += 2)
+  {
+    keccak_state_vec2 h_shake_G_hat;
+    shake256_init_vec2(&h_shake_G_hat);
+    shake256_absorb_vec2(&h_shake_G_hat, bs_buf[i], bs_buf[i + 1], CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+    shake256_finalize_vec2(&h_shake_G_hat);
+    shake256_squeeze_vec2(digest_G_hat[i], digest_G_hat[i + 1], MEDS_digest_bytes, &h_shake_G_hat);
+  }
+#endif
+
   // Hash the digests into a single digest
   for (int i = 0; i < MEDS_t; i++)
     shake256_absorb(&shake, digest_G_hat[i], MEDS_digest_bytes);

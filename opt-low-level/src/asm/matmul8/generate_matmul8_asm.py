@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 from typing import List
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -374,10 +375,13 @@ def generate_mat_mul_asm(context, fun_id):
 
     asm = []
     # Header and function information
-    add(asm, 0, ".cpu cortex-a72")
     add(asm, 0, ".arch armv8-a")
-    add(asm, 0, f".global {fun_id}")
-    add(asm, 0, f"{fun_id}:")
+    if platform.system() == 'Darwin':
+        add(asm, 0, f".global _{fun_id}")
+        add(asm, 0, f"_{fun_id}:")
+    else:
+        add(asm, 0, f".global {fun_id}")
+        add(asm, 0, f"{fun_id}:")
     # Store v8-v15
     # Preserve v8-v15? Does not seem to be necessary
     # add(asm, 1, "stp q8, q9, [sp, #-32]!")
