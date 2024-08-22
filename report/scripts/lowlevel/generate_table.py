@@ -49,18 +49,26 @@ def matmul_cycles(m, o, n):
 def matsyst_cycles(m, n, r_max, do_swap, do_backsub):
     result = 0
     
+    # result = result + 115 * r_max
+    # result = result + (27/8) * (n * r_max - (r_max - 1) * r_max / 2)
+    # result = result + (1/8) * ((m-1) * r_max - (r_max - 1) * r_max / 2)
+    # result = result + (40/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+    
+    result = result + r_max * n * (1/4)
     result = result + 115 * r_max
-    result = result + (27/8) * (n * r_max - (r_max - 1) * r_max / 2)
-    result = result + (1/8) * ((m-1) * r_max - (r_max - 1) * r_max / 2)
-    result = result + (40/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+    result = result + (13/8) * (n * r_max - (r_max - 1) * r_max / 2)
+    result = result + (23/8) * (m * n * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
     
     if do_swap:
-        result = result + (2/8) * (m * r_max - (r_max - 1) * r_max / 2)
-        result = result + (4/8) * (r_max - 1) * r_max / 2
+        # result = result + (2/8) * (m * r_max - (r_max - 1) * r_max / 2)
+        # result = result + (4/8) * (r_max - 1) * r_max / 2
+        result = result + (1/8) * (m * r_max - (r_max - 1) * r_max / 2)
     
     if do_backsub:
-        result = result + (33/8) * (r_max - 1) * r_max / 2
-        result = result + (33/8) * (n - r_max) * (r_max - 1) * r_max / 2
+        # result = result + (33/8) * (r_max - 1) * r_max / 2
+        # result = result + (33/8) * (n - r_max) * (r_max - 1) * r_max / 2
+        result = result + (18/8) * (r_max - 1) * r_max / 2
+        result = result + (18/8) * (n - r_max) * (r_max - 1) * r_max / 2
     
     return result
 

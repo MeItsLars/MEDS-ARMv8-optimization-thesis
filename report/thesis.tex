@@ -1300,50 +1300,49 @@ The inner loops that we are optimizing usually do not loop over a dimension that
 As with the matrix multiplication algorithm, the resulting systemizer algorithm becomes quite complex. Although it can be implemented with NEON intrinsics, we opted for the faster approach of generating optimized ARMv8 assembly code using a Python script.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/blob/main/opt-low-level/src/asm/systemizer/generate\_systemizer\_asm.py}} The script generates a specialized assembly function for each set of input dimensions that is used in MEDS.
 
 \subsubsection{Minimum cycle bound}
-Finding a minimum cycle bound for the optimized systemizer algorithm is very similar to determining its complexity. As we can follow the same structure as in Section~\ref{sec:matrixsystemizercomplexity}, we omit some of the steps taken and refer the reader to that section for a more detailed explanation.
+Finding a minimum cycle bound for the optimized systemizer algorithm is very similar to determining its complexity. As we can follow the same structure as in Section~\ref{sec:matrixsystemizercomplexity}, we omit some of the steps taken and refer the reader to that section for a more detailed explanation. As with matrix multiplication, we assume infinite registers and that all values are loaded and stored only once.
 
 For the basic algorithm, the number of instructions required is as follows:
 \begin{itemize}
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), add, freeze, and store instructions (first inner loop);
+  \item $r_\text{max} \cdot n \cdot \frac{1}{8}$ loads of $A$;
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ add, bitwise AND, and freeze instructions (first inner loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} 1$ finite field inversions;
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (normalize loop);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load, combine, and store instructions (normalize loop);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \frac{1}{8}$ load instructions (last inner loop);
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1} \frac{1}{8}$ combine instructions (normalize loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (last inner loop);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (last inner loop).
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1} \frac{1}{8}$ combine, add, subtract and freeze instructions (last inner loop);
+  \item $r_\text{max} \cdot n \cdot \frac{1}{8}$ stores of $A$.
 \end{itemize}
 
 \pagebreak
 
 Given that reduction takes five cycles, freezing takes three cycles, field inversion takes 115 cycles, and all other instructions take one cycle, combining these results using the same techniques as for the complexity analysis gives us the following minimum cycle bound for the basic algorithm:
 \begin{align*}
-   & 115 \cdot r_\text{max} + \frac{27}{8} \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)                                        \\
-   & + \frac{1}{8} \left( (m-1) \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)                                                            \\
-   & + \frac{40}{8} \left( mn \cdot r_\text{max} - m \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} - n \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right. \\
+   & \frac{1}{4} \cdot r_\text{max} \cdot n + 115 \cdot r_\text{max} + \frac{13}{8} \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) \\
+   & + \frac{23}{8} \left( mn \cdot r_\text{max} - m \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} - n \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right.   \\
    & \left. + \frac{(r_\text{max} - 1)r_{\text{max}}(2r_{\text{max}} - 1)}{6} - n \cdot r_\text{max} + \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 
 When using the algorithm with \texttt{do\_swap} set to true, the following instructions are added to the minimum cycle bound:
 \begin{itemize}
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1} \frac{1}{8}$ load and or instructions (swap loop 1);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{i=0}^{r-1} \frac{1}{8}$ load (two) and store (two) instructions (swap loop 2).
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1} \frac{1}{8}$ bitwise OR instructions (swap loop 1).
 \end{itemize}
 Following the same approach as above, using \texttt{do\_swap} adds the following value to the minimum cycle bound:
 \begin{align*}
-   & \frac{2}{8} \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{4}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+   & \frac{1}{8} \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 \todo[inline]{Aaaaaaaaaaaaa ik snap er geen reet van}
 
 When using the algorithm with \texttt{do\_backsub} set to true, the following instructions are added to the minimum cycle bound:
 \begin{itemize}
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub middle loop);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub middle loop);
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \frac{1}{8}$ combine, add, subtract, and freeze instructions (backsub middle loop);
   \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} (\frac{1}{8} \cdot 2)$ multiply and reduce instructions (backsub inner loop);
-  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} \frac{1}{8}$ load (two), combine, add, subtract, freeze, and store instructions (backsub inner loop).
+  \item $\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1} \frac{1}{8}$ combine, add, subtract, and freeze instructions (backsub inner loop).
 \end{itemize}
 Following the same approach as above, using \texttt{do\_backsub} adds the following value to the minimum cycle bound:
 \begin{align*}
-   & \frac{33}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{33}{8} \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+   & \frac{18}{8} \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + \frac{18}{8} \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 
 \subsection{Isometry derivation}
