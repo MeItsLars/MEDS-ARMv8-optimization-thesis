@@ -178,7 +178,11 @@
 
 \input{abstract.tex}
 
+
+\hypersetup{linkcolor=black}
 \tableofcontents
+\hypersetup{linkcolor=linkcolor}
+
 \newpage
 
 \chapter{Introduction}
@@ -1218,17 +1222,18 @@ A more accurate minimum cycle bound can be established by looking at the number 
   \item The NEON unit can perform operations in parallel.
   \item As we compute the result for an $8\times8$ submatrix of $C$, we can use the same input value eight times, reducing the number of loads required.
 \end{itemize}
-The number of instructions required for the vectorized algorithm can be calculated as follows:
+The vectorized algorithm loads and later re-loads the same values multiple times. It is hard to account for this in a minimum cycle bound, as various implementations of the algorithm might require more or less loads. Therefore, we establish a minimum cycle bound based on the idea that we have infinite registers and need to load and store all required values only once. The number of instructions required for the vectorized algorithm can then be calculated as follows:
 \begin{itemize}
-  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8$ loads of $A$;
-  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8$ loads of $B$;
+  \item $\frac{1}{8}m \cdot \frac{1}{8}n \cdot 8$ loads of $A$;
+  \item $\frac{1}{8}o \cdot \frac{1}{8}n \cdot 8$ loads of $B$;
   \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot 8 \cdot 2$ multiply-accumulate operations;
   \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot 2$ reductions;
-  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8$ stores.
+  \item $\frac{1}{8}m \cdot \frac{1}{8}o \cdot 8$ stores of $C$.
 \end{itemize}
 Given that reduction takes five cycles and the other operations take one cycle, we establish the following minimum cycle bound:
 \[
-  \frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot (1 + 1 + 8 \cdot 2) + \frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot (1 + 5 \cdot 2) = mo\left(\frac{9}{32}n + \frac{11}{8}\right)
+  % \frac{1}{8}m \cdot \frac{1}{8}o \cdot \frac{1}{8}n \cdot 8 \cdot (1 + 1 + 8 \cdot 2) + \frac{1}{8}m \cdot \frac{1}{8}o \cdot 8 \cdot (1 + 5 \cdot 2) = mo\left(\frac{9}{32}n + \frac{11}{8}\right)
+  \frac{1}{8}mn + \frac{1}{8}on + \frac{1}{4}mon + \frac{1}{4}mo \cdot 5 + \frac{1}{8}mo = \frac{1}{4}mno + \frac{1}{8}mn + \frac{11}{8}mo + \frac{1}{8}no
 \]
 % \frac{1}{64}mo(18n + 88)
 

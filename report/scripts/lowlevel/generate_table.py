@@ -43,7 +43,8 @@ def replace_minus(value):
     return value.replace('r', '-')
 
 def matmul_cycles(m, o, n):
-    return (1 / 64.0) * m * n * (18 * o + 88)
+    return (1/4.0) * m * n * o + (1/8.0) * m * n + (11/8.0) * m * o + (1/8) * n * o
+    # old: return (1 / 64.0) * m * n * (18 * o + 88)
 
 def matsyst_cycles(m, n, r_max, do_swap, do_backsub):
     result = 0
