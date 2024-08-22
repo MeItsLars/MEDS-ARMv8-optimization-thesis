@@ -93,3 +93,94 @@ SUM[r=0,r_max-1] SUM[r_2=0,r-1] SUM[c=r_max,n-1] 18/8
 > Applying arithmetic series gives:
 (18/8) * (r_max - 1) * r_max / 2
 (18/8) * (n - r_max) * (r_max - 1) * r_max / 2
+
+
+
+
+
+
+
+
+==================================== NAIVE ALGORITHM ====================================
+> Initial analysis:
+$r_\text{max} \cdot n$ loads of $A$;
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1}$ add, bitwise AND, and freeze instructions (first inner loop);
+$\sum_{r=0}^{r\_\text{max}-1} 1$ finite field inversions;
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{c=r}^{n-1}$ multiply and reduce instructions (normalize loop);
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r+1}^{m-1} \sum_{c=r}^{n-1}$ multiply, reduce, add, subtract, and freeze instructions (last inner loop);
+$r_\text{max} \cdot n$ stores of $A$.
+
+> Converting and combining gives:
+r_max * n
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 5
+SUM[r=0,r_max-1] 115
+SUM[r=0,r_max-1] SUM[c=r,n-1] 6
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 11
+r_max * n
+
+> Grouping by sum gives:
+r_max * n * 2
+SUM[r=0,r_max-1] 115
+SUM[r=0,r_max-1] SUM[c=r,n-1] 6
+SUM[r=0,r_max-1] SUM[r_2=r+1,m-1] SUM[c=r,n-1] 11
+
+> Simplifying gives:
+r_max * n * 2
+1  * SUM[r=0,r_max-1] 115
+6  * SUM[r=0,r_max-1] (n-r)
+11 * SUM[r=0,r_max-1] (m-r-1) * (n-r)
+
+> Simplyfing sum terms gives:
+r_max * n * 2
+1  * SUM[r=0,r_max] 115
+6  * SUM[r=0,r_max-1] (n-r)
+11 * SUM[r=0,r_max] (mn - mr - nr + r^2 - n + r)
+
+> Removing easy sums gives:
+r_max * n * 2
+1 * (115 * r_max)
+(6) * (n * r_max - SUM[r=0,r_max-1] r)
+(11) * (mn * r_max - m * SUM[r=0,r_max-1] r - n * SUM[r=0,r_max-1] r + SUM[r=0,r_max-1] r^2 - n * r_max + SUM[r=0,r_max-1] r)
+
+> Applying arithmetic series gives:
+r_max * n * 2
+115 * r_max
+(6) * (n * r_max - (r_max - 1) * r_max / 2)
+(11) * (mn * r_max - m * (r_max - 1) * r_max / 2 - n * (r_max - 1) * r_max / 2 + (r_max - 1) * r_max * (2 * r_max - 1) / 6 - n * r_max + (r_max - 1) * r_max / 2)
+
+==================================== WITH DO_SWAP ====================================
+> Initial analysis:
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=r}^{m-1}$ bitwise OR instructions (swap loop 1)
+
+> Converting and combining gives:
+SUM[r=0,r_max-1] SUM[r_2=r,m-1] 1
+
+> Simplifying gives:
+1 * SUM[r=0,r_max-1] (m-r)
+
+> Expanding:
+1 * (m * r_max - SUM[r=0,r_max-1] r)
+
+> Applying arithmetic series gives:
+(m * r_max - (r_max - 1) * r_max / 2)
+
+==================================== WITH BACKSUB ====================================
+> Initial analysis:
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1}$ multiply, reduce, add, subtract, and freeze instructions (backsub middle loop);
+$\sum_{r=0}^{r\_\text{max}-1} \sum_{r_2=0}^{r-1} \sum_{c=r_\text{max}}^{n-1}$ multiply, reduce, add, subtract, and freeze instructions (backsub inner loop).
+
+> Converting and combining gives:
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] 11
+SUM[r=0,r_max-1] SUM[r_2=0,r-1] SUM[c=r_max,n-1] 11
+
+> Simplifying gives:
+11 * SUM[r=0,r_max-1] r
+11 * SUM[r=0,r_max-1] r * (n - r_max)
+
+> Removing easy sums gives:
+11 * SUM[r=0,r_max-1] r
+11 * (n - r_max) * SUM[r=0,r_max-1] r
+
+> Applying arithmetic series gives:
+11 * (r_max - 1) * r_max / 2
+11 * (n - r_max) * (r_max - 1) * r_max / 2

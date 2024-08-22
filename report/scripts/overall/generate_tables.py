@@ -1,7 +1,8 @@
 import csv
 import os
 
-FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results.csv")
+FILE_PATH_CORTEX_A72 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results_cortexa72.csv")
+FILE_PATH_APPLE_M2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results_m2.csv")
 
 TABLE_TEMPLATE = """
     \\begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
@@ -42,14 +43,22 @@ def parse_data(data):
         parsed_data[meds_param][technique] = values_to_mcycles
     return parsed_data
 
-def load_csv():
-    with open(FILE_PATH, 'r') as file:
+def load_csv(file):
+    with open(file, 'r') as file:
         reader = csv.reader(file)
         data = list(reader)
     return data
 
-data = load_csv()
-parsed_data = parse_data(data)
-print(generate_table(parsed_data["MEDS-21595"]))
-print(generate_table(parsed_data["MEDS-55520"]))
-print(generate_table(parsed_data["MEDS-122000"]))
+def print_tables(file):
+    print()
+    print("RESULTS FOR %s" % file)
+    print()
+    data = load_csv(file)
+    parsed_data = parse_data(data)
+    print(generate_table(parsed_data["MEDS-21595"]))
+    print(generate_table(parsed_data["MEDS-55520"]))
+    print(generate_table(parsed_data["MEDS-122000"]))
+
+if __name__ == "__main__":
+    print_tables(FILE_PATH_CORTEX_A72)
+    print_tables(FILE_PATH_APPLE_M2)

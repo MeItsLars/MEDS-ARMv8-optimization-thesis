@@ -33,7 +33,7 @@ custom_palette = [deep_blue, light_blue, deep_orange, light_orange, deep_green, 
 sns.set_palette(custom_palette)
 
 THIS_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
-FILE_PATH = os.path.join(THIS_FILE_PATH, "results.csv")
+FILE_PATH = os.path.join(THIS_FILE_PATH, "results_cortexa72.csv")
 
 def generate_barplot(parsed_data, filename):
     # Create and configure the figure and the two subplots

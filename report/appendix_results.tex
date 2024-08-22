@@ -1,9 +1,19 @@
 \chapter{Benchmark Results}
 \label{app:benchmark_results}
+In this appendix, we present the benchmarking results for all implementations of MEDS on two different platforms: the ARM Cortex-A72 and the Apple M2. We benchmark each of the three parameter sets that we consider: MEDS-21595, MEDS-55520, and MEDS-122000. For each benchmark, we consider the reference, low-level optimized, and high-level optimized implementations. For each implementation, we also consider the optimized hash structure variant described in Section~\ref{sec:hashfunctionoptimization}.
+
+The ARM Cortex-A72 measurements are taken on a Raspberry~Pi~4 Model~B with the CPU running at 1.5 GHz. Frequency scaling is disabled to ensure consistent results. The results are shown in Tables \ref{tab:overall_benchmark_results_21595}, \ref{tab:overall_benchmark_results_55520}, and \ref{tab:overall_benchmark_results_122000}.
+
+The Apple M2 measurements are taken on a Mac Mini (2023). All benchmarks are ran on one of the four performance cores, clocked at 3.49 GHz. The results are shown in Tables \ref{tab:overall_benchmark_results_21595_m2}, \ref{tab:overall_benchmark_results_55520_m2}, and \ref{tab:overall_benchmark_results_122000_m2}.
+
+% ================================================================== 
+% CORTEX-A72
+% ==================================================================
+\pagebreak
 
 \begin{table}[H]
   \centering
-  \caption{MEDS-21595 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \caption{MEDS-21595 benchmarking results on the ARM Cortex-A72 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
   \label{tab:overall_benchmark_results_21595}
   \resizebox{\textwidth}{!}{
   %
@@ -25,7 +35,7 @@
 
 \begin{table}[H]
   \centering
-  \caption{MEDS-55520 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \caption{MEDS-55520 benchmarking results on the ARM Cortex-A72 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
   \label{tab:overall_benchmark_results_55520}
   \resizebox{\textwidth}{!}{
   %
@@ -47,7 +57,7 @@
 
 \begin{table}[H]
   \centering
-  \caption{MEDS-122000 benchmarking results for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \caption{MEDS-122000 benchmarking results on the ARM Cortex-A72 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
   \label{tab:overall_benchmark_results_122000}
   \resizebox{\textwidth}{!}{
   %
@@ -61,6 +71,77 @@
   Low-Level (New Hash Structure) & 16.7 & \footnotesize$(\times 4.3)$ & 2653.6 & \footnotesize$(\times 5.2)$ & 2550.3 & \footnotesize$(\times 5.4)$ \\
   High-Level & 71.2 & \footnotesize$(\times 1.0)$ & 3820.6 & \footnotesize$(\times 3.6)$ & 4130.7 & \footnotesize$(\times 3.3)$ \\
   High-Level (New Hash Structure) & 71.2 & \footnotesize$(\times 1.0)$ & 3672.1 & \footnotesize$(\times 3.7)$ & 3991.3 & \footnotesize$(\times 3.4)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+\end{table}
+
+% ==================================================================
+% Apple M2
+% ==================================================================
+\pagebreak
+
+\begin{table}[H]
+  \centering
+  \caption{MEDS-21595 benchmarking results on the Apple M2 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \label{tab:overall_benchmark_results_21595_m2}
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    \textbf{Variant} & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 3.0 & \footnotesize$(\times 1.0)$ & 345.6 & \footnotesize$(\times 1.0)$ & 345.5 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 3.0 & \footnotesize$(\times 1.0)$ & 352.7 & \footnotesize$(\times 1.0)$ & 352.6 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 1.0 & \footnotesize$(\times 3.0)$ & 93.9 & \footnotesize$(\times 3.7)$ & 84.6 & \footnotesize$(\times 4.1)$ \\
+  Low-Level (New Hash Structure) & 1.0 & \footnotesize$(\times 3.0)$ & 72.3 & \footnotesize$(\times 4.8)$ & 62.7 & \footnotesize$(\times 5.5)$ \\
+  High-Level & 3.0 & \footnotesize$(\times 1.0)$ & 89.8 & \footnotesize$(\times 3.8)$ & 93.3 & \footnotesize$(\times 3.7)$ \\
+  High-Level (New Hash Structure) & 3.0 & \footnotesize$(\times 1.0)$ & 67.9 & \footnotesize$(\times 5.1)$ & 71.1 & \footnotesize$(\times 4.9)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{MEDS-55520 benchmarking results the Apple M2 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \label{tab:overall_benchmark_results_55520_m2}
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    \textbf{Variant} & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 8.8 & \footnotesize$(\times 1.0)$ & 1469.8 & \footnotesize$(\times 1.0)$ & 1469.0 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 8.8 & \footnotesize$(\times 1.0)$ & 1469.8 & \footnotesize$(\times 1.0)$ & 1469.5 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 2.3 & \footnotesize$(\times 3.8)$ & 335.3 & \footnotesize$(\times 4.4)$ & 314.8 & \footnotesize$(\times 4.7)$ \\
+  Low-Level (New Hash Structure) & 2.4 & \footnotesize$(\times 3.7)$ & 255.7 & \footnotesize$(\times 5.7)$ & 234.2 & \footnotesize$(\times 6.3)$ \\
+  High-Level & 8.8 & \footnotesize$(\times 1.0)$ & 372.2 & \footnotesize$(\times 3.9)$ & 386.8 & \footnotesize$(\times 3.8)$ \\
+  High-Level (New Hash Structure) & 8.8 & \footnotesize$(\times 1.0)$ & 291.8 & \footnotesize$(\times 5.0)$ & 309.3 & \footnotesize$(\times 4.7)$ \\
+    \bottomrule
+\end{tabular}
+  %
+  }
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{MEDS-122000 benchmarking results the Apple M2 for all implementations (reference and optimized variants). The values represent the number of megacycles required to execute that algorithm. `New Hash Structure' refers to the optimized hash structure described in Section~\ref{sec:hashfunctionoptimization}.}
+  \label{tab:overall_benchmark_results_122000_m2}
+  \resizebox{\textwidth}{!}{
+  %
+  \begin{tabular}{l r @{\hskip 5pt} r r @{\hskip 5pt} r r @{\hskip 5pt} r}
+    \toprule
+    \textbf{Variant} & \multicolumn{2}{c}{\textbf{Keygen}} & \multicolumn{2}{c}{\textbf{Sign}} & \multicolumn{2}{c}{\textbf{Verify}} \\
+    \midrule
+  Reference & 22.6 & \footnotesize$(\times 1.0)$ & 4877.7 & \footnotesize$(\times 1.0)$ & 4878.4 & \footnotesize$(\times 1.0)$ \\
+  Reference (New Hash Structure) & 22.6 & \footnotesize$(\times 1.0)$ & 4970.7 & \footnotesize$(\times 1.0)$ & 4876.4 & \footnotesize$(\times 1.0)$ \\
+  Low-Level & 5.1 & \footnotesize$(\times 4.4)$ & 948.6 & \footnotesize$(\times 5.1)$ & 899.4 & \footnotesize$(\times 5.4)$ \\
+  Low-Level (New Hash Structure) & 5.1 & \footnotesize$(\times 4.4)$ & 719.9 & \footnotesize$(\times 6.8)$ & 671.6 & \footnotesize$(\times 7.3)$ \\
+  High-Level & 22.6 & \footnotesize$(\times 1.0)$ & 1193.6 & \footnotesize$(\times 4.1)$ & 1247.8 & \footnotesize$(\times 3.9)$ \\
+  High-Level (New Hash Structure) & 22.6 & \footnotesize$(\times 1.0)$ & 963.1 & \footnotesize$(\times 5.1)$ & 10160.3 & \footnotesize$(\times 0.5)$ \\
     \bottomrule
 \end{tabular}
   %

@@ -13,8 +13,8 @@ All three implementations can be compiled and ran in the same way, using CMake. 
 
 1. Navigate to either 'ref', 'opt-low-level' or 'opt-high-level' directory
 2. Create and navigate to a build directory: `mkdir build && cd build`
-3. Run CMake: `cmake .. -PARAM=[Level]` where `[Level]` is either 'Level1', 'Level3', or 'Level5'.
+3. Run CMake: `cmake -DPARAM=[Level] ..` where `[Level]` is either 'level1', 'level3', or 'level5'.
 4. Build the requested target: `make [target]` where `[target]` is either 'test', 'profile', or 'benchmark'.
-5. Run the target: `./[Level]/[Release/Debug]/[target]`
+5. Run the target: `./[Level]/[release/debug]/[target]`
 
 The 'test' target runs a basic test of all three algorithms (key generation, signing, and verification) and prints the results. The 'profile' target runs a performance test and prints the results. The 'benchmark' target runs an extensive benchmark and prints the results.

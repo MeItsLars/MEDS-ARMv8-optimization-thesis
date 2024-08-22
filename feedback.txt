@@ -1,6 +1,0 @@
-
-* I'm pretty certain that it's possible to come up with a program where
-  the CPU is not able to schedule instructions optimally on the fly.
-  I'm happy with using the word "optimized", but my intuition is that the
-  "optimal" in the reference manual is just marketing BS.
-

@@ -308,6 +308,24 @@ The MEDS key generation, signing, and verification algorithms require some addit
 \end{algorithm}
 
 \begin{algorithm}
+  \caption{MEDS `SF' function}
+  \label{alg:medssffunction}
+  \begin{algorithmic}
+    \Function{SF}{$\textbf{G} \in \mathbb{F}_{4093}^{k \times mn}$}
+      \State $M \gets \text{matrix of size } k \times k$
+      \For{$r \gets 0$ to $k$}
+        \State $M[r \cdot k, (r+1) \cdot k] \gets \textbf{G}[r \cdot mn, r \cdot mn + k]$
+      \EndFor
+      \State $M^{-1} \gets \text{mat\_inv}(M)$
+      \If{$M^{-1} = \bot$}
+        \State \Return $\bot$
+      \EndIf
+      \State \Return $\text{matrix\_mul}(M^{-1}, \textbf{G})$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
   \caption{MEDS matrix systemizer}
   \label{alg:systemizer}
   \begin{algorithmic}
@@ -366,24 +384,6 @@ The MEDS key generation, signing, and verification algorithms require some addit
         \EndFor
       \EndFor
       \State \Return $ret$
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-  \caption{MEDS `SF' function}
-  \label{alg:medssffunction}
-  \begin{algorithmic}
-    \Function{SF}{$\textbf{G} \in \mathbb{F}_{4093}^{k \times mn}$}
-      \State $M \gets \text{matrix of size } k \times k$
-      \For{$r \gets 0$ to $k$}
-        \State $M[r \cdot k, (r+1) \cdot k] \gets \textbf{G}[r \cdot mn, r \cdot mn + k]$
-      \EndFor
-      \State $M^{-1} \gets \text{mat\_inv}(M)$
-      \If{$M^{-1} = \bot$}
-        \State \Return $\bot$
-      \EndIf
-      \State \Return $\text{matrix\_mul}(M^{-1}, \textbf{G})$
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
