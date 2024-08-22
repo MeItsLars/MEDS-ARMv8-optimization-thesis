@@ -1382,20 +1382,38 @@ As the \texttt{solve\_opt} function is very large, we have decided not to implem
 \subsubsection{Minimum cycle bound}
 We establish a minimum cycle bound for the part of the \texttt{solve\_opt} function that we optimized: the two time-consuming loops. As they share the same structure, we show a general approach for establishing a minimum cycle bound for these loops, which we then apply to both loops to obtain a minimum cycle bound for the combined loops.
 
-We call $x$ the number of iterations of the outermost loop, $y$ the number of iterations of the middle loop, and $z$ the number of iterations of the innermost loop. The minimum number of instructions for the triple-nested loop can be calculated as follows:
+We call $x$ the number of iterations of the outermost loop, $y$ the number of iterations of the middle loop, and $z$ the number of iterations of the innermost loop. As with matrix multiplication, we assume infinite registers and that all values are loaded and stored only once. The minimum number of instructions for the triple-nested loop can be calculated as follows:
 \begin{itemize}
-  \item $x \cdot y$ loads of \texttt{tmp2} (it is loaded once per iteration of the innermost loop);
-  \item $x \cdot y \cdot \frac{1}{8}z \cdot 8$ loads to load the 8 values of \texttt{tmp1};
+  \item $x \cdot y$ loads of \texttt{tmp2} (not dependent on $z$);
+  \item $y \cdot \frac{1}{8}z \cdot 8$ loads to load the 8 values of \texttt{tmp1} (not dependent on $x$);
   \item $x \cdot y \cdot \frac{1}{8}z \cdot 2$ multiplications and reductions to compute \texttt{prod\_low/high};
   \item $x \cdot y \cdot \frac{1}{8}z$ combinations of \texttt{prod\_low} and \texttt{prod\_high} to compute \texttt{prod};
-  \item $x \cdot y \cdot \frac{1}{8}z$ loads to load \texttt{val};
+  \item $x \cdot \frac{1}{8}z$ loads to load \texttt{val} (not dependent on $y$);
   \item $x \cdot y \cdot \frac{1}{8}z$ additions, subtractions, and final reductions to compute \texttt{val};
-  \item $x \cdot y \cdot \frac{1}{8}z$ stores of \texttt{val}.
+  \item $x \cdot \frac{1}{8}z$ stores of \texttt{val} (not dependent on $y$).
 \end{itemize}
-Given that reductions take five cycles, freezes take three cycles, and all other operations take one cycle, we establish a minimum bound of $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
+Given that reductions take five cycles, freezes take three cycles, and all other operations take one cycle, we establish a minimum bound of:
+\[
+  xy + yz + \frac{1}{8}xyz \cdot (2 \cdot (1 + 5) + 1 + (1 + 1 + 3)) + \frac{1}{4}xz = xy + yz + \frac{1}{4}xz + \frac{18}{8}xyz
+\]
 
-We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table~\ref{tab:medsparametersets}). This gives us a total of $\frac{1}{8}(m-3)(m-1)(28m + 8)$ cycles for loop 1 and $\frac{1}{8}(m-2)(m-1)(28n + 8)$ cycles for loop 2, giving a combined total of $(m-3)(m-1)\left(\frac{7}{2}m + \frac{7}{2}n + 2\right)$ cycles.
-% $\frac{1}{8}(m-3)(m-1)(28m + 28n + 16)$
+% $xy + xy \cdot \frac{1}{8}z \cdot (8 + 2 \cdot (1 + 5) + 1 + 1 + (1 + 1 + 3) + 1) = xy + \frac{28}{8}xyz$.
+
+We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table~\ref{tab:medsparametersets}). This gives us a total of
+\begin{align*}
+  &(m - 3)(m - 1) + (m - 1)m + \frac{1}{4}(m - 3)m + \frac{18}{8}(m - 3)(m - 1)m\\
+  &= \frac{9}{4} m^3 - \frac{27}{4} m^2 + m + 3
+\end{align*}
+cycles for loop 1 and
+\begin{align*}
+  &(m - 2)(m - 1) + (m - 1)n + \frac{1}{4}(m - 2)n + \frac{18}{8}(m - 2)(m - 1)n\\
+  &= \frac{9}{4} m^2 n + m^2 - \frac{11}{2} m n - 3 m + 3 n + 2
+\end{align*}
+cycles for loop 2, giving a combined minimum cycle bound of:
+\[
+  \frac{9}{4} m^3 + \frac{9}{4} m^2 n - \frac{23}{4} m^2 - \frac{11}{2} m n - 2 m + 3 n + 5
+\]
+
 \todo[inline]{Also state what the reduction is compared to the original}
 
 \section{High-level optimization}
@@ -1629,7 +1647,7 @@ We first look at the performance results of the three algorithms that were optim
 \label{sec:resultslowlevel}
 In our low-level optimization approach (see Section~\ref{sec:lowleveloptimization}), we optimized matrix multiplication, the matrix systemizer, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. The calculated lower bounds are applicable to the algorithms that we used for the optimizations. Using a different algorithm might result in a different lower bound.
 
-To determine how close we got to our calculated bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the cycle count of the original function and the calculated minimum bound for each function (part), this gives us an understanding of how close we got to the optimal performance of the function (with the specific algorithm that we used). The results for these optimizations are shown in Table~\ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the minimum of the timing results.
+To determine how close we got to our calculated bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the cycle count of the original function and the calculated minimum bound for each function (part), this gives us an understanding of how close we got to the optimal performance of the function (with the specific algorithm that we used). The results for these optimizations are shown in Table~\ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the median of the timing results.
 
 \begin{table}
   \centering
@@ -1639,25 +1657,25 @@ To determine how close we got to our calculated bound, we benchmarked the optimi
     %
     \begin{tabular}{lllR{1.35cm}R{1.2cm}R{1.2cm}r}
       \toprule
-      \textbf{Function}                        & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles}                & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}        \\
-                                               & \multicolumn{1}{c}{\textit{A}}          & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)}   & \text{(Opt.)}  &                &      \\
+      \textbf{Function} & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
+      & \multicolumn{1}{c}{\textit{A}} & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)} & \text{(Opt.)} & & \\
       \toprule
-      Matrix Multiplication                    & $2 \times k$                            & $k \times k$                   & 6450            & 1348           & 744            & 1.81 \\
-      Matrix Multiplication                    & $2 \times mn$                           & $mn \times k$                  & 226217          & 39234          & 22852          & 1.72 \\
-      Matrix Multiplication                    & $k \times mn$                           & $mn \times k$                  & 3757155         & 489947         & 388488         & 1.26 \\
-      Matrix Multiplication                    & $m \times n$                            & $n \times m$                   & 109556          & 15947          & 12969          & 1.23 \\
-      Matrix Multiplication                    & $m \times n$                            & $n \times n$                   & 111334          & 16794          & 13350          & 1.26 \\
-      Matrix Multiplication                    & $32 \times 32$                          & $32 \times 32$                 & 89725           & 10750          & 10624          & 1.01 \\
-      \midrule
-      Matrix Systemizer                        & $k \times k$                            &                                & 169141          & 95299          & 71438          & 1.33 \\
-      Matrix Syst.                             & $k \times 2k$                           &                                & 292309          & 175155         & 170710         & 1.03 \\
-      Matrix Syst. (bsub$^{*}$)                & $n \times 2n$                           &                                & 453498          & 292422         & 274242         & 1.07 \\
-      Matrix Syst. (bsub$^{*}$)                & $m \times 2m$                           &                                & 407491          & 261331         & 251704         & 1.04 \\
-      Matrix Syst. (bsub$^{*}$)                & $k \times 2k$                           &                                & 407583          & 261028         & 251704         & 1.04 \\
-      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$)   & $n \times 2m$                           &                                & 422529          & 269895         & 260463         & 1.04 \\
-      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$                          &                                & 190097          & 123796         & 73106          & 1.69 \\
-      \midrule
-      Isometry Derivation (part)               & $2 \times mn$                           &                                & 1142883         & 350909         & 249100         & 1.41 \\
+      Matrix Multiplication & $2 \times k$ & $k \times k$ & 6450 & 1348 & 824 & 1.63\\
+      Matrix Multiplication & $2 \times mn$ & $mn \times k$ & 226217 & 39234 & 28568 & 1.37\\
+      Matrix Multiplication & $k \times mn$ & $mn \times k$ & 3757155 & 489947 & 404744 & 1.21\\
+      Matrix Multiplication & $m \times n$ & $n \times m$ & 109556 & 15947 & 12044 & 1.32\\
+      Matrix Multiplication & $m \times n$ & $n \times n$ & 111334 & 16794 & 12351 & 1.36\\
+      Matrix Multiplication & $32 \times 32$ & $32 \times 32$ & 89725 & 10750 & 9856 & 1.09\\
+  \midrule
+      Matrix Systemizer & $k \times k$& & 169141 & 95299 & 42800 & 2.23\\
+      Matrix Syst. & $k \times 2k$& & 292309 & 175155 & 99805 & 1.75\\
+      Matrix Syst. (bsub$^{*}$) & $n \times 2n$& & 453498 & 292422 & 156774 & 1.87\\
+      Matrix Syst. (bsub$^{*}$) & $m \times 2m$& & 407491 & 261331 & 143984 & 1.82\\
+      Matrix Syst. (bsub$^{*}$) & $k \times 2k$& & 407583 & 261028 & 143984 & 1.81\\
+      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $n \times 2m$& & 422529 & 269895 & 149018 & 1.81\\
+      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$& & 190097 & 123796 & 43413 & 2.85\\
+  \midrule
+      Isometry Derivation (part) & $2 \times mn$ & & 1142883 & 350909 & 166319 & 2.11\\
       \bottomrule
     \end{tabular}
     %
@@ -1665,11 +1683,13 @@ To determine how close we got to our calculated bound, we benchmarked the optimi
   \label{tab:lowleveloptimizationresults}
 \end{table}
 
-The results show that we were able to optimize the matrix multiplication function for the $32 \times 32$ case to within 2\% of the lower bound. This case is not used in MEDS, but we added it to show that the optimization works almost perfectly for matrices of which the dimensions are a multiple of 8. The other cases show that the optimization works fairly well for matrices with more than 8 rows and columns. These cases are unable to reach the lower bound because of the overhead of having to deal with dimensions that are not a multiple of 8, but the results are still very good. The worst case arises when one of the input matrices has only 2 rows. This makes sense, as we are unable to use full 8-way parallelization and therefore lose performance. The optimization of matrix multiplication for these cases might be improved by using a different approach to parallelization, which we leave as future work (see Section~\ref{sec:futureworkopt}).
+Because of our assumption that we have infinite registers (and therefore only need to load or store each value once) in the calculation of the minimum cycle bound, none of the functions reach the lower bound. This is especially true for the matrix systemizer and isometry derivation functions, both of these use a lot of intermediate loads and stores and are therefore relatively far from the lower bound.
 
-When looking at the matrix systemizer, we see that we get very close to the lower bound for most cases. The exceptions are the cases where the matrix size is relatively small, which is to be expected. For these matrix sizes, the overhead of having to deal with dimensions that are not a multiple of 8 is relatively large, compared to the parallelization speedup.
+The results show that we were able to optimize the matrix multiplication function for the $32 \times 32$ case to within 9\% of the lower bound. This case is not used in MEDS, but we added it to show that the optimization works almost perfectly for matrices of which the dimensions are a multiple of 8. The other cases show that the optimization works fairly well for matrices with more than 8 rows and columns. These cases are unable to reach the lower bound because of the overhead of having to deal with dimensions that are not a multiple of 8, but the results are still very good. The worst case arises when one of the input matrices has only 2 rows. This makes sense, as we are unable to use full 8-way parallelization and therefore lose performance. The optimization of matrix multiplication for these cases might be improved by using a different approach to parallelization, which we leave as future work (see Section~\ref{sec:futureworkopt}).
 
-Finally, we consider the isometry derivation function. The results show that we were able to optimize this function to within 41\% of the lower bound. This is a major improvement over the reference implementation, but it is still quite far from the lower bound. This can be attributed to the fact that we only optimized the two most time-consuming parts of the function. Furthermore, we used NEON intrinsics for the optimization, whereas an assembly implementation might have resulted in a larger speedup. We leave this as future work (see Section~\ref{sec:futureworkopt}).
+When looking at the matrix systemizer, we see that we get reasonably close to the lower bound for most cases. The difference is mostly caused by the assumption that we have infinite registers, which is not the case in reality. The exceptions are the cases where the matrix size is relatively small, which is to be expected. For these matrix sizes, the additional overhead of having to deal with dimensions that are not a multiple of 8 is relatively large, compared to the parallelization speedup.
+
+Finally, we consider the isometry derivation function. The results show that we were able to optimize this function to within $2.11\times$ of the lower bound. This is a major improvement over the reference implementation, but it is still quite far from the lower bound. This can be attributed to the infinite register assumption and the fact that we only optimized the two most time-consuming parts of the function. Furthermore, we used NEON intrinsics for the optimization, whereas an assembly implementation might have resulted in a larger speedup. We leave this as future work (see Section~\ref{sec:futureworkopt}).
 
 \section{Profiling implementation variants}
 \label{sec:profilingoptimizations}

@@ -1,14 +1,6 @@
 
-* page 44: It's tricky to include loads and stores in the lower bound beyond
-  loading inputs once at the beginning and storing outputs once at the end.
-  Who tells you that you need to go to and from memory every time between
-  loops...
-
 * I'm pretty certain that it's possible to come up with a program where
   the CPU is not able to schedule instructions optimally on the fly.
   I'm happy with using the word "optimized", but my intuition is that the
   "optimal" in the reference manual is just marketing BS.
 
-* "by running that function 128 times and taking the minimum of the timing
-  results": the standard approach is to use the median (and ideally also
-  report quartiles).
