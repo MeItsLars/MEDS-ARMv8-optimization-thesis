@@ -187,7 +187,7 @@ Optimizing the MEDS implementation for the ARMv8 architecture will improve the M
 The goal of this thesis is to optimize the performance of the MEDS implementation for the ARMv8 architecture to the extent that further optimizations are either infeasible or provide only minimal performance improvements. To achieve this goal, we investigate the following research questions:
 \begin{itemize}[left=35pt,labelsep=15pt]
   \item[RQ I.] How is CPU time distributed across the code of the MEDS implementation?
-  \pagebreak
+        \pagebreak
   \item[RQ II.] What optimizations can be made to improve the performance of the MEDS implementation for the ARMv8 architecture?
         \begin{itemize}
           \item[a)] Which of these optimizations can be used in general for any
@@ -204,12 +204,15 @@ Since the submission of the original MEDS implementation to the NIST PQC competi
 In this thesis, when talking about the MEDS implementation, we refer to the new reference implementation that was provided by the authors in~\cite{chou2024reducing}, unless stated otherwise.
 
 \section{Related work}
-\todo[inline]{This is the only remaining section that still needs to be changed.}
 Digital signature schemes and their optimization have been the subject of many research papers over the last few decades. Traditional widely-used digital signature schemes such as RSA~\cite{rivest1978method}, ECDSA~\cite{johnson2001elliptic}, and EdDSA~\cite{bernstein2012high} have received optimizations for various versions of ARM CPUs over the years~\cite{talal2009efficient,tanik2001ecdsa,xu2001efficient}. The introduction of NEON~\cite{ARMv8A-ProgrammersGuide} (ARM's SIMD instruction set) in ARMv7 has led to a new wave of optimizations for traditional digital signature schemes based on NEON instructions, starting with the work of Bernstein and Schwabe in 2011~\cite{bernstein2012neon}. This work has been continued for both symmetric and asymmetric cryptographic algorithms over the years~\cite{azarderaksh2015neon,gouvea2015implementing,seo2016efficient,seo2014parallel,wang2015higher}.
 
-The introduction of the NIST post-quantum cryptography standardization process in 2016 has led to the development of many new public key encryption (PKE), key encapsulation mechanism (KEM), and digital signature schemes that are believed to be secure against quantum computers. Research into the NEON optimization of PKE/KEM schemes soon followed~\cite{nguyen2021fast,nguyen2021optimized,ortiz2022evaluation,streit2018post}. The optimization of post-quantum digital signature schemes has mostly focused on finalists of the competition: CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, SPHINCS$^+$~\cite{bernstein2015sphincs}, and Rainbow~\cite{ding2005rainbow} have received NEON-based optimizations for ARMv8 CPUs~\cite{becker2021neon,becker2022hybrid,kim2022accelerating,kim2022crystals,kwon2023look,nguyen2023fast}.
+The introduction of the NIST post-quantum cryptography standardization process in 2016 has led to the development of many new public key encryption (PKE), key encapsulation mechanism (KEM), and digital signature schemes that are believed to be secure against quantum computers. Research into the NEON optimization of PKE/KEM schemes soon followed~\cite{nguyen2021fast,nguyen2021optimized,ortiz2022evaluation,sim2022mceliece,streit2018post}. The optimization of post-quantum digital signature schemes has mostly focused on finalists of the competition: CRYSTALS-Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, SPHINCS$^+$~\cite{bernstein2015sphincs}, and Rainbow~\cite{ding2005rainbow} have received NEON-based optimizations for ARMv8 CPUs~\cite{becker2021neon,becker2022hybrid,kim2022accelerating,kim2022crystals,kwon2023look,nguyen2023fast}.
 
-Besides the use of NEON instructions, the use of already optimized algorithms can greatly improve the performance of a cryptographic scheme. Common cryptographic building blocks such as the KECCAK permutation~\cite{bertoni2013keccak} and Montgomery multiplication~\cite{montgomery1985modular} have already been optimized for various ARM CPUs~\cite{becker2022hybrid,bos2014montgomery,seo2015montgomery} and are used in many digital signature schemes.
+More relevant to this thesis is the work on the implementation and optimization of other (code-based) schemes that are similar to MEDS. Many schemes in the ongoing NIST PQC competition, including ALTEQ~\cite{blaser2024alteq}, LESS~\cite{baldi2024less}, PERK~\cite{aaraj2023perk}, and RYDE~\cite{aragon2023ryde}, have been optimized for x86 CPUs using AVX2/AVX512~\cite{intel-avx512} instructions. However, only a few schemes, such as MiRitH~\cite{adj2023mirith} and UOV~\cite{beullens2023uov}, have been optimized for ARMv8.
+
+Of particular interest is the work on the optimization of the original MEDS implementation for the x86 architecture using AVX512 instructions~\cite{IIS2023HighLevel, IIS2023LowLevel}. Both this optimization and ALTEQ~\cite{blaser2024alteq} provide the high-level optimization idea of intertwining multiple mathematical objects to allow for more parallelism in the signature generation and verification algorithms. Besides this, LESS~\cite{baldi2024less} explores the low-level optimization of the computation of the RREF of a matrix, which is also used in MEDS.
+
+Besides the use of NEON instructions, the use of already optimized algorithms can greatly improve the performance of a cryptographic scheme. Common cryptographic building blocks such as the KECCAK permutation~\cite{bertoni2013keccak} (which is used in MEDS) and Montgomery multiplication~\cite{montgomery1985modular} have already been optimized for various ARM CPUs~\cite{becker2022hybrid,bos2014montgomery,seo2015montgomery} and are used in many digital signature schemes.
 
 \section{Contributions}
 This thesis makes the following contributions:
@@ -298,7 +301,7 @@ The formal definition of a digital signature scheme is given in Definition~\ref{
 
 \subsection{Codes and Matrix Code Equivalence (MCE)}
 \label{sec:codes}
-Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence (MCE), which is closely related to the notion of Code Equivalence that is used in LESS~\cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition. In this section, we provide background information on codes and the MCE problem. A more detailed explanation on matrix codes can be found in~\cite{gorla2021rank}. A study on the hardness of the MCE problem, as well as related problems, can be found in~\cite{reijnders2024hardness}.
+Most PQC schemes are based on mathematical concepts such as linear codes, isogenies, lattices and multivariate equations. These concepts have associated decisional and computational problems that are believed to be hard to solve for both classical and quantum computers. MEDS is based on the notion of Matrix Code Equivalence (MCE), which is closely related to the notion of Code Equivalence that is used in LESS~\cite{biasse2020less}, a similar scheme in the NIST PQC Signature competition. In this section, we provide background information on codes and the MCE problem. A more detailed explanation of matrix codes can be found in~\cite{gorla2021rank}. A study on the hardness of the MCE problem, as well as related problems, can be found in~\cite{reijnders2024hardness}.
 
 \subsubsection{Codes}
 Each matrix has a so-called rank, of which the definition is given in Definition~\ref{def:matrixrank}.
@@ -308,7 +311,7 @@ Each matrix has a so-called rank, of which the definition is given in Definition
   The rank of a matrix $\textbf{A} \in \mathbb{F}_q^{m \times n}$, denoted as $\text{rank}(\textbf{A})$, is the maximum number of linearly independent rows (or columns) of $\textbf{A}$.
 \end{definition}
 
-The matrix rank can be used to create a distance metric between matrices. This metric is called the rank metric, and its definition is provied in Definition~\ref{def:rankmetric}.
+The matrix rank can be used to create a distance metric between matrices. This metric is called the rank metric, and its definition is provided in Definition~\ref{def:rankmetric}.
 
 \begin{definition}[Rank Metric, following~\cite{gorla2021rank}]~\\
   \label{def:rankmetric}
@@ -423,7 +426,7 @@ The team behind MEDS has proposed three parameter sets for the new optimized ver
 
 \begin{table}
   \centering
-  \caption{MEDS security levels. \textbf{FS} denotes the claimed security of a MEDS parameter set in bits, following the currently best known attack of~\cite{kumar2024algorithms}.}
+  \caption{MEDS security levels. \textbf{FS} denotes the claimed security of a MEDS parameter set in bits, following the currently best-known attack of~\cite{kumar2024algorithms}.}
   \begin{tabular}{lcc}
     \toprule
     \textbf{Parameter Set} & \textbf{NIST Category} & \textbf{FS} \\
@@ -722,7 +725,7 @@ Another example of branching on secret data occurs when the code uses a loop in 
   \end{algorithmic}
 \end{algorithm}
 
-Obviously, the execution time of this code snippet depends on the value of `secret\_data'.
+The execution time of this code snippet depends on the value of `secret\_data'.
 
 \subsubsection{Compiler optimizations and branch prediction}
 The previous examples are relatively obvious, but there are many more subtle ways in which branching on secret data can occur, especially when working with a smart compiler that tries to optimize the code. Consider the following example in Algorithm~\ref{alg:conditionalswap}.
@@ -915,6 +918,10 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \label{tab:medssigningfunctions}
 \end{table}
 
+\subsection{Result analysis}
+Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for 98.76\% of the total number of cycles. For signing and verification, these numbers are 99.42\% and 99.39\%, respectively. In all three algorithms, the remainder of the cycles is spent on a large set of functions that take up a small amount of time. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
+
+% Move this table down a bit because it helps with formatting
 \begin{table}
   \centering
   \caption{MEDS-55520 verification profiling results for the ARM Cortex-A72.}
@@ -934,28 +941,6 @@ We added cycle count measurements to all MEDS functions that we anticipate will 
   \end{tabular}
   \label{tab:medsverificationfunctions}
 \end{table}
-
-% \begin{tikzpicture}
-%   \pie[
-%     sum=100,
-%     text=legend,
-%     % pos={8,0},
-%     % explode=0.1,
-%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
-%   ]{59.3/matmul, 17.1/matsyst, 6.1/shakeabsorb, 1.2/GFinv, 16.3/Other}
-%   \pie[
-%     sum=100,
-%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9},
-%     hide number
-%   ]{59.3/,17.1/,6.1/,1.2/1.2\%}
-%   \pie[
-%     sum=100,
-%     color={pie3,pie4,pie5,pie6,pie7,pie8,pie9}
-%   ]{59.3/,17.1/,6.1/}
-% \end{tikzpicture}
-
-\subsection{Result analysis}
-Because of the way that MEDS works, the results of the signing and verification operations are very similar. For key generation, the results in the table account for 98.76\% of the total number of cycles. For signing and verification, this number is 99.42\% and 99.39\%, respectively. In all three algorithms, the remainder of the cycles is spent on a large set of functions that take up a small amount of time. Given that there are only a few functions that take up a significant amount of time, we can conclude that the performance of MEDS is mostly determined by these functions.
 
 \subsubsection{Matrix multiplication}
 For all three operations, the \texttt{pmod\_mat\_mul} function takes up the most time, almost 70\%. This function is used to multiply two matrices $A \in \mathbb{F}_q^{m \times n}$ and $B \in \mathbb{F}_q^{n \times o}$ over a finite field $\mathbb{F}_q$. The function is implemented in MEDS using a naive algorithm that computes the dot product of each row of $A$ with each column of $B$, followed by a reduction modulo $q$. As will be shown in Section~\ref{sec:matrixmultiplicationcomplexity}, the time complexity of this algorithm is $\mathcal{O}(mno)$ ($= \mathcal{O}(n^3)$ for square matrices).
@@ -1045,13 +1030,13 @@ The reference code for our Barrett reduction algorithm is shown in Algorithm~\re
 The NEON version of the Barrett reduction algorithm is shown in Algorithm~\ref{alg:neonbarretreductionc} (C code) and Algorithm~\ref{alg:neonbarretreductionasm} (assembly code). The C code uses NEON intrinsics to perform the reduction on 128-bit NEON registers. The assembly code is a direct translation of the C code to ARMv8 assembly. Both algorithms assume that the input consists of four 32-bit unsigned integers that are stored in four lanes of a 128-bit NEON register. The output can either be stored in four 32-bit lanes or four 16-bit lanes, depending on the requirements of the calling function.
 
 \begin{algorithm}
-  \caption{NEON Barrett reduction (C)}
+  \caption{MEDS NEON Barrett reduction (C)}
   \label{alg:neonbarretreductionc}
   \lstinputlisting[language=C, style=CStyle]{code/barrett_reduce_c.c}
 \end{algorithm}
 
 \begin{algorithm}
-  \caption{NEON Barrett reduction (assembly)}
+  \caption{MEDS NEON Barrett reduction (assembly)}
   \label{alg:neonbarretreductionasm}
   \textbf{Input:}
   $a_i \in [0, 2^{29.5})$ for $0 \leq i < 4$ (in \texttt{v0.4s})\\
@@ -1079,8 +1064,7 @@ A useful operation when working with numbers outside of the finite field is the 
   \end{algorithmic}
 \end{algorithm}
 
-As explained in Section~\ref{sec:branching}, we cannot use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm~\ref{alg:neonfreezeoperationc} (C code) and Algorithm~\ref{alg:neonfreezeoperationasm} (assembly code).
-
+% Move these tables up a bit because they help with formatting
 \begin{algorithm}
   \caption{NEON freeze operation (C)}
   \label{alg:neonfreezeoperationc}
@@ -1095,6 +1079,8 @@ As explained in Section~\ref{sec:branching}, we cannot use branching in constant
   \label{alg:neonfreezeoperationasm}
   \lstinputlisting[language={[x86masm]Assembler}, style=ASMStyle]{code/freeze_asm.s}
 \end{algorithm}
+
+As explained in Section~\ref{sec:branching}, we cannot use branching in constant-time code. However, using NEON intrinsics (or assembly instructions), we can implement the freeze operation in constant time. The NEON version of the freeze operation is shown in Algorithm~\ref{alg:neonfreezeoperationc} (C code) and Algorithm~\ref{alg:neonfreezeoperationasm} (assembly code).
 
 \section{Low-level optimization}
 \label{sec:lowleveloptimization}
@@ -1195,6 +1181,9 @@ A very crude minimum cycle bound on the naive algorithm (see Algorithm~\ref{alg:
 \end{itemize}
 The `multiply-accumulate' operation is a single instruction on ARMv8, and modular reduction can be done in five instructions (see Section~\ref{sec:barrettreduction}). This means that we can establish a minimum bound of $m \cdot o \cdot n + m \cdot o \cdot 5$ on the number of arithmetic instructions required for the naive algorithm. Any algorithm that follows this structure will require at least this number of instructions to execute, divided by the parallelization factor of that algorithm. In the case of the vectorized algorithm, this factor is eight.
 
+% [SUGGEST PAGEBREAK FOR FORMATTING]
+\pagebreak
+
 A more accurate minimum cycle bound can be established by looking at the number of instructions required for the vectorized algorithm (see Algorithm~\ref{alg:vectorizedmatrixmultiplication}). This algorithm obtains a speedup because of two factors:
 \begin{itemize}
   \item The NEON unit can perform operations in parallel.
@@ -1233,7 +1222,7 @@ The matrix systemizer function is the second most time-consuming function in MED
 
 \subsubsection{Complexity analysis}
 \label{sec:matrixsystemizercomplexity}
-We analyze the complexity of the the matrix systemizer algorithm used in the reference implementation (see Algorithm~\ref{alg:systemizer}). We first consider the basic algorithm where $r_\text{max} = m$ and \texttt{do\_swap} and \texttt{do\_backsub} are set to false. We can then compute the complexity of the algorithm as follows:
+We analyze the complexity of the matrix systemizer algorithm used in the reference implementation (see Algorithm~\ref{alg:systemizer}). We first consider the basic algorithm where $r_\text{max} = m$ and \texttt{do\_swap} and \texttt{do\_backsub} are set to false. We can then compute the complexity of the algorithm as follows:
 
 \resizebox{\textwidth}{!}{
   \begin{minipage}{\textwidth}
@@ -1304,8 +1293,6 @@ For the basic algorithm, the number of instructions required is as follows:
   \item $r_\text{max} \cdot n \cdot \frac{1}{8}$ stores of $A$.
 \end{itemize}
 
-\pagebreak
-
 Given that reduction takes five cycles, freezing takes three cycles, field inversion takes 115 cycles, and all other instructions take one cycle, combining these results using the same techniques as for the complexity analysis gives us the following minimum cycle bound for the basic algorithm:
 \begin{align*}
    & \frac{1}{4} \cdot r_\text{max} \cdot n + 115 \cdot r_\text{max} + \frac{13}{8} \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) \\
@@ -1337,17 +1324,17 @@ Following the same approach as above, using \texttt{do\_backsub} adds the follow
 \subsubsection{Theoretical speedup}
 Similarly to the matrix multiplication algorithm, we establish a theoretical speedup factor. Using a similar approach as in the previous section, we establish the bound for the non-optimized systemizer algorithm with \texttt{do\_swap} and \texttt{do\_backsub} set to false:
 \begin{align*}
-  & 2 \cdot r_\text{max} \cdot n + 115 \cdot r_\text{max} + 6 \cdot \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) \\
-  & + 11 \cdot \left( mn \cdot r_\text{max} - m \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} - n \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right.   \\
-  & \left. + \frac{(r_\text{max} - 1)r_{\text{max}}(2r_{\text{max}} - 1)}{6} - n \cdot r_\text{max} + \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+   & 2 \cdot r_\text{max} \cdot n + 115 \cdot r_\text{max} + 6 \cdot \left( n \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)          \\
+   & + 11 \cdot \left( mn \cdot r_\text{max} - m \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} - n \cdot \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right. \\
+   & \left. + \frac{(r_\text{max} - 1)r_{\text{max}}(2r_{\text{max}} - 1)}{6} - n \cdot r_\text{max} + \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 When using the algorithm with \texttt{do\_swap} set to true, the bound is increased by:
 \begin{align*}
-  & 1 \cdot \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+   & 1 \cdot \left( m \cdot r_\text{max} - \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 When using the algorithm with \texttt{do\_backsub} set to true, the bound is increased by:
 \begin{align*}
-  & 11 \cdot \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + 11 \cdot \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
+   & 11 \cdot \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right) + 11 \cdot \left( n - r_\text{max} \right) \left( \frac{(r_\text{max} - 1)r_{\text{max}}}{2} \right)
 \end{align*}
 As these bounds are very complex, we do not provide a closed-form expression for the theoretical speedup factor. This factor is obtained by dividing the bound for the non-optimized algorithm by the bound for the optimized algorithm (possibly with the additional instructions for \texttt{do\_swap} and \texttt{do\_backsub}). The theoretical and actual speedup factors are compared in Section~\ref{sec:resultslowlevel}.
 
@@ -1407,13 +1394,13 @@ Given that reductions take five cycles, freezes take three cycles, and all other
 
 We have $x = m - 3, y = m - 1, z = m$ for loop 1 and $x = m - 2, y = m - 1, z = n$ for loop 2, where $m$ and $n$ are the values of the parameter set that is used (as shown in Table~\ref{tab:medsparametersets}). This gives us a total of
 \begin{align*}
-  &(m - 3)(m - 1) + (m - 1)m + \frac{1}{4}(m - 3)m + \frac{18}{8}(m - 3)(m - 1)m\\
-  &= \frac{9}{4} m^3 - \frac{27}{4} m^2 + m + 3
+   & (m - 3)(m - 1) + (m - 1)m + \frac{1}{4}(m - 3)m + \frac{18}{8}(m - 3)(m - 1)m \\
+   & = \frac{9}{4} m^3 - \frac{27}{4} m^2 + m + 3
 \end{align*}
 cycles for loop 1 and
 \begin{align*}
-  &(m - 2)(m - 1) + (m - 1)n + \frac{1}{4}(m - 2)n + \frac{18}{8}(m - 2)(m - 1)n\\
-  &= \frac{9}{4} m^2 n + m^2 - \frac{11}{2} m n - 3 m + 3 n + 2
+   & (m - 2)(m - 1) + (m - 1)n + \frac{1}{4}(m - 2)n + \frac{18}{8}(m - 2)(m - 1)n \\
+   & = \frac{9}{4} m^2 n + m^2 - \frac{11}{2} m n - 3 m + 3 n + 2
 \end{align*}
 cycles for loop 2, giving a combined minimum cycle bound of:
 \[
@@ -1507,29 +1494,30 @@ To give a brief overview of the modifications that need to be made to these algo
   \lstinputlisting[language=C, style=CStyle]{code/matrix_multiplication.c}
 \end{algorithm}
 
+As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x8.h} file and thus perform 8 computations in
+parallel. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/tree/main/opt-high-level/src}}
+
+\pagebreak
+
+% Weird samepage to force formatting
+\begin{samepage}
 \begin{algorithm}
   \caption{Matrix multiplication (vectorized for eight commitments)}
   \label{alg:medsmatrixmultiplicationvec}
   \lstinputlisting[language=C, style=CStyle]{code/matrix_multiplication_vec.c}
 \end{algorithm}
 
-\pagebreak
-
-As can be seen from the code, the vectorized version is essentially the same as the non-vectorized version, but with certain operations altered so they work with the vectorized datatypes and functions defined in the \texttt{vec\_16x8.h} file and thus perform 8 computations in
-parallel. The same approach is used for all other supplemental algorithms that require parallelization, their modified implementations can be found in the code repository.\footnote{\url{https://github.com/MeItsLars/MEDS-ARMv8-optimization-thesis/tree/main/opt-high-level/src}}
-
 \subsection{Parallelization of commitment computations}
 \label{sec:commitmentparallelization}
+\end{samepage}
 Using the modified datatypes and supplemental algorithms, we can parallelize the computation of the commitments in MEDS. As can be seen in the algorithms for both signing (Algorithm~\ref{alg:medssignoverview}) and verification (Algorithm~\ref{alg:medsverifyoverview}), the computation of the commitments is done in a for-loop that loops from $0$ to $t$. As the generation of a commitment can fail (for example, when a randomly generated matrix is not invertible), the generation of a particular commitment is done in a while loop that runs until the commitment is successfully generated. This is why the signing and verification code exhibits the following structure:
 \begin{samepage}
-  \begin{verbatim}
+\begin{verbatim}
   // Initial definitions and loading
   for (int i = 0; i < t; i++) {
     while (1) {
       // Compute commitment
-      if (commitment is computed) {
-        break;
-      }
+      if (commitment is computed) break;
     }
   }
   // Final operations
@@ -1600,6 +1588,8 @@ Our optimization relies on the observation that two 12-bit values can be convert
   \end{algorithmic}
 \end{algorithm}
 
+\pagebreak
+
 \section{Hash structure}
 \label{sec:hashfunctionoptimization}
 The result of the computation of each commitment is a large matrix. To convert these commitments into a set of challenges (as is required by the Fiat-Shamir structure, see Section~\ref{sec:fiatshamir}), the commitments are hashed (using the SHAKE256 XOF) into a single KECCAK state. This state is then converted into an array of $t$ challenges.
@@ -1622,7 +1612,6 @@ There is little to no room for improvement in the actual SHAKE256 XOF, as it (an
 \begin{enumerate}
   \item \textbf{Stage 1}: $\textit{Hash}_1$\\
         In the first stage, the commitment matrices are hashed into a set of intermediate states $i_0, i_1, \ldots, i_{t-1}$ using the same $\textit{Hash}_1$ function as in the original structure. This stage can be parallelized, as the hashing of each commitment no longer depends on other commitments.
-        \pagebreak
   \item \textbf{Stage 2}: $\textit{Hash}_2$\\
         In the second stage, we combine the intermediate states $i_0, i_1, \ldots, i_{t-1}$ into a single state $s_t$ that we can use to generate the array of challenges. We do this by repeatedly applying the $\textit{Hash}_2$ function (which also calls SHAKE256) to the intermediate states and the running state $s$. This stage is once again sequential, but it only requires $t$ calls to the Keccak-f[1600] permutation.
 \end{enumerate}
@@ -1660,7 +1649,7 @@ We first look at the performance results of the three algorithms that were optim
 
 \section{Low-level optimizations}
 \label{sec:resultslowlevel}
-In our low-level optimization approach (see Section~\ref{sec:lowleveloptimization}), we optimized matrix multiplication, the matrix systemizer, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. The calculated lower bounds are applicable to the algorithms that we used for the optimizations. Using a different algorithm might result in a different lower bound.
+In our low-level optimization approach (see Section~\ref{sec:lowleveloptimization}), we optimized matrix multiplication, the matrix systemizer, and isometry derivation. For each of these functions, we established a lower bound on the number of cycles that the (optimized part of the) function should take to execute. The calculated lower bounds apply to the algorithms that we used for the optimizations. Using a different algorithm might result in a different lower bound.
 
 To determine how close we got to our calculated bound, we benchmarked the optimized functions for parameter set MEDS-55520. Together with the cycle count of the original function and the calculated minimum bound for each function (part), this gives us an understanding of how close we got to the optimal performance of the function (with the specific algorithm that we used). The results for these optimizations are shown in Table~\ref{tab:lowleveloptimizationresults}. Each benchmark result was obtained by running that function 128 times and taking the median of the timing results.
 
@@ -1672,25 +1661,25 @@ To determine how close we got to our calculated bound, we benchmarked the optimi
     %
     \begin{tabular}{lllR{1.35cm}R{1.2cm}R{1.2cm}r}
       \toprule
-      \textbf{Function} & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles} & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}\\
-      & \multicolumn{1}{c}{\textit{A}} & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)} & \text{(Opt.)} & & \\
+      \textbf{Function}                        & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Cycles}                & \textbf{Cycles} & \textbf{Bound} & \textbf{Ratio}        \\
+                                               & \multicolumn{1}{c}{\textit{A}}          & \multicolumn{1}{c}{\textit{B}} & \text{(Ref.)}   & \text{(Opt.)}  &                &      \\
       \toprule
-      Matrix Multiplication & $2 \times k$ & $k \times k$ & 6450 & 1348 & 824 & 1.63\\
-      Matrix Multiplication & $2 \times mn$ & $mn \times k$ & 226217 & 39234 & 28568 & 1.37\\
-      Matrix Multiplication & $k \times mn$ & $mn \times k$ & 3757155 & 489947 & 404744 & 1.21\\
-      Matrix Multiplication & $m \times n$ & $n \times m$ & 109556 & 15947 & 12044 & 1.32\\
-      Matrix Multiplication & $m \times n$ & $n \times n$ & 111334 & 16794 & 12351 & 1.36\\
-      Matrix Multiplication & $32 \times 32$ & $32 \times 32$ & 89725 & 10750 & 9856 & 1.09\\
-  \midrule
-      Matrix Systemizer & $k \times k$& & 169141 & 95299 & 42800 & 2.23\\
-      Matrix Syst. & $k \times 2k$& & 292309 & 175155 & 99805 & 1.75\\
-      Matrix Syst. (bsub$^{*}$) & $n \times 2n$& & 453498 & 292422 & 156774 & 1.87\\
-      Matrix Syst. (bsub$^{*}$) & $m \times 2m$& & 407491 & 261331 & 143984 & 1.82\\
-      Matrix Syst. (bsub$^{*}$) & $k \times 2k$& & 407583 & 261028 & 143984 & 1.81\\
-      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $n \times 2m$& & 422529 & 269895 & 149018 & 1.81\\
-      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$& & 190097 & 123796 & 43413 & 2.85\\
-  \midrule
-      Isometry Derivation (part) & $2 \times mn$ & & 1142883 & 350909 & 166319 & 2.11\\
+      Matrix Multiplication                    & $2 \times k$                            & $k \times k$                   & 6450            & 1348           & 824            & 1.63 \\
+      Matrix Multiplication                    & $2 \times mn$                           & $mn \times k$                  & 226217          & 39234          & 28568          & 1.37 \\
+      Matrix Multiplication                    & $k \times mn$                           & $mn \times k$                  & 3757155         & 489947         & 404744         & 1.21 \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times m$                   & 109556          & 15947          & 12044          & 1.32 \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times n$                   & 111334          & 16794          & 12351          & 1.36 \\
+      Matrix Multiplication                    & $32 \times 32$                          & $32 \times 32$                 & 89725           & 10750          & 9856           & 1.09 \\
+      \midrule
+      Matrix Systemizer                        & $k \times k$                            &                                & 169141          & 95299          & 42800          & 2.23 \\
+      Matrix Syst.                             & $k \times 2k$                           &                                & 292309          & 175155         & 99805          & 1.75 \\
+      Matrix Syst. (bsub$^{*}$)                & $n \times 2n$                           &                                & 453498          & 292422         & 156774         & 1.87 \\
+      Matrix Syst. (bsub$^{*}$)                & $m \times 2m$                           &                                & 407491          & 261331         & 143984         & 1.82 \\
+      Matrix Syst. (bsub$^{*}$)                & $k \times 2k$                           &                                & 407583          & 261028         & 143984         & 1.81 \\
+      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$)   & $n \times 2m$                           &                                & 422529          & 269895         & 149018         & 1.81 \\
+      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$                          &                                & 190097          & 123796         & 43413          & 2.85 \\
+      \midrule
+      Isometry Derivation (part)               & $2 \times mn$                           &                                & 1142883         & 350909         & 166319         & 2.11 \\
       \bottomrule
     \end{tabular}
     %
@@ -1717,25 +1706,25 @@ Besides determining the proximity of the optimized functions to the calculated l
     %
     \begin{tabular}{lllrrrr}
       \toprule
-      \textbf{Function} & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Factor} & \textbf{Factor}\\
-      & \multicolumn{1}{c}{\textit{A}} & \multicolumn{1}{c}{\textit{B}} & \text{Theoretical} & \text{Actual} & & \\
+      \textbf{Function}                        & \multicolumn{2}{c}{\textbf{Input size}} & \textbf{Factor}                & \textbf{Factor}                         \\
+                                               & \multicolumn{1}{c}{\textit{A}}          & \multicolumn{1}{c}{\textit{B}} & \text{Theoretical} & \text{Actual} &  & \\
       \toprule
-      Matrix Multiplication & $2 \times k$ & $k \times k$ & 7.6 & 4.8\\
-      Matrix Multiplication & $2 \times mn$ & $mn \times k$ & 7.6 & 5.8\\
-      Matrix Multiplication & $k \times mn$ & $mn \times k$ & 7.5 & 7.7\\
-      Matrix Multiplication & $m \times n$ & $n \times m$ & 7.5 & 6.9\\
-      Matrix Multiplication & $m \times n$ & $n \times n$ & 7.5 & 6.6\\
-      Matrix Multiplication & $32 \times 32$ & $32 \times 32$ & 7.5 & 8.3\\
-  \midrule
-      Matrix Systemizer & $k \times k$& & 3.6 & 1.8\\
-      Matrix Syst. & $k \times 2k$& & 3.7 & 1.7\\
-      Matrix Syst. (bsub$^{*}$) & $n \times 2n$& & 4.1 & 1.6\\
-      Matrix Syst. (bsub$^{*}$) & $m \times 2m$& & 4.1 & 1.6\\
-      Matrix Syst. (bsub$^{*}$) & $k \times 2k$& & 4.1 & 1.6\\
-      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$) & $n \times 2m$& & 4.1 & 1.6\\
-      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$& & 3.7 & 1.5\\
-  \midrule
-      Isometry Derivation (part) & $2 \times mn$ & & 5.7 & 3.3\\
+      Matrix Multiplication                    & $2 \times k$                            & $k \times k$                   & 7.6                & 4.8                \\
+      Matrix Multiplication                    & $2 \times mn$                           & $mn \times k$                  & 7.6                & 5.8                \\
+      Matrix Multiplication                    & $k \times mn$                           & $mn \times k$                  & 7.5                & 7.7                \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times m$                   & 7.5                & 6.9                \\
+      Matrix Multiplication                    & $m \times n$                            & $n \times n$                   & 7.5                & 6.6                \\
+      Matrix Multiplication                    & $32 \times 32$                          & $32 \times 32$                 & 7.5                & 8.3                \\
+      \midrule
+      Matrix Systemizer                        & $k \times k$                            &                                & 3.6                & 1.8                \\
+      Matrix Syst.                             & $k \times 2k$                           &                                & 3.7                & 1.7                \\
+      Matrix Syst. (bsub$^{*}$)                & $n \times 2n$                           &                                & 4.1                & 1.6                \\
+      Matrix Syst. (bsub$^{*}$)                & $m \times 2m$                           &                                & 4.1                & 1.6                \\
+      Matrix Syst. (bsub$^{*}$)                & $k \times 2k$                           &                                & 4.1                & 1.6                \\
+      Matrix Syst. (n-1$^{**}$) (bsub$^{*}$)   & $n \times 2m$                           &                                & 4.1                & 1.6                \\
+      Matrix Syst. (swap$^{***}$) (bsub$^{*}$) & $m-1 \times m$                          &                                & 3.7                & 1.5                \\
+      \midrule
+      Isometry Derivation (part)               & $2 \times mn$                           &                                & 5.7                & 3.3                \\
       \bottomrule
     \end{tabular}
     %
@@ -1743,7 +1732,7 @@ Besides determining the proximity of the optimized functions to the calculated l
   \label{tab:lowleveloptimizationresults2}
 \end{table}
 
-The results show that especially for the matrix multiplication function, the actual speedup factors are close to the theoretical speedup factors, indicating that we were able to optimize these functions very well. Again, the exceptions are the cases where the matrix size is relatively small, in which case we are unable to use full 8-way parallelization, causing the actual speedup factor to be lower than the theoretical speedup factor. For the matrix systemizer and isometry derivation functions, the actual speedup factors are lower than the theoretical speedup factors. This is due to the fact that the C compiler was already able to optimize these functions to a certain extent, which means that the speedup factor that we could achieve was limited.
+The results show that especially for the matrix multiplication function, the actual speedup factors are close to the theoretical speedup factors, indicating that we were able to optimize these functions very well. Again, the exceptions are the cases where the matrix size is relatively small, in which case we are unable to use full 8-way parallelization, causing the actual speedup factor to be lower than the theoretical speedup factor. For the matrix systemizer and isometry derivation functions, the actual speedup factors are lower than the theoretical speedup factors. This is because the C compiler was already able to optimize these functions to a certain extent, which means that the speedup factor that we could achieve was limited.
 
 \section{Profiling implementation variants}
 \label{sec:profilingoptimizations}
@@ -1774,7 +1763,7 @@ The figures show major improvements for all three algorithms in both the low-lev
 \begin{itemize}
   \item The key generation algorithm used in the high-level optimized implementation is the same as the one in the reference implementation, because the parameter sets that we consider do not allow for large speedup factors for the high-level optimizations of this algorithm. We leave this as future work (see Section~\ref{sec:futureworkopt}).
   \item In key generation, the \texttt{rnd\_sys\_mat} (responsible for generating random systemized matrices) and \texttt{bs\_fill} (responsible for writing to a bitstream) functions have not been optimized, and therefore show no improvement. Generating random systemized matrices cannot be optimized, as it relies on the generation of random field elements using the SHAKE256 XOF (which is already optimized). Writing to a bitstream can be optimized using the approach described in Section~\ref{sec:bitstreamfilling}, which we leave as future work.
-  \pagebreak
+        \pagebreak
   \item The \texttt{shake256\_absorb} function used in signing and verification does not show any improvement. This is because the SHAKE256 XOF is already heavily optimized. The only thing that can be optimized is the structure of the hashing process, which we execute and explain in Section~\ref{sec:hashfunctionoptimization}.
 \end{itemize}
 
@@ -1801,7 +1790,7 @@ MEDS was benchmarked for every possible combination of these variables, resultin
   \item The final benchmark result was obtained by taking the median of the 128 measurements.
 \end{enumerate}
 
-The exact results of the benchmarks on the Cortex-A72 are shown in Table~\ref{tab:overall_benchmark_results_21595} (MEDS-21595), Table~\ref{tab:overall_benchmark_results_55520} (MEDS-55520), and Table~\ref{tab:overall_benchmark_results_122000} (MEDS-122000) in Appendix~\ref{app:benchmark_results}. For the Apple M2, the results are shown in Table~\ref{tab:overall_benchmark_results_21595_m2} (MEDS-21595), Table~\ref{tab:overall_benchmark_results_55520_m2} (MEDS-55520), and Table~\ref{tab:overall_benchmark_results_122000_m2} (MEDS-122000) in Appendix~\ref{app:benchmark_results}. 
+The exact results of the benchmarks on the Cortex-A72 are shown in Table~\ref{tab:overall_benchmark_results_21595} (MEDS-21595), Table~\ref{tab:overall_benchmark_results_55520} (MEDS-55520), and Table~\ref{tab:overall_benchmark_results_122000} (MEDS-122000) in Appendix~\ref{app:benchmark_results}. For the Apple M2, the results are shown in Table~\ref{tab:overall_benchmark_results_21595_m2} (MEDS-21595), Table~\ref{tab:overall_benchmark_results_55520_m2} (MEDS-55520), and Table~\ref{tab:overall_benchmark_results_122000_m2} (MEDS-122000) in Appendix~\ref{app:benchmark_results}.
 
 As the relative performance of the implementations is more important than the exact numbers and as we focused our optimization efforts on the Cortex-A72, we depict the Cortex-A72 results in the form of bar charts in Figure~\ref{fig:overal_performance_bar_chart_MEDS-21595} (MEDS-21595), Figure~\ref{fig:overal_performance_bar_chart_MEDS-55520} (MEDS-55520), and Figure~\ref{fig:overal_performance_bar_chart_MEDS-122000} (MEDS-122000).
 
@@ -1830,34 +1819,34 @@ The results show that both the low-level and high-level optimizations have resul
 
 Additionally, the results show that the alternative hash structure presented in Section~\ref{sec:hashfunctionoptimization} results in a small speedup for the signing and verification algorithms. It does not have a noticeable impact when applied to the reference implementation.
 
-The speedup factors are larger on the Apple M2 than on the ARM Cortex-A72, especially for the variants with the optimized hash structure. This is due to the fact that the Apple M2 is able to utilize the cryptographic extension of the ARMv8 architecture, which contains instructions that accelerate the parallel performance of the Keccak-f[1600] permutation.
+The speedup factors are larger on the Apple M2 than on the ARM Cortex-A72, especially for the variants with the optimized hash structure. This is because the Apple M2 can utilize the cryptographic extension of the ARMv8 architecture, which contains instructions that accelerate the parallel performance of the Keccak-f[1600] permutation.
 
 \section{Comparison to similar schemes}
 \label{sec:comparison}
 We compare the performance of MEDS on the Cortex-A72 to the performance of other digital signature schemes. Note that we compare to the self-reported performance of the schemes over various CPUs, which means the results are not directly comparable. Nevertheless, the comparison indicates the rough relative performance of the schemes. Besides this, note that the comparison is only based on the performance of the schemes and does not take key and signature sizes into account.
 
-For reference, we include a comparison to Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS$^+$~\cite{aumasson2022sphincs}, the three selected signature schemes in the initial NIST post-quantum standardization process. More importantly though, we compare to a set of related (mostly code-based) post-quantum digital signature schemes that are, like MEDS, in the current NIST post-quantum digital signature standardization process. The results are shown in Table~\ref{tab:codebasedcomparison}.
+For reference, we include a comparison to Dilithium~\cite{ducas2018crystals}, Falcon~\cite{fouque2018falcon}, and SPHINCS$^+$~\cite{aumasson2022sphincs}, the three selected signature schemes in the initial NIST post-quantum standardization process. More importantly, though, we compare to a set of related (mostly code-based) post-quantum digital signature schemes that are, like MEDS, in the current NIST post-quantum digital signature standardization process. The results are shown in Table~\ref{tab:codebasedcomparison}.
 
 % \begin{table}
-%   \centering
-%   \caption{Comparison of MEDS performance to self-reported times of standardized post-quantum digital signature schemes that have been optimized for ARMv8. The numbers represent the number of KCycles that the key generation, signing, and verification algorithms take to execute on an ARM Cortex-A72 CPU.}
-%   \begin{tabular}{p{1.1cm}lrrr}
-%     \toprule
-%     \textbf{NIST Level}  & \textbf{Work}                    & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
-%     \midrule
-%     \multirow{3}{*}{I}   & Falcon512~\cite{nguyen2023fast}  & -               & 1044.6        & 59.9            \\
-%                          & Dilithium2~\cite{becker2021neon} & 269.7           & 649.2         & 272.8           \\
-%                          & MEDS-21595 (ours)                & 2821.4          & 248223.4      & 229793.6        \\
-%     \midrule
-%     \multirow{2}{*}{III} & Dilithium3~\cite{becker2021neon} & 515.8           & 1089.4        & 447.5           \\
-%                          & MEDS-55520 (ours)                & 7184.6          & 927910.3      & 878268.2        \\
-%     \midrule
-%     \multirow{3}{*}{V}   & Falcon1024~\cite{nguyen2023fast} & -               & 2137.0        & 125.2           \\
-%                          & Dilithium5~\cite{becker2021neon} & 782.8           & 1437.0        & 764.9           \\
-%                          & MEDS-122000 (ours)               & 16646.2         & 2794525.4     & 2693826.8       \\
-%     \bottomrule
-%   \end{tabular}
-%   \label{tab:stdcomparison}
+%   \centering
+%   \caption{Comparison of MEDS performance to self-reported times of standardized post-quantum digital signature schemes that have been optimized for ARMv8. The numbers represent the number of KCycles that the key generation, signing, and verification algorithms take to execute on an ARM Cortex-A72 CPU.}
+%   \begin{tabular}{p{1.1cm}lrrr}
+%     \toprule
+%     \textbf{NIST Level}  & \textbf{Work}                    & \textbf{Keygen} & \textbf{Sign} & \textbf{Verify} \\
+%     \midrule
+%     \multirow{3}{*}{I}   & Falcon512~\cite{nguyen2023fast}  & -               & 1044.6        & 59.9            \\
+%                          & Dilithium2~\cite{becker2021neon} & 269.7           & 649.2         & 272.8           \\
+%                          & MEDS-21595 (ours)                & 2821.4          & 248223.4      & 229793.6        \\
+%     \midrule
+%     \multirow{2}{*}{III} & Dilithium3~\cite{becker2021neon} & 515.8           & 1089.4        & 447.5           \\
+%                          & MEDS-55520 (ours)                & 7184.6          & 927910.3      & 878268.2        \\
+%     \midrule
+%     \multirow{3}{*}{V}   & Falcon1024~\cite{nguyen2023fast} & -               & 2137.0        & 125.2           \\
+%                          & Dilithium5~\cite{becker2021neon} & 782.8           & 1437.0        & 764.9           \\
+%                          & MEDS-122000 (ours)               & 16646.2         & 2794525.4     & 2693826.8       \\
+%     \bottomrule
+%   \end{tabular}
+%   \label{tab:stdcomparison}
 % \end{table}
 
 \begin{table}
@@ -1922,7 +1911,7 @@ For reference, we include a comparison to Dilithium~\cite{ducas2018crystals}, Fa
   \label{tab:codebasedcomparison}
 \end{table}
 
-When comparing the performance of MEDS to other similar post-quantum digital signature schemes, the results are mixed. ALTEQ, CROSS, PERK, and RYDE outperform MEDS for all three algorithms. UOV also outperforms MEDS by a large factor, except for key generation. MEDS performs relatively similar to LESS, although for larger security levels, LESS is significantly slower at generating and verifying signatures. The only scheme that MEDS outperforms for all three algorithms is Wave. Although these results do not seem too promising, it is important to note that, except for Wave, MEDS provides smaller signature sizes than all of these schemes. This makes MEDS a viable competitor in the digital signature scheme landscape.
+When comparing the performance of MEDS to other similar post-quantum digital signature schemes, the results are mixed. ALTEQ, CROSS, PERK, and RYDE outperform MEDS for all three algorithms. UOV also outperforms MEDS by a large factor, except for key generation. MEDS performs relatively similarly to LESS, although for larger security levels, LESS is significantly slower at generating and verifying signatures. The only scheme that MEDS outperforms for all three algorithms is Wave. Although these results do not seem too promising, it is important to note that, except for Wave and UOV, MEDS provides smaller signature sizes than all of these schemes. This makes MEDS a viable competitor in the digital signature scheme landscape.
 
 When comparing the performance of MEDS to standardized post-quantum digital signature schemes, we see that MEDS is significantly slower than Falcon and Dilithium but can compete with SPHINCS$^+$. Although MEDS and a lot of other schemes are slower than Falcon and Dilithium, they can still be viable alternatives. Firstly, there can be specialized use cases where performance is not the most important factor, and where the potentially smaller key or signature sizes of alternative schemes are more important. Secondly, standardizing schemes that rely on different mathematical problems provides more diversity in security assumptions. If the security of structured lattices (on which both Falcon and Dilithium rely) is ever broken, it is important to have alternative schemes that rely on different mathematical problems.
 
@@ -1946,7 +1935,7 @@ We present an alternative hash structure in Section~\ref{sec:hashfunctionoptimiz
 
 We have shown that the MEDS implementation is very suitable for optimization using SIMD instructions. The achieved speedup on ARMv8 is big, but we expect that future research can achieve even larger speedups on other architectures that support SIMD instructions, such as AVX512~\cite{intel-avx512}, on which 4 times as many field elements can be processed in parallel compared to ARMv8.
 
-Compared to standardized post-quantum signature schemes, MEDS is heavily outperformed by Falcon and Dilithium. However, if the security of structured lattices (on which both Falcon and Dilithium rely) is ever broken, MEDS can serve as a viable alternative, as it is based on a different mathematical problem. When compared to other similar (code-based) post-quantum signature schemes, MEDS provides a smaller signature size than nearly all of them, but is outperformed by most of them in terms of performance. The choice between these schemes should be based on a wide range of factors, among which are the security requirements of the application, the performance requirements of the key generation, signing, and verification algorithms, the private and public key sizes, and the signature size.
+Compared to standardized post-quantum signature schemes, MEDS is heavily outperformed by Falcon and Dilithium. However, if the security of structured lattices (on which both Falcon and Dilithium rely) is ever broken, MEDS can serve as a viable alternative, as it is based on a different mathematical problem. When compared to other similar (code-based) post-quantum signature schemes, MEDS provides a smaller signature size than nearly all of them but is outperformed by most of them in terms of performance. The choice between these schemes should be based on a wide range of factors, among which are the security requirements of the application, the performance requirements of the key generation, signing, and verification algorithms, the private and public key sizes, and the signature size.
 
 \chapter{Future Work}
 \label{ch:futurework}
